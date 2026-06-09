@@ -795,7 +795,7 @@ export default function Album({ id }) {
               </button>
             </div>
             <div className="modal-body">
-              <dl className="diff-cells">
+              <dl className="genre-preview-dl">
                 <div>
                   <dt className="muted small">Current</dt>
                   <dd>{genrePreview.old || <span className="muted">empty</span>}</dd>
