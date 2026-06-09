@@ -32,8 +32,11 @@ npm run build        # outputs to dist/ with a Vite manifest
 
 The build uses `base: '/static/dist/'`, because in production the backend serves
 the bundle from `/static/dist/` and reads the Vite manifest to inject the hashed
-entry JS/CSS into its page shell. Drop `dist/` into the backend's
-`src/static/dist/` to serve the built UI from the backend.
+entry JS/CSS into its page shell. Copy the built `dist/` into the backend's
+`src/static/dist/` to serve the UI from the backend.
+
+The backend repo's `make sync-frontend-dist` target does both steps in one
+command (build here, copy there). See the backend README for details.
 
 ## Linting & formatting
 
