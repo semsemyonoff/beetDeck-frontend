@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { distanceToScore, buildDiffRows, buildAlbumDiffRows } from './diff.js';
+import { distanceToScore, buildDiffRows, buildAlbumDiffRows, buildLyricsPreview } from './diff.js';
 
 describe('distanceToScore', () => {
   it('distance 0 = score 100', () => {
@@ -115,5 +115,41 @@ describe('buildAlbumDiffRows', () => {
     expect(byField.title.status).toBe('add');
     expect(byField.year.status).toBe('change');
     expect(byField.label.status).toBe('same');
+  });
+});
+
+describe('buildLyricsPreview', () => {
+  it('empty current + found lyrics = change', () => {
+    const p = buildLyricsPreview('', 'verse 1\nverse 2');
+    expect(p.old).toBe('');
+    expect(p.new).toBe('verse 1\nverse 2');
+    expect(p.hasChange).toBe(true);
+  });
+
+  it('existing lyrics replaced with new lyrics = change', () => {
+    const p = buildLyricsPreview('old lyrics', 'new lyrics');
+    expect(p.old).toBe('old lyrics');
+    expect(p.new).toBe('new lyrics');
+    expect(p.hasChange).toBe(true);
+  });
+
+  it('identical lyrics = no-op (hasChange false)', () => {
+    const p = buildLyricsPreview('same lyrics', 'same lyrics');
+    expect(p.old).toBe('same lyrics');
+    expect(p.new).toBe('same lyrics');
+    expect(p.hasChange).toBe(false);
+  });
+
+  it('trims surrounding whitespace when comparing', () => {
+    const p = buildLyricsPreview('  same  ', 'same');
+    expect(p.hasChange).toBe(false);
+    expect(p.old).toBe('same');
+  });
+
+  it('handles null/undefined gracefully', () => {
+    const p = buildLyricsPreview(null, null);
+    expect(p.old).toBe('');
+    expect(p.new).toBe('');
+    expect(p.hasChange).toBe(false);
   });
 });

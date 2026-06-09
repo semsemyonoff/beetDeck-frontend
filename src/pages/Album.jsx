@@ -4,6 +4,7 @@ import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import { fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from '../lib/disc.js';
+import { buildLyricsPreview } from '../lib/diff.js';
 
 function ActionGroup({ label, children }) {
   return (
@@ -44,6 +45,10 @@ export default function Album({ id }) {
   const [genreEdit, setGenreEdit] = useState(null); // string
   const [coverPreview, setCoverPreview] = useState(null); // {source, url}
   const [identifyOpen, setIdentifyOpen] = useState(false);
+  const [lyricsEditState, setLyricsEditState] = useState({});
+  const [lyricsFetchPreview, setLyricsFetchPreview] = useState({});
+  const [trackBusy, setTrackBusy] = useState({});
+  const [trackError, setTrackError] = useState({});
   const uploadRef = useRef(null);
 
   useEffect(() => {
@@ -296,6 +301,113 @@ export default function Album({ id }) {
     }
   };
 
+  const setTrackBusyForId = (id, val) =>
+    setTrackBusy((prev) => ({ ...prev, [id]: val }));
+
+  const setTrackErrorForId = (id, msg) =>
+    setTrackError((prev) => ({ ...prev, [id]: msg || null }));
+
+  const refreshTrackLyrics = async (item) => {
+    try {
+      const r = await fetch(`/api/album/${data.id}/track/${item.id}/lyrics`);
+      const payload = r.ok ? await r.json() : { has_lyrics: false };
+      setLyricsCache((prev) => ({ ...prev, [item.id]: payload }));
+    } catch {
+      setLyricsCache((prev) => ({ ...prev, [item.id]: { has_lyrics: false } }));
+    }
+  };
+
+  const startLyricsEdit = (item) => {
+    const payload = lyricsCache[item.id];
+    setLyricsEditState((prev) => ({ ...prev, [item.id]: payload?.lyrics || '' }));
+    setTrackErrorForId(item.id, null);
+  };
+
+  const cancelLyricsEdit = (item) => {
+    setLyricsEditState((prev) => {
+      const n = { ...prev };
+      delete n[item.id];
+      return n;
+    });
+  };
+
+  const handleTrackLyricsSave = async (item) => {
+    const text = lyricsEditState[item.id] ?? '';
+    setTrackBusyForId(item.id, true);
+    setTrackErrorForId(item.id, null);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/track/${item.id}/lyrics/save`,
+      { lyrics: text }
+    );
+    setTrackBusyForId(item.id, false);
+    if (ok) {
+      cancelLyricsEdit(item);
+      showFlash('ok', 'Lyrics saved.');
+      await refreshTrackLyrics(item);
+    } else {
+      setTrackErrorForId(item.id, d?.error || 'Failed to save lyrics.');
+    }
+  };
+
+  const handleTrackLyricsFetchOnline = async (item) => {
+    setTrackBusyForId(item.id, true);
+    setTrackErrorForId(item.id, null);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/track/${item.id}/lyrics/fetch`
+    );
+    setTrackBusyForId(item.id, false);
+    if (!ok) {
+      setTrackErrorForId(item.id, d?.error || 'Lyrics fetch failed.');
+      return;
+    }
+    if (!d?.found) {
+      setTrackErrorForId(item.id, 'No lyrics found online.');
+      return;
+    }
+    const current = lyricsCache[item.id]?.lyrics || '';
+    const preview = buildLyricsPreview(current, d.lyrics || '');
+    setLyricsFetchPreview((prev) => ({ ...prev, [item.id]: preview }));
+  };
+
+  const cancelLyricsFetchPreview = (item) => {
+    setLyricsFetchPreview((prev) => {
+      const n = { ...prev };
+      delete n[item.id];
+      return n;
+    });
+  };
+
+  const handleTrackLyricsConfirmFetch = async (item) => {
+    setTrackBusyForId(item.id, true);
+    setTrackErrorForId(item.id, null);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/track/${item.id}/lyrics/confirm`
+    );
+    setTrackBusyForId(item.id, false);
+    if (ok) {
+      cancelLyricsFetchPreview(item);
+      showFlash('ok', 'Lyrics saved.');
+      await refreshTrackLyrics(item);
+    } else {
+      setTrackErrorForId(item.id, d?.error || 'Lyrics confirm failed.');
+    }
+  };
+
+  const handleTrackLyricsEmbed = async (item) => {
+    setTrackBusyForId(item.id, true);
+    setTrackErrorForId(item.id, null);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/track/${item.id}/lyrics/embed`
+    );
+    setTrackBusyForId(item.id, false);
+    if (ok) {
+      showFlash('ok', 'Lyrics embedded from .lrc.');
+      await refreshTrackLyrics(item);
+    } else {
+      setTrackErrorForId(item.id, d?.error || 'Embed .lrc failed.');
+    }
+  };
+
   const coverImgSrc = data.has_cover
     ? `/api/album/${data.id}/cover?v=${coverV}`
     : null;
@@ -540,31 +652,125 @@ export default function Album({ id }) {
                     <div className="album-track-lyrics">
                       {lyrPayload == null ? (
                         <div className="muted small">Loading lyrics…</div>
-                      ) : !lyrPayload.has_lyrics ? (
-                        <div className="muted small">No lyrics for this track.</div>
                       ) : (
                         <>
-                          <div className="lyrics-toolbar">
-                            <span className="lyrics-badge">
-                              <Icon name="check" size={10} /> {lyrPayload.source || 'embedded'}
-                            </span>
-                            <div className="lyrics-toolbar-actions">
-                              <button
-                                className="track-mini-btn"
-                                onClick={() => openLyricsModal(t)}
-                              >
-                                expand ↗
-                              </button>
+                          {trackError[t.id] && (
+                            <div className="track-lyrics-error">{trackError[t.id]}</div>
+                          )}
+                          {lyricsEditState[t.id] !== undefined ? (
+                            <div className="lyrics-edit-area">
+                              <textarea
+                                className="form-input lyrics-edit-textarea"
+                                value={lyricsEditState[t.id]}
+                                rows={8}
+                                onChange={(e) =>
+                                  setLyricsEditState((prev) => ({ ...prev, [t.id]: e.target.value }))
+                                }
+                              />
+                              <div className="lyrics-edit-actions">
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={() => cancelLyricsEdit(t)}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  className="btn btn-primary"
+                                  disabled={!!trackBusy[t.id]}
+                                  onClick={() => handleTrackLyricsSave(t)}
+                                >
+                                  <Icon name="check" size={12} /> Save
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="lyrics-preview">
-                            <pre className="lyrics-pre">
-                              {(lyrPayload.lyrics || '').split('\n').slice(0, 8).join('\n')}
-                            </pre>
-                            <button className="lyrics-fade" onClick={() => openLyricsModal(t)}>
-                              click to expand →
-                            </button>
-                          </div>
+                          ) : lyricsFetchPreview[t.id] ? (
+                            <div className="lyrics-fetch-preview">
+                              <div className="lyrics-fetch-compare">
+                                <div>
+                                  <div className="muted small">Current</div>
+                                  <pre className="lyrics-pre lyrics-compare-pane">
+                                    {lyricsFetchPreview[t.id].old || '(empty)'}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <div className="muted small">Found online</div>
+                                  <pre className="lyrics-pre lyrics-compare-pane">
+                                    {lyricsFetchPreview[t.id].new}
+                                  </pre>
+                                </div>
+                              </div>
+                              <div className="lyrics-edit-actions">
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={() => cancelLyricsFetchPreview(t)}
+                                >
+                                  Discard
+                                </button>
+                                <button
+                                  className="btn btn-primary"
+                                  disabled={!!trackBusy[t.id]}
+                                  onClick={() => handleTrackLyricsConfirmFetch(t)}
+                                >
+                                  <Icon name="check" size={12} /> Confirm
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="lyrics-toolbar">
+                                {lyrPayload.has_lyrics ? (
+                                  <span className="lyrics-badge">
+                                    <Icon name="check" size={10} /> {lyrPayload.source || 'embedded'}
+                                  </span>
+                                ) : (
+                                  <span className="muted small">No lyrics for this track.</span>
+                                )}
+                                <div className="lyrics-toolbar-actions">
+                                  {lyrPayload.has_lyrics && (
+                                    <button
+                                      className="track-mini-btn"
+                                      onClick={() => openLyricsModal(t)}
+                                    >
+                                      expand ↗
+                                    </button>
+                                  )}
+                                  <button
+                                    className="track-mini-btn"
+                                    disabled={!!trackBusy[t.id]}
+                                    onClick={() => startLyricsEdit(t)}
+                                  >
+                                    <Icon name="edit" size={11} /> edit
+                                  </button>
+                                  <button
+                                    className="track-mini-btn"
+                                    disabled={!!trackBusy[t.id]}
+                                    onClick={() => handleTrackLyricsFetchOnline(t)}
+                                  >
+                                    <Icon name="download" size={11} /> fetch online
+                                  </button>
+                                  {t.has_lrc && (
+                                    <button
+                                      className="track-mini-btn"
+                                      disabled={!!trackBusy[t.id]}
+                                      onClick={() => handleTrackLyricsEmbed(t)}
+                                    >
+                                      embed .lrc
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              {lyrPayload.has_lyrics && (
+                                <div className="lyrics-preview">
+                                  <pre className="lyrics-pre">
+                                    {(lyrPayload.lyrics || '').split('\n').slice(0, 8).join('\n')}
+                                  </pre>
+                                  <button className="lyrics-fade" onClick={() => openLyricsModal(t)}>
+                                    click to expand →
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </>
                       )}
                     </div>

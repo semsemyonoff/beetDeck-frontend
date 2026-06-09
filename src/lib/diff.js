@@ -50,3 +50,9 @@ export function buildAlbumDiffRows(album) {
     return { field, current: oldV || '—', proposed: newV || '—', status };
   });
 }
+
+export function buildLyricsPreview(current, fetched) {
+  const old = (current || '').trim();
+  const newLyrics = (fetched || '').trim();
+  return { old, new: newLyrics, hasChange: old !== newLyrics };
+}
