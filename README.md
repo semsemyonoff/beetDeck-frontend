@@ -1,40 +1,57 @@
-# beetDeek frontend
+# beetDeck frontend
 
-React 18 + Vite SPA. Source for what Flask serves at `/`.
+React 18 + Vite single-page app for [beetDeck](https://beets.io). It talks to the
+beetDeck backend purely over HTTP (`/api`, `/static`) — there is no shared code or
+filesystem with the backend.
 
-## Layout
+## Requirements
 
-- `index.html` — Vite entry (loaded directly by the dev server; in prod the built assets are injected into `src/templates/index.html` via the Vite manifest).
-- `src/main.jsx` — React entry, imports `styles.css`.
-- `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
-- `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, CoverStack).
-- `src/pages/` — Library (Index + Wall), Artist, Album, Untagged, IdentifyModal, LyricsModal, etc.
-- `src/styles.css` — ported from `docs/design/project/styles.css`. Accent `#ec4868` and cozy density are fixed; do not add Tweaks panel.
+- Node.js 20+
 
 ## Dev workflow
 
-Run Flask and Vite concurrently:
-
 ```bash
-make dev
+npm install
+npm run dev          # Vite dev server on :5173 with HMR
 ```
 
-That starts `python app.py` on `:5000` and `vite` on `:5173`. The Vite config proxies `/api` and `/static` to Flask, so open `http://localhost:5173` while developing — edits hot-reload.
-
-Or run them separately:
+The dev server proxies `/api` and `/static` to the backend. By default it targets
+`http://localhost:5000`; point it elsewhere with the `BACKEND_URL` env var:
 
 ```bash
-python app.py                  # terminal 1, Flask on :5000
-cd frontend && npm run dev     # terminal 2, Vite on :5173
+BACKEND_URL=http://localhost:5001 npm run dev
 ```
+
+Open `http://localhost:5173` — edits hot-reload.
 
 ## Production build
 
 ```bash
-make build-frontend
+npm run build        # outputs to dist/ with a Vite manifest
 ```
 
-Outputs to `../src/static/dist/` (configured via `vite.config.js` `build.outDir`). Flask reads the Vite manifest at request time and injects the hashed entry JS/CSS into `src/templates/index.html`. The `make build` target runs this inside the multi-stage Dockerfile, so you only need `make build-frontend` for local prod previews (`python app.py` then visit `:5000`).
+The build uses `base: '/static/dist/'`, because in production the backend serves
+the bundle from `/static/dist/` and reads the Vite manifest to inject the hashed
+entry JS/CSS into its page shell. Drop `dist/` into the backend's
+`src/static/dist/` to serve the built UI from the backend.
+
+## Linting & formatting
+
+```bash
+npm run lint         # ESLint
+npm run lint:fix     # ESLint with autofix
+npm run format       # Prettier (write)
+npm run format:check # Prettier (check only)
+```
+
+## Layout
+
+- `index.html` — Vite entry (loaded by the dev server; in prod the built assets are injected into the backend's page shell via the Vite manifest).
+- `src/main.jsx` — React entry, imports `styles.css`.
+- `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
+- `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, IdentifyModal).
+- `src/pages/` — Library, Artist, Album, Untagged.
+- `src/styles.css` — accent `#ec4868` and cozy density are fixed.
 
 ## Conventions
 
@@ -42,8 +59,4 @@ Outputs to `../src/static/dist/` (configured via `vite.config.js` `build.outDir`
 - No router library — `useHashRoute.js` is the whole router. Routes: `#/`, `#/artist/<name>`, `#/album/<id>`, `#/untagged`. Artist names are `encodeURIComponent`'d.
 - No state management library — `useState` / `useReducer` only.
 - Absolute API paths (`/api/...`) so the dev proxy and prod both work.
-- API contract lives in the project root `CLAUDE.md`; new fields on existing endpoints are additive only.
-
-## Visual source of truth
-
-`docs/design/` (JSX prototypes + chat transcript). See `docs/design/README-USAGE.md` for which decisions are fixed.
+- New fields on existing backend endpoints are additive only.
