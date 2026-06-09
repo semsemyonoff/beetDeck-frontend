@@ -6,6 +6,7 @@ import IdentifyModal from '../ui/IdentifyModal.jsx';
 import { fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
 import { isIdentified } from '../lib/albums.js';
+import { useModalDismiss } from '../lib/useModalDismiss.js';
 
 function ActionGroup({ label, children }) {
   return (
@@ -50,10 +51,18 @@ export default function Album({ id }) {
   const [lyricsFetchPreview, setLyricsFetchPreview] = useState({});
   const [trackBusy, setTrackBusy] = useState({});
   const [trackError, setTrackError] = useState({});
+  const [heroCoverError, setHeroCoverError] = useState(false);
   const uploadRef = useRef(null);
   const flashTimerRef = useRef(null);
 
   useEffect(() => () => window.clearTimeout(flashTimerRef.current), []);
+
+  const inlineModalClose =
+    genrePreview !== null ? () => setGenrePreview(null) :
+    genreEdit !== null ? () => setGenreEdit(null) :
+    coverPreview !== null ? () => setCoverPreview(null) :
+    null;
+  useModalDismiss(inlineModalClose);
 
   useEffect(() => {
     let aborted = false;
@@ -98,6 +107,12 @@ export default function Album({ id }) {
     if (!data) return 0;
     return (data.tracks || []).reduce((acc, t) => acc + parseLength(t.length), 0);
   }, [data]);
+
+  const coverImgSrc = data?.has_cover
+    ? `/api/album/${data.id}/cover?v=${coverV}`
+    : null;
+
+  useEffect(() => setHeroCoverError(false), [coverImgSrc]);
 
   if (error) {
     return (
@@ -416,10 +431,6 @@ export default function Album({ id }) {
     }
   };
 
-  const coverImgSrc = data.has_cover
-    ? `/api/album/${data.id}/cover?v=${coverV}`
-    : null;
-
   return (
     <div className="page page-album">
       <div className="crumbs">
@@ -445,7 +456,7 @@ export default function Album({ id }) {
 
       <header className="album-hero">
         <div className="album-hero-cover">
-          {coverImgSrc ? (
+          {coverImgSrc && !heroCoverError ? (
             <div
               className="cover"
               style={{ width: 260, height: 260, borderRadius: 8, flex: '0 0 260px' }}
@@ -453,11 +464,12 @@ export default function Album({ id }) {
               <img
                 src={coverImgSrc}
                 alt=""
+                onError={() => setHeroCoverError(true)}
                 style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
               />
             </div>
           ) : (
-            <Cover album={album} size={260} rounded={8} showTitle={false} />
+            <Cover album={{ ...album, has_cover: false }} size={260} rounded={8} showTitle={false} />
           )}
         </div>
         <div className="album-hero-text">
@@ -946,6 +958,7 @@ export default function Album({ id }) {
 }
 
 function LyricsModal({ item, payload, onClose }) {
+  useModalDismiss(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-lyrics" onClick={(e) => e.stopPropagation()}>
@@ -971,6 +984,7 @@ function LyricsModal({ item, payload, onClose }) {
 }
 
 function TagsModal({ item, tags, error, onClose }) {
+  useModalDismiss(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>

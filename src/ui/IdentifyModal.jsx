@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { distanceToScore, buildDiffRows } from '../lib/diff.js';
+import { useModalDismiss } from '../lib/useModalDismiss.js';
 
 function Score({ score }) {
   const r = 14;
@@ -129,6 +130,7 @@ function SearchingState({ note }) {
 }
 
 export default function IdentifyModal({ albumId, artistName, albumTitle, albumYear, onClose, onConfirmed }) {
+  useModalDismiss(onClose);
   const [phase, setPhase] = useState('form'); // form | searching | results | error
   const [params, setParams] = useState({ artist: '', album: '', mbid: '' });
   const [error, setError] = useState(null);

@@ -3,7 +3,14 @@ export function parse(hash) {
   if (!raw) return { name: 'library' };
   const [head, ...rest] = raw.split('/');
   if (head === 'artist' && rest.length > 0) {
-    return { name: 'artist', artist: decodeURIComponent(rest.join('/')) };
+    const raw = rest.join('/');
+    let artist;
+    try {
+      artist = decodeURIComponent(raw);
+    } catch {
+      artist = raw;
+    }
+    return { name: 'artist', artist };
   }
   if (head === 'album' && rest.length > 0) {
     return { name: 'album', id: rest[0] };

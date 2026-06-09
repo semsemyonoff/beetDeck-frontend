@@ -41,6 +41,18 @@ describe('parse', () => {
   it('joins multi-segment artist path', () => {
     expect(parse('#/artist/foo/bar/baz')).toEqual({ name: 'artist', artist: 'foo/bar/baz' });
   });
+
+  it('falls back to raw value on malformed percent sequence', () => {
+    expect(parse('#/artist/foo%ZZbar')).toEqual({ name: 'artist', artist: 'foo%ZZbar' });
+  });
+
+  it('falls back to raw value on trailing incomplete percent', () => {
+    expect(parse('#/artist/hello%')).toEqual({ name: 'artist', artist: 'hello%' });
+  });
+
+  it('falls back to raw value on percent followed by one hex digit', () => {
+    expect(parse('#/artist/test%2')).toEqual({ name: 'artist', artist: 'test%2' });
+  });
 });
 
 describe('navigate', () => {
