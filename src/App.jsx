@@ -32,7 +32,7 @@ export default function App() {
           }
           setTimeout(() => setScanStatus(null), 3000);
         }
-      } catch (_) {
+      } catch {
         clearInterval(scanPollRef.current);
         setScanStatus('error');
         setTimeout(() => setScanStatus(null), 3000);

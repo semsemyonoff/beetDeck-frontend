@@ -57,7 +57,7 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
   const variant = Math.floor(r() * 6);
   const [c0, c1, c2] = [pick(0), pick(1), pick(2 % palette.length)];
   const initials = title
-    .replace(/[\[\(].*?[\]\)]/g, '')
+    .replace(/[[(].*?[\])]/g, '')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
