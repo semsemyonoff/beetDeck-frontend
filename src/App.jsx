@@ -5,11 +5,13 @@ import Artist from './pages/Artist.jsx';
 import Album from './pages/Album.jsx';
 import Untagged from './pages/Untagged.jsx';
 import { useHashRoute, navigate } from './useHashRoute.js';
+import { buildScanSummary } from './lib/scan.js';
 
 export default function App() {
   const route = useHashRoute();
   const [search, setSearch] = useState({ q: '', results: null });
   const [scanStatus, setScanStatus] = useState(null); // null | 'running' | 'done' | 'error'
+  const [scanSummary, setScanSummary] = useState(null); // { added, removed } | null
   const scanPollRef = useRef(null);
 
   const handleSearch = ({ q, results }) => {
@@ -27,12 +29,14 @@ export default function App() {
           clearInterval(scanPollRef.current);
           if (d.returncode !== undefined && d.returncode !== 0) {
             setScanStatus('error');
+            setScanSummary(null);
           } else {
             setScanStatus('done');
+            setScanSummary(buildScanSummary(d));
           }
-          setTimeout(() => setScanStatus(null), 3000);
+          setTimeout(() => { setScanStatus(null); setScanSummary(null); }, 3000);
         }
-      } catch (_) {
+      } catch {
         clearInterval(scanPollRef.current);
         setScanStatus('error');
         setTimeout(() => setScanStatus(null), 3000);
@@ -71,7 +75,9 @@ export default function App() {
       {scanStatus && (
         <div className={`scan-banner scan-banner--${scanStatus}`}>
           {scanStatus === 'running' && 'Scanning library…'}
-          {scanStatus === 'done' && 'Scan complete'}
+          {scanStatus === 'done' && (
+            <>Scan complete{scanSummary != null ? ` · +${scanSummary.added} / −${scanSummary.removed} tracks` : ''}</>
+          )}
           {scanStatus === 'error' && 'Scan failed'}
         </div>
       )}

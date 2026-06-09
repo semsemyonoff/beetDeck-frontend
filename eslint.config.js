@@ -37,6 +37,29 @@ export default [
       'react/prop-types': 'off',
     },
   },
+  // Node.js config files (Vite config) need Node globals, not browser globals.
+  {
+    files: ['vite.config.js', 'vitest.config.js'],
+    languageOptions: { globals: globals.node },
+  },
+  // Test files use Vitest globals (describe, it, expect, vi, etc.)
+  {
+    files: ['**/*.test.{js,jsx}', 'test/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        vi: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+      },
+    },
+  },
   // Disables ESLint rules that would conflict with Prettier formatting.
   prettier,
 ];

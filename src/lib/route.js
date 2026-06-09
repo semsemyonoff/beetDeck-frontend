@@ -1,0 +1,32 @@
+export function parse(hash) {
+  const raw = (hash || '').replace(/^#\/?/, '');
+  if (!raw) return { name: 'library' };
+  const [head, ...rest] = raw.split('/');
+  if (head === 'artist' && rest.length > 0) {
+    const raw = rest.join('/');
+    let artist;
+    try {
+      artist = decodeURIComponent(raw);
+    } catch {
+      artist = raw;
+    }
+    return { name: 'artist', artist };
+  }
+  if (head === 'album' && rest.length > 0) {
+    return { name: 'album', id: rest[0] };
+  }
+  if (head === 'untagged') return { name: 'untagged' };
+  return { name: 'library' };
+}
+
+export function navigate(target) {
+  if (!target || target.name === 'library') {
+    window.location.hash = '';
+  } else if (target.name === 'artist') {
+    window.location.hash = '#/artist/' + encodeURIComponent(target.artist);
+  } else if (target.name === 'album') {
+    window.location.hash = '#/album/' + target.id;
+  } else if (target.name === 'untagged') {
+    window.location.hash = '#/untagged';
+  }
+}

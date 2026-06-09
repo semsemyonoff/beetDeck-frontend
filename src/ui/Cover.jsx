@@ -24,12 +24,17 @@ function defaultPalette(title) {
   return hues.map((hue) => `hsl(${hue}, 55%, 45%)`);
 }
 
+import { useEffect, useState } from 'react';
+
 export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = false }) {
   const title = album.title || album.album || '';
   const id = album.id;
   const hasCover = album.has_cover === true || album.hasCover === true;
+  const [coverFailed, setCoverFailed] = useState(false);
 
-  if (hasCover && id != null) {
+  useEffect(() => setCoverFailed(false), [id, hasCover]);
+
+  if (hasCover && id != null && !coverFailed) {
     return (
       <div
         className={'cover' + (dim ? ' cover-dim' : '')}
@@ -38,6 +43,7 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
         <img
           src={`/api/album/${id}/cover`}
           alt=""
+          onError={() => setCoverFailed(true)}
           style={{
             display: 'block',
             width: '100%',
@@ -57,7 +63,7 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
   const variant = Math.floor(r() * 6);
   const [c0, c1, c2] = [pick(0), pick(1), pick(2 % palette.length)];
   const initials = title
-    .replace(/[\[\(].*?[\]\)]/g, '')
+    .replace(/[[(].*?[\])]/g, '')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)

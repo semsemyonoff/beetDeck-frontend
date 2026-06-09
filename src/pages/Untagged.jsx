@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import { navigate } from '../useHashRoute.js';
-
-function distanceToScore(distance) {
-  if (typeof distance !== 'number') return 0;
-  return Math.round(Math.max(0, Math.min(1, 1 - distance)) * 100);
-}
+import { distanceToScore, buildAlbumDiffRows } from '../lib/diff.js';
 
 function Score({ score }) {
   const r = 14;
@@ -43,20 +39,6 @@ function Score({ score }) {
   );
 }
 
-function buildAlbumDiffRows(album) {
-  if (!album) return [];
-  return Object.entries(album)
-    .map(([field, vals]) => {
-      const oldV = (vals?.old ?? '').toString();
-      const newV = (vals?.new ?? '').toString();
-      let status = 'same';
-      if (oldV === newV) status = 'same';
-      else if (!oldV) status = 'add';
-      else status = 'change';
-      return { field, current: oldV || '—', proposed: newV || '—', status };
-    });
-}
-
 export default function Untagged() {
   const [items, setItems] = useState(null);
   const [error, setError] = useState(null);
@@ -90,6 +72,8 @@ export default function Untagged() {
     }
   };
 
+  const flashTimerRef = useRef(null);
+
   useEffect(() => {
     load();
     return () => {
@@ -97,6 +81,7 @@ export default function Untagged() {
         window.clearTimeout(pollRef.current);
         pollRef.current = null;
       }
+      window.clearTimeout(flashTimerRef.current);
     };
   }, []);
 
@@ -116,8 +101,8 @@ export default function Untagged() {
 
   const showFlash = (kind, text) => {
     setFlash({ kind, text });
-    window.clearTimeout(showFlash._t);
-    showFlash._t = window.setTimeout(() => setFlash(null), 2400);
+    window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => setFlash(null), 2400);
   };
 
   const saveItem = async (id) => {

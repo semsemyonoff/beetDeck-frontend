@@ -23,4 +23,9 @@ export default defineConfig(({ command }) => ({
       '/static': BACKEND,
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./test/setup.js'],
+  },
 }));

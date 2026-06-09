@@ -21,17 +21,27 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
 
 ```
 .
-├── index.html              # Vite entry HTML (loads src/main.jsx)
-├── vite.config.js          # Vite config: dev proxy, prod base, manifest
-├── eslint.config.js        # ESLint flat config (React + hooks + react-refresh)
+├── index.html              # Vite entry HTML (inline FOUC-fix script + loads src/main.jsx)
+├── vite.config.js          # Vite config: dev proxy, prod base, manifest, Vitest block
+├── eslint.config.js        # ESLint flat config (React + hooks + react-refresh + vitest globals)
 ├── .prettierrc.json        # Prettier config
 ├── package.json
+├── test/
+│   └── setup.js            # @testing-library/jest-dom imports for Vitest
 └── src/
     ├── main.jsx            # React entry; mounts <App>, imports styles.css
     ├── App.jsx             # Top-level shell: topbar, search, rescan polling, route switch
-    ├── useHashRoute.js     # useHashRoute() hook + navigate() helper
-    ├── styles.css          # All styling (accent #ec4868, light/dark)
+    ├── useHashRoute.js     # useHashRoute() hook; re-exports navigate() from lib/route.js
+    ├── styles.css          # All styling: dark default (:root), light override (:root[data-theme="light"])
     ├── assets/             # Static assets (logo.png)
+    ├── lib/                # Pure helpers (no React imports) — each has a co-located *.test.js
+    │   ├── route.js        # parse(hash) / navigate(target)
+    │   ├── albums.js       # mapAlbum / isIdentified(album) / needsReview(album)
+    │   ├── library.js      # mapApi / totals / sortArtists / filterArtists / filterAlbums / letterGroups
+    │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
+    │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
+    │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
+    │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── Topbar.jsx
     │   ├── Icon.jsx
@@ -81,11 +91,53 @@ npm run format         # Prettier (write)
 - **Dev**: `base` is `/` and the dev server proxies API calls to the backend.
 - **Prod**: `base` is `/static/dist/`; the backend serves the bundle from
   `/static/dist/` and reads the Vite manifest to inject the hashed entry JS/CSS.
-  Place the built `dist/` into the backend's `src/static/dist/`.
+  Place the built `dist/` into the backend's `src/static/dist/`. The one-command
+  hand-off is `make sync-frontend-dist` from the backend repo — see the backend
+  `README.md` "Syncing the frontend build" section for details.
+
+## Testing
+
+Vitest + React Testing Library. Run inside the DWE container:
+
+```bash
+dwe cmd frontend.test          # run once (npm test)
+# watch / coverage have no dedicated dwe command; invoke the npm script directly:
+dwe cmd frontend.npm --set args="run test:watch"   # watch mode
+dwe cmd frontend.npm --set args="run test:cov"     # with coverage
+```
+
+Or directly (host node, from `services/frontend/src/`):
+```bash
+npm test               # vitest run
+npm run test:watch     # vitest (watch)
+npm run test:cov       # vitest run --coverage
+```
+
+- Co-locate tests next to the module they test (`lib/route.test.js`, etc.).
+- `src/lib/` helpers are pure JS — test them with table-driven unit tests, no
+  browser environment needed.
+- `useModalDismiss.js` and `IdentifyModal.jsx` use RTL + jsdom; setup file is
+  `test/setup.js` (imports `@testing-library/jest-dom`).
+- **Every task that adds or changes pure logic must add/update Vitest tests.**
+  Pure CSS/markup tweaks do not require a unit test.
+
+## Theme
+
+- Dark theme is the default (bare `:root` block in `styles.css`).
+- Light theme overrides surface/text/border tokens via `:root[data-theme="light"]`.
+  Do NOT add a `[data-theme="dark"]` selector (specificity trap).
+- The `<html>` element's `data-theme` attribute is set by an inline script in
+  `index.html` *before* the module loads (prevents FOUC).
+- The Topbar cycles `auto → light → dark`, persisting to `localStorage.theme`.
+- Shared tokens (`--accent: #ec4868`, `--ok`, `--warn`, `--danger`) are not
+  overridden per theme unless contrast requires it.
 
 ## Conventions
 
 - Function components and hooks only; no class components.
 - Keep `react/jsx-runtime` style (no explicit `React` import needed for JSX).
 - Absolute API paths; no hardcoded backend origin in components.
+- Pure helpers (no React) live in `src/lib/`; each module has a co-located test.
+- Use `useModalDismiss` from `src/lib/useModalDismiss.js` on every modal for
+  Escape-to-close; backdrop-click dismissal is wired per modal in the JSX.
 - Run `npm run lint` and `npm run format` before committing.
