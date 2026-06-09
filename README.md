@@ -38,6 +38,17 @@ entry JS/CSS into its page shell. Copy the built `dist/` into the backend's
 The backend repo's `make sync-frontend-dist` target does both steps in one
 command (build here, copy there). See the backend README for details.
 
+## Testing
+
+```bash
+npm test             # vitest run (single pass)
+npm run test:watch   # vitest (watch mode)
+npm run test:cov     # vitest run --coverage
+```
+
+Tests live next to the modules they cover (`src/lib/*.test.js`). All pure
+helpers in `src/lib/` have table-driven unit tests. RTL tests use `test/setup.js`.
+
 ## Linting & formatting
 
 ```bash
@@ -49,17 +60,20 @@ npm run format:check # Prettier (check only)
 
 ## Layout
 
-- `index.html` — Vite entry (loaded by the dev server; in prod the built assets are injected into the backend's page shell via the Vite manifest).
+- `index.html` — Vite entry; includes an inline FOUC-fix script that sets `data-theme` on `<html>` before modules load.
 - `src/main.jsx` — React entry, imports `styles.css`.
 - `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
+- `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `useModalDismiss`.
 - `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, IdentifyModal).
 - `src/pages/` — Library, Artist, Album, Untagged.
-- `src/styles.css` — accent `#ec4868` and cozy density are fixed.
+- `src/styles.css` — dark default (`:root`), light override (`:root[data-theme="light"]`); accent `#ec4868` shared.
 
 ## Conventions
 
 - Plain JavaScript + JSX (no TypeScript).
 - No router library — `useHashRoute.js` is the whole router. Routes: `#/`, `#/artist/<name>`, `#/album/<id>`, `#/untagged`. Artist names are `encodeURIComponent`'d.
 - No state management library — `useState` / `useReducer` only.
+- Pure helpers live in `src/lib/`; each has a co-located `*.test.js`.
+- Every modal uses `useModalDismiss` (Escape + backdrop-click).
 - Absolute API paths (`/api/...`) so the dev proxy and prod both work.
 - New fields on existing backend endpoints are additive only.
