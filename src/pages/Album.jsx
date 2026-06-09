@@ -387,8 +387,8 @@ export default function Album({ id }) {
       setTrackErrorForId(item.id, 'No lyrics found online.');
       return;
     }
-    const current = lyricsCache[item.id]?.lyrics || '';
-    const preview = buildLyricsPreview(current, d.lyrics || '');
+    const current = lyricsCache[item.id]?.lyrics || d.current_lyrics || '';
+    const preview = buildLyricsPreview(current, d.new_lyrics || '');
     setLyricsFetchPreview((prev) => ({ ...prev, [item.id]: preview }));
   };
 
