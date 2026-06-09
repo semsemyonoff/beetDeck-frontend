@@ -81,7 +81,9 @@ npm run format         # Prettier (write)
 - **Dev**: `base` is `/` and the dev server proxies API calls to the backend.
 - **Prod**: `base` is `/static/dist/`; the backend serves the bundle from
   `/static/dist/` and reads the Vite manifest to inject the hashed entry JS/CSS.
-  Place the built `dist/` into the backend's `src/static/dist/`.
+  Place the built `dist/` into the backend's `src/static/dist/`. The one-command
+  hand-off is `make sync-frontend-dist` from the backend repo — see the backend
+  `README.md` "Syncing the frontend build" section for details.
 
 ## Conventions
 
