@@ -5,6 +5,7 @@ import Artist from './pages/Artist.jsx';
 import Album from './pages/Album.jsx';
 import Untagged from './pages/Untagged.jsx';
 import { useHashRoute, navigate } from './useHashRoute.js';
+import { buildScanSummary } from './lib/scan.js';
 
 export default function App() {
   const route = useHashRoute();
@@ -31,7 +32,7 @@ export default function App() {
             setScanSummary(null);
           } else {
             setScanStatus('done');
-            setScanSummary(typeof d.added === 'number' ? { added: d.added, removed: d.removed ?? 0 } : null);
+            setScanSummary(buildScanSummary(d));
           }
           setTimeout(() => { setScanStatus(null); setScanSummary(null); }, 3000);
         }

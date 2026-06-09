@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { parse, navigate } from './route.js';
 
 describe('parse', () => {
@@ -56,11 +56,18 @@ describe('parse', () => {
 });
 
 describe('navigate', () => {
+  const origLocation = Object.getOwnPropertyDescriptor(window, 'location');
+
   beforeEach(() => {
     Object.defineProperty(window, 'location', {
       value: { hash: '' },
+      configurable: true,
       writable: true,
     });
+  });
+
+  afterEach(() => {
+    if (origLocation) Object.defineProperty(window, 'location', origLocation);
   });
 
   it('clears hash for library', () => {

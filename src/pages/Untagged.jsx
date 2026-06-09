@@ -72,6 +72,8 @@ export default function Untagged() {
     }
   };
 
+  const flashTimerRef = useRef(null);
+
   useEffect(() => {
     load();
     return () => {
@@ -97,7 +99,6 @@ export default function Untagged() {
   const selectAll = (on) =>
     setSelected(on && items ? new Set(items.map((i) => i.id)) : new Set());
 
-  const flashTimerRef = useRef(null);
   const showFlash = (kind, text) => {
     setFlash({ kind, text });
     window.clearTimeout(flashTimerRef.current);

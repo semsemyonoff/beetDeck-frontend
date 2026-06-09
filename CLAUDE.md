@@ -35,12 +35,13 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     ├── styles.css          # All styling: dark default (:root), light override (:root[data-theme="light"])
     ├── assets/             # Static assets (logo.png)
     ├── lib/                # Pure helpers (no React imports) — each has a co-located *.test.js
-    │   ├── route.js        # parse(hash) / navigate(target) / encodeArtist
-    │   ├── albums.js       # isIdentified(album) / needsReview(album) / mapAlbum
-    │   ├── library.js      # filterAlbums / sortAlbums / groupByLetter / libraryTotals
-    │   ├── disc.js         # byDisc / stats / parseLength / fmtMins / fmtTotal / basename
-    │   ├── diff.js         # buildDiffRows / buildAlbumDiffRows / distanceToScore / buildLyricsPreview
-    │   └── useModalDismiss.js  # React hook: Escape-to-close + backdrop-click for modals
+    │   ├── route.js        # parse(hash) / navigate(target)
+    │   ├── albums.js       # mapAlbum / isIdentified(album) / needsReview(album)
+    │   ├── library.js      # mapApi / totals / sortArtists / filterArtists / filterAlbums / letterGroups
+    │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
+    │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
+    │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
+    │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── Topbar.jsx
     │   ├── Icon.jsx
@@ -100,8 +101,9 @@ Vitest + React Testing Library. Run inside the DWE container:
 
 ```bash
 dwe cmd frontend.test          # run once (npm test)
-dwe cmd frontend.test:watch    # watch mode
-dwe cmd frontend.test:cov      # with coverage
+# watch / coverage have no dedicated dwe command; invoke the npm script directly:
+dwe cmd frontend.npm --set args="run test:watch"   # watch mode
+dwe cmd frontend.npm --set args="run test:cov"     # with coverage
 ```
 
 Or directly (host node, from `services/frontend/src/`):
@@ -136,6 +138,6 @@ npm run test:cov       # vitest run --coverage
 - Keep `react/jsx-runtime` style (no explicit `React` import needed for JSX).
 - Absolute API paths; no hardcoded backend origin in components.
 - Pure helpers (no React) live in `src/lib/`; each module has a co-located test.
-- Use `useModalDismiss` from `src/lib/useModalDismiss.js` on every modal (Escape
-  + backdrop-click close).
+- Use `useModalDismiss` from `src/lib/useModalDismiss.js` on every modal for
+  Escape-to-close; backdrop-click dismissal is wired per modal in the JSX.
 - Run `npm run lint` and `npm run format` before committing.

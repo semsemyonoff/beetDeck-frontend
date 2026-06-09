@@ -108,12 +108,7 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
               const visibleAlbums = filterAlbums(artist.albums, filter);
               const identCount = artist.albums.filter((a) => a.identified).length;
               const totalAll = artist.albums.length;
-              const totalShown =
-                filter === 'noident'
-                  ? visibleAlbums.length
-                  : filter === 'ident'
-                    ? visibleAlbums.length
-                    : totalAll;
+              const totalShown = filter === 'all' ? totalAll : visibleAlbums.length;
               return (
                 <div
                   key={artist.name}
@@ -184,9 +179,7 @@ function LibraryWall({ artists, filter, onArtist, onAlbum }) {
   const items = useMemo(() => {
     const out = [];
     for (const a of artists) {
-      for (const al of a.albums) {
-        if (filter === 'ident' && !al.identified) continue;
-        if (filter === 'noident' && al.identified) continue;
+      for (const al of filterAlbums(a.albums, filter)) {
         out.push({ artist: a, album: al });
       }
     }
