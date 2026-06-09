@@ -3,35 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover, CoverStack } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
-
-function mapApi(apiArtists) {
-  return (apiArtists || []).map((a) => ({
-    name: a.artist,
-    albums: (a.albums || []).map((al) => ({
-      id: al.id,
-      title: al.album,
-      year: al.year,
-      has_cover: al.has_cover,
-      tagged: al.tagged,
-      ignored: al.ignored,
-      identified: !!(al.tagged || al.ignored),
-    })),
-  }));
-}
-
-function totals(artists) {
-  let albums = 0;
-  let ident = 0;
-  let notIdent = 0;
-  for (const a of artists) {
-    for (const al of a.albums) {
-      albums++;
-      if (al.identified) ident++;
-      else notIdent++;
-    }
-  }
-  return { artists: artists.length, albums, ident, notIdent };
-}
+import { mapApi, totals, sortArtists, filterArtists, filterAlbums, letterGroups } from '../lib/library.js';
 
 function LibraryHeader({ stats, filter, setFilter, layout, setLayout, sort, setSort }) {
   return (
@@ -120,24 +92,9 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
   };
   const isExpanded = (name) => expanded.has(name) || filter === 'noident';
 
-  const filteredArtists = useMemo(() => {
-    if (filter === 'all') return artists;
-    return artists.filter((a) => {
-      if (filter === 'ident') return a.albums.some((al) => al.identified);
-      if (filter === 'noident') return a.albums.some((al) => !al.identified);
-      return true;
-    });
-  }, [artists, filter]);
+  const filteredArtists = useMemo(() => filterArtists(artists, filter), [artists, filter]);
 
-  const groups = useMemo(() => {
-    const map = new Map();
-    for (const a of filteredArtists) {
-      const ch = (a.name[0] || '#').toUpperCase();
-      if (!map.has(ch)) map.set(ch, []);
-      map.get(ch).push(a);
-    }
-    return [...map.entries()];
-  }, [filteredArtists]);
+  const groups = useMemo(() => letterGroups(filteredArtists), [filteredArtists]);
 
   return (
     <div className="lib-index">
@@ -147,11 +104,7 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
           <div className="lib-rows">
             {list.map((artist) => {
               const open = isExpanded(artist.name);
-              const visibleAlbums = artist.albums.filter((al) => {
-                if (filter === 'ident') return al.identified;
-                if (filter === 'noident') return !al.identified;
-                return true;
-              });
+              const visibleAlbums = filterAlbums(artist.albums, filter);
               const identCount = artist.albums.filter((a) => a.identified).length;
               const totalAll = artist.albums.length;
               const totalShown =
@@ -298,20 +251,7 @@ export default function Library() {
 
   const artists = useMemo(() => {
     if (!data || data._notInitialized) return [];
-    const mapped = mapApi(data);
-    let list = [...mapped];
-    if (sort === 'az') {
-      list.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sort === 'size') {
-      list.sort((a, b) => b.albums.length - a.albums.length);
-    } else if (sort === 'recent') {
-      list.sort((a, b) => {
-        const yA = Math.max(0, ...a.albums.map((x) => x.year || 0));
-        const yB = Math.max(0, ...b.albums.map((x) => x.year || 0));
-        return yB - yA;
-      });
-    }
-    return list;
+    return sortArtists(mapApi(data), sort);
   }, [data, sort]);
 
   const stats = useMemo(() => totals(artists), [artists]);

@@ -3,18 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
-
-function mapAlbums(apiAlbums) {
-  return (apiAlbums || []).map((al) => ({
-    id: al.id,
-    title: al.album,
-    year: al.year,
-    has_cover: al.has_cover,
-    tagged: al.tagged,
-    ignored: al.ignored,
-    identified: !!(al.tagged || al.ignored),
-  }));
-}
+import { mapAlbum } from '../lib/albums.js';
 
 export default function Artist({ name }) {
   const [data, setData] = useState(null);
@@ -41,7 +30,7 @@ export default function Artist({ name }) {
     };
   }, [name]);
 
-  const albums = useMemo(() => (data ? mapAlbums(data.albums) : []), [data]);
+  const albums = useMemo(() => (data ? (data.albums || []).map(mapAlbum) : []), [data]);
   const total = albums.length;
   const ident = albums.filter((a) => a.identified).length;
   const years = albums.map((a) => a.year).filter(Boolean);

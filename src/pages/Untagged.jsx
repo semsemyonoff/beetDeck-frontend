@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import { navigate } from '../useHashRoute.js';
-
-function distanceToScore(distance) {
-  if (typeof distance !== 'number') return 0;
-  return Math.round(Math.max(0, Math.min(1, 1 - distance)) * 100);
-}
+import { distanceToScore, buildAlbumDiffRows } from '../lib/diff.js';
 
 function Score({ score }) {
   const r = 14;
@@ -41,20 +37,6 @@ function Score({ score }) {
       </text>
     </svg>
   );
-}
-
-function buildAlbumDiffRows(album) {
-  if (!album) return [];
-  return Object.entries(album)
-    .map(([field, vals]) => {
-      const oldV = (vals?.old ?? '').toString();
-      const newV = (vals?.new ?? '').toString();
-      let status = 'same';
-      if (oldV === newV) status = 'same';
-      else if (!oldV) status = 'add';
-      else status = 'change';
-      return { field, current: oldV || '—', proposed: newV || '—', status };
-    });
 }
 
 export default function Untagged() {

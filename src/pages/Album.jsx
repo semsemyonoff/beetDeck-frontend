@@ -3,30 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
-
-function basename(p) {
-  if (!p) return '';
-  const parts = String(p).split('/').filter(Boolean);
-  return parts.length ? parts[parts.length - 1] : '';
-}
-
-function fmtMins(sec) {
-  const m = Math.round((sec || 0) / 60);
-  return `${m} min`;
-}
-
-function fmtTotal(sec) {
-  if (!sec) return '0 min';
-  const m = Math.floor(sec / 60);
-  return `${m} min`;
-}
-
-function parseLength(str) {
-  if (!str) return 0;
-  const [m, s] = String(str).split(':').map(Number);
-  if (Number.isNaN(m) || Number.isNaN(s)) return 0;
-  return m * 60 + s;
-}
+import { fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from '../lib/disc.js';
 
 function ActionGroup({ label, children }) {
   return (
@@ -100,25 +77,12 @@ export default function Album({ id }) {
 
   const stats = useMemo(() => {
     if (!data) return [];
-    return (data.discs || []).map((d) => ({
-      disc: d.disc,
-      count: d.track_count,
-      mins: Math.round((d.duration_sec || 0) / 60),
-      sec: d.duration_sec || 0,
-      dirName: basename(d.dir) || `CD${d.disc}`,
-    }));
+    return discStats(data.discs || []);
   }, [data]);
 
   const byDisc = useMemo(() => {
     if (!data) return [];
-    const tracks = data.tracks || [];
-    if (!stats.length) {
-      return [{ disc: 1, count: tracks.length, mins: 0, dirName: '', tracks }];
-    }
-    return stats.map((s) => ({
-      ...s,
-      tracks: tracks.filter((t) => (t.disc || 1) === s.disc),
-    }));
+    return groupByDisc(data.tracks || [], stats);
   }, [data, stats]);
 
   const totalSec = useMemo(() => {
