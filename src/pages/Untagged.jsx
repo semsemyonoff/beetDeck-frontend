@@ -79,6 +79,7 @@ export default function Untagged() {
         window.clearTimeout(pollRef.current);
         pollRef.current = null;
       }
+      window.clearTimeout(flashTimerRef.current);
     };
   }, []);
 
@@ -96,10 +97,11 @@ export default function Untagged() {
   const selectAll = (on) =>
     setSelected(on && items ? new Set(items.map((i) => i.id)) : new Set());
 
+  const flashTimerRef = useRef(null);
   const showFlash = (kind, text) => {
     setFlash({ kind, text });
-    window.clearTimeout(showFlash._t);
-    showFlash._t = window.setTimeout(() => setFlash(null), 2400);
+    window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => setFlash(null), 2400);
   };
 
   const saveItem = async (id) => {

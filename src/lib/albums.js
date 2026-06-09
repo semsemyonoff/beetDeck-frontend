@@ -10,10 +10,10 @@ export function mapAlbum(al) {
   };
 }
 
-// Note: Task 5 will update isIdentified to only return true when tagged === true.
-// For now it mirrors the `identified` field set by mapAlbum (tagged || ignored).
+// Badge: green "identified" only when explicitly tagged.
+// An ignored-but-untagged album is not "identified" for badge purposes.
 export function isIdentified(album) {
-  return !!album.identified;
+  return !!album.tagged;
 }
 
 // needsReview: true when the album has not been tagged or ignored.

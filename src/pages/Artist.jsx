@@ -3,7 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
-import { mapAlbum } from '../lib/albums.js';
+import { mapAlbum, isIdentified } from '../lib/albums.js';
 
 export default function Artist({ name }) {
   const [data, setData] = useState(null);
@@ -132,15 +132,15 @@ export default function Artist({ name }) {
               <div className="album-card-title">{al.title}</div>
               <div className="album-card-meta">
                 <span>{al.year}</span>
-                {al.identified ? (
+                {isIdentified(al) ? (
                   <span className="ok small">
                     <Icon name="check" size={10} />
                   </span>
-                ) : (
+                ) : !al.identified ? (
                   <span className="warn small">
                     <Icon name="alert" size={10} /> review
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
           </button>

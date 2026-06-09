@@ -30,9 +30,11 @@ describe('mapAlbum', () => {
 });
 
 describe('isIdentified / needsReview truth table', () => {
+  // isIdentified = badge (green "identified"): true only when tagged
+  // needsReview   = filter: true when neither tagged nor ignored
   const cases = [
     { tagged: true,  ignored: false, expectedIdent: true,  expectedReview: false },
-    { tagged: false, ignored: true,  expectedIdent: true,  expectedReview: false },
+    { tagged: false, ignored: true,  expectedIdent: false, expectedReview: false }, // ignored ≠ identified
     { tagged: true,  ignored: true,  expectedIdent: true,  expectedReview: false },
     { tagged: false, ignored: false, expectedIdent: false, expectedReview: true  },
   ];
@@ -49,10 +51,9 @@ describe('isIdentified / needsReview truth table', () => {
     });
   }
 
-  it('isIdentified and needsReview are always opposites', () => {
-    for (const { tagged, ignored } of cases) {
-      const album = mapAlbum({ tagged, ignored });
-      expect(isIdentified(album)).toBe(!needsReview(album));
-    }
+  it('ignored-but-untagged: not identified, not needing review', () => {
+    const album = mapAlbum({ tagged: false, ignored: true });
+    expect(isIdentified(album)).toBe(false);
+    expect(needsReview(album)).toBe(false);
   });
 });

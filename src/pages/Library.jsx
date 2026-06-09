@@ -4,6 +4,7 @@ import Segmented from '../ui/Segmented.jsx';
 import { Cover, CoverStack } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
 import { mapApi, totals, sortArtists, filterArtists, filterAlbums, letterGroups } from '../lib/library.js';
+import { isIdentified } from '../lib/albums.js';
 
 function LibraryHeader({ stats, filter, setFilter, layout, setLayout, sort, setSort }) {
   return (
@@ -153,15 +154,15 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
                           <div className="lib-album-chip-info">
                             <div className="lib-album-chip-title">
                               {al.title}
-                              {al.identified ? (
+                              {isIdentified(al) ? (
                                 <span className="dot-ok">
                                   <Icon name="check" size={10} />
                                 </span>
-                              ) : (
+                              ) : !al.identified ? (
                                 <span className="dot-warn">
                                   <Icon name="alert" size={10} />
                                 </span>
-                              )}
+                              ) : null}
                             </div>
                             <div className="lib-album-chip-meta">{al.year}</div>
                           </div>

@@ -5,6 +5,7 @@ import { navigate } from '../useHashRoute.js';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import { fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
+import { isIdentified } from '../lib/albums.js';
 
 function ActionGroup({ label, children }) {
   return (
@@ -50,6 +51,9 @@ export default function Album({ id }) {
   const [trackBusy, setTrackBusy] = useState({});
   const [trackError, setTrackError] = useState({});
   const uploadRef = useRef(null);
+  const flashTimerRef = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(flashTimerRef.current), []);
 
   useEffect(() => {
     let aborted = false;
@@ -76,8 +80,8 @@ export default function Album({ id }) {
 
   const showFlash = (kind, text) => {
     setFlash({ kind, text });
-    window.clearTimeout(showFlash._t);
-    showFlash._t = window.setTimeout(() => setFlash(null), 3500);
+    window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => setFlash(null), 3500);
   };
 
   const stats = useMemo(() => {
@@ -195,7 +199,8 @@ export default function Album({ id }) {
     setBusy(null);
     setGenrePreview(null);
     if (ok) {
-      showFlash('ok', `Genre saved: ${d?.genre || ''}`);
+      const partial = d?.status === 'partial';
+      showFlash(partial ? 'warn' : 'ok', `Genre saved: ${d?.genre || ''}${partial ? ' (partial write)' : ''}`);
       reload();
     } else {
       showFlash('err', d?.error || 'Genre confirm failed.');
@@ -209,7 +214,8 @@ export default function Album({ id }) {
     setBusy(null);
     setGenreEdit(null);
     if (ok) {
-      showFlash('ok', `Genre saved: ${d?.genre || value}`);
+      const partial = d?.status === 'partial';
+      showFlash(partial ? 'warn' : 'ok', `Genre saved: ${d?.genre || value}${partial ? ' (partial write)' : ''}`);
       reload();
     } else {
       showFlash('err', d?.error || 'Genre save failed.');
@@ -278,10 +284,12 @@ export default function Album({ id }) {
       showFlash('err', d?.error || 'Bulk lyrics fetch failed.');
       return;
     }
-    const found = (d?.tracks || []).filter((t) => t.found && !t.current_lyrics);
+    const allTracks = d?.tracks || [];
+    const found = allTracks.filter((t) => t.found && !t.current_lyrics);
     if (!found.length) {
       setBusy(null);
-      showFlash('err', 'No lyrics found for any track.');
+      const anyFound = allTracks.some((t) => t.found);
+      showFlash('err', anyFound ? 'All tracks already have lyrics.' : 'No lyrics found for any track.');
       return;
     }
     const item_ids = found.map((t) => t.item_id);
@@ -455,7 +463,7 @@ export default function Album({ id }) {
         <div className="album-hero-text">
           <div className="album-hero-eyebrow">
             <Icon name="disc" size={12} /> Album
-            {album.identified ? (
+            {isIdentified(data) ? (
               <span className="badge badge-ok">
                 <Icon name="check" size={10} /> identified
               </span>
