@@ -41,13 +41,21 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
     │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
+    │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / dirtyFields / batchPayload
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── Topbar.jsx
     │   ├── Icon.jsx
     │   ├── Segmented.jsx
-    │   ├── Cover.jsx       # Album cover; SVG palette placeholder when has_cover is false
-    │   └── IdentifyModal.jsx
+    │   ├── Cover.jsx           # Album cover; SVG palette placeholder when has_cover is false
+    │   ├── IdentifyModal.jsx
+    │   ├── useTagRows.js       # Editor state hook: rows, selection, setField, applyBulk, commit, summary
+    │   ├── FolderTree.jsx      # Folder path tree with per-file basenames and durations
+    │   ├── TagTable.jsx        # Editable per-track grid (track #, title, artist, album, year)
+    │   ├── BulkBar.jsx         # Bulk-apply bar for album-level fields → "Apply to N"
+    │   ├── UntaggedGroup.jsx   # Pinned amber banner in Library (UntaggedGroup + UntaggedFolderRow)
+    │   ├── ItemsIdentifyModal.jsx  # Item-identify flow (identify → poll → apply → confirm → navigate)
+    │   └── TagEditorModal.jsx  # Album tag editor modal (opened from Album page *Edit tags* action)
     └── pages/              # Route views
         ├── Library.jsx     # Index + Wall layouts
         ├── Artist.jsx
@@ -63,7 +71,8 @@ into a route object; `navigate(target)` writes the hash. Routes:
 - `#/` — Library
 - `#/artist/<name>` — Artist (name is `encodeURIComponent`'d)
 - `#/album/<id>` — Album
-- `#/untagged` — Untagged items
+- `#/untagged` — Untagged folder index (pinned amber banner; folder list fallback)
+- `#/untagged/<dir>` — Per-folder tag editor (dir is `encodeURIComponent`'d; decoded once in `parse()`)
 
 Anything unrecognized falls back to the Library route.
 
@@ -77,6 +86,8 @@ New fields on existing endpoints are treated as additive only.
 Patterns used against the API:
 - `App.jsx` polls `GET /api/rescan/status` on an interval while a rescan runs.
 - `IdentifyModal.jsx` drives the identify flow (`identify` → poll `status` → `apply` → `confirm`).
+- `TagEditorModal.jsx` and the untagged folder editor post to `POST /api/items/metadata-batch` for album-level + per-track tag writes in one request.
+- `ItemsIdentifyModal.jsx` drives the items identify flow (same polling cycle as `IdentifyModal`).
 
 ## Build & Dev
 
