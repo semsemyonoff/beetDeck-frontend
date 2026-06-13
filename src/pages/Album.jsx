@@ -3,6 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
+import TagEditorModal from '../ui/TagEditorModal.jsx';
 import { fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
 import { isIdentified } from '../lib/albums.js';
@@ -47,6 +48,7 @@ export default function Album({ id }) {
   const [genreEdit, setGenreEdit] = useState(null); // string
   const [coverPreview, setCoverPreview] = useState(null); // {source, url}
   const [identifyOpen, setIdentifyOpen] = useState(false);
+  const [tagEditorModal, setTagEditorModal] = useState(null); // null | {focusTrack: id|null}
   const [lyricsEditState, setLyricsEditState] = useState({});
   const [lyricsFetchPreview, setLyricsFetchPreview] = useState({});
   const [trackBusy, setTrackBusy] = useState({});
@@ -61,6 +63,7 @@ export default function Album({ id }) {
     genrePreview !== null ? () => setGenrePreview(null) :
     genreEdit !== null ? () => setGenreEdit(null) :
     coverPreview !== null ? () => setCoverPreview(null) :
+    tagEditorModal !== null ? () => setTagEditorModal(null) :
     null;
   useModalDismiss(inlineModalClose);
 
@@ -557,6 +560,12 @@ export default function Album({ id }) {
               </button>
               <button
                 className="btn btn-action"
+                onClick={() => setTagEditorModal({ focusTrack: null })}
+              >
+                <Icon name="edit" size={12} /> Edit tags
+              </button>
+              <button
+                className="btn btn-action"
                 disabled={busy === 'ignore'}
                 onClick={handleIgnore}
               >
@@ -665,6 +674,12 @@ export default function Album({ id }) {
                       </button>
                       <button className="track-mini-btn" onClick={() => openTagsModal(t)}>
                         <Icon name="tag" size={11} /> tags
+                      </button>
+                      <button
+                        className="track-mini-btn"
+                        onClick={() => setTagEditorModal({ focusTrack: t.id })}
+                      >
+                        <Icon name="edit" size={11} /> edit
                       </button>
                     </span>
                   </div>
@@ -949,6 +964,18 @@ export default function Album({ id }) {
           onConfirmed={() => {
             showFlash('ok', 'Tags applied.');
             refreshCover();
+            reload();
+          }}
+        />
+      )}
+
+      {tagEditorModal && (
+        <TagEditorModal
+          album={data}
+          focusTrack={tagEditorModal.focusTrack}
+          onClose={() => setTagEditorModal(null)}
+          onSaved={() => {
+            showFlash('ok', 'Tags saved.');
             reload();
           }}
         />
