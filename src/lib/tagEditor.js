@@ -93,15 +93,6 @@ export function applyBulk(rows, selectedIdxSet, vals) {
 const EDITABLE_FIELDS = ['track', 'title', 'artist', 'album', 'albumartist', 'year', 'genre'];
 const ITEM_FIELDS = ['title', 'artist', 'track', 'disc'];
 
-// Return object of keys where row differs from orig.
-export function dirtyFields(row, orig) {
-  const out = {};
-  for (const k of EDITABLE_FIELDS) {
-    if (row[k] !== orig[k]) out[k] = row[k];
-  }
-  return out;
-}
-
 // True if any editable field differs between row and orig.
 export function rowDirty(row, orig) {
   return EDITABLE_FIELDS.some((k) => row[k] !== orig[k]);

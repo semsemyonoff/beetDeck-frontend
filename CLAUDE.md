@@ -41,7 +41,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
     │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
-    │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / dirtyFields / batchPayload
+    │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── Topbar.jsx

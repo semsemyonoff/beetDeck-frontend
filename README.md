@@ -63,15 +63,15 @@ npm run format:check # Prettier (check only)
 - `index.html` — Vite entry; includes an inline FOUC-fix script that sets `data-theme` on `<html>` before modules load.
 - `src/main.jsx` — React entry, imports `styles.css`.
 - `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
-- `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `useModalDismiss`.
-- `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, IdentifyModal).
+- `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `scan`, `tagEditor`, `useModalDismiss`.
+- `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, IdentifyModal, useTagRows, FolderTree, TagTable, BulkBar, UntaggedGroup, ItemsIdentifyModal, TagEditorModal).
 - `src/pages/` — Library, Artist, Album, Untagged.
 - `src/styles.css` — dark default (`:root`), light override (`:root[data-theme="light"]`); accent `#ec4868` shared.
 
 ## Conventions
 
 - Plain JavaScript + JSX (no TypeScript).
-- No router library — `useHashRoute.js` is the whole router. Routes: `#/`, `#/artist/<name>`, `#/album/<id>`, `#/untagged`. Artist names are `encodeURIComponent`'d.
+- No router library — `useHashRoute.js` is the whole router. Routes: `#/`, `#/artist/<name>`, `#/album/<id>`, `#/untagged` (folder index), `#/untagged/<dir>` (per-folder tag editor). Artist names and folder dirs are `encodeURIComponent`'d.
 - No state management library — `useState` / `useReducer` only.
 - Pure helpers live in `src/lib/`; each has a co-located `*.test.js`.
 - Every modal uses `useModalDismiss` (Escape + backdrop-click).

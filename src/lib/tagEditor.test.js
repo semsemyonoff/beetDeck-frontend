@@ -5,7 +5,6 @@ import {
   excludeUntagged,
   summarize,
   applyBulk,
-  dirtyFields,
   rowDirty,
   batchPayload,
 } from './tagEditor.js';
@@ -237,28 +236,8 @@ describe('applyBulk', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  dirtyFields / rowDirty
+//  rowDirty
 // ─────────────────────────────────────────────────────────────────────────────
-
-describe('dirtyFields', () => {
-  it('returns only changed fields', () => {
-    const row  = { track: '1', title: 'New', artist: 'A', album: 'X', albumartist: '', year: '', genre: '' };
-    const orig = { track: '1', title: 'Old', artist: 'A', album: 'X', albumartist: '', year: '', genre: '' };
-    expect(dirtyFields(row, orig)).toEqual({ title: 'New' });
-  });
-
-  it('returns empty object when nothing changed', () => {
-    const r = { track: '1', title: 'T', artist: 'A', album: 'X', albumartist: 'AA', year: '2020', genre: 'Rock' };
-    expect(dirtyFields(r, { ...r })).toEqual({});
-  });
-
-  it('detects multiple changed fields', () => {
-    const row  = { track: '2', title: 'New', artist: 'B', album: 'Y', albumartist: 'C', year: '2021', genre: 'Pop' };
-    const orig = { track: '1', title: 'Old', artist: 'A', album: 'X', albumartist: '',  year: '',     genre: ''    };
-    const df = dirtyFields(row, orig);
-    expect(Object.keys(df)).toHaveLength(7);
-  });
-});
 
 describe('rowDirty', () => {
   it('returns false when row matches orig', () => {
