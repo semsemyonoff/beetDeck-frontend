@@ -75,6 +75,8 @@ describe('TagEditorModal', () => {
     expect(body.album.album).toBe('Test Album');
     expect(body.album.albumartist).toBe('Test Artist');
     expect(onSaved).toHaveBeenCalledOnce();
+    // No warnings → onSaved is told so, so the parent reports plain success.
+    expect(onSaved.mock.calls[0][0]).toEqual({ warnings: [] });
   });
 
   it('shows flash warning when backend returns warnings', async () => {
@@ -94,6 +96,27 @@ describe('TagEditorModal', () => {
     });
 
     expect(screen.getByText(/item 99 not found/i)).toBeInTheDocument();
+  });
+
+  it('passes backend warnings to onSaved so the parent can qualify success', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ status: 'ok', warnings: ['file write failed: /x.mp3'] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const onSaved = vi.fn();
+
+    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={onSaved} />);
+
+    fireEvent.change(screen.getByDisplayValue('First Track'), {
+      target: { value: 'Changed' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /write/i }));
+    });
+
+    expect(onSaved).toHaveBeenCalledOnce();
+    expect(onSaved.mock.calls[0][0]).toEqual({ warnings: ['file write failed: /x.mp3'] });
   });
 
   it('shows error flash when POST fails', async () => {

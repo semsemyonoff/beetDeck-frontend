@@ -974,8 +974,13 @@ export default function Album({ id }) {
           album={data}
           focusTrack={tagEditorModal.focusTrack}
           onClose={() => setTagEditorModal(null)}
-          onSaved={() => {
-            showFlash('ok', 'Tags saved.');
+          onSaved={(res) => {
+            const warnings = res?.warnings || [];
+            if (warnings.length) {
+              showFlash('warn', `Tags saved with warnings: ${warnings.join('; ')}`);
+            } else {
+              showFlash('ok', 'Tags saved.');
+            }
             reload();
           }}
         />

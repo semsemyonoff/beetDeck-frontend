@@ -70,7 +70,10 @@ export default function TagEditorModal({ album, focusTrack, onClose, onSaved }) 
       } else {
         showFlash('ok', 'Saved');
       }
-      if (onSaved) onSaved();
+      // The album row was written to the DB even on a partial (file-write)
+      // failure, so the parent still refreshes — but it is handed the warnings
+      // so it does not report an unqualified success.
+      if (onSaved) onSaved({ warnings });
     } catch (e) {
       showFlash('err', String(e));
     } finally {
