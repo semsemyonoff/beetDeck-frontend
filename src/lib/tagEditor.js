@@ -46,7 +46,10 @@ export function groupUntagged(items) {
 export function excludeUntagged(artists, untaggedAlbumIds) {
   const ids = new Set(untaggedAlbumIds);
   return (artists || [])
-    .map((a) => ({ ...a, albums: (a.albums || []).filter((al) => !ids.has(al.id)) }))
+    .map((a) => ({
+      ...a,
+      albums: (a.albums || []).filter((al) => !ids.has(al.id)),
+    }))
     .filter((a) => a.albums.length > 0);
 }
 
@@ -70,7 +73,9 @@ export function summarize(rows) {
   const aaS = mostCommon(rows, 'albumartist');
   const artistS = mostCommon(rows, 'artist');
   const albumArtist = aaS.value || (artistS.consistent ? artistS.value : '');
-  const titled = (rows || []).filter((r) => String(r.title || '').trim()).length;
+  const titled = (rows || []).filter((r) =>
+    String(r.title || '').trim()
+  ).length;
   const canIdentify = !!albumS.value && !!albumArtist;
   return {
     album: albumS.value,
@@ -87,10 +92,20 @@ export function applyBulk(rows, selectedIdxSet, vals) {
   const clean = Object.fromEntries(
     Object.entries(vals || {}).filter(([, v]) => String(v).trim() !== '')
   );
-  return (rows || []).map((r, i) => (selectedIdxSet.has(i) ? { ...r, ...clean } : r));
+  return (rows || []).map((r, i) =>
+    selectedIdxSet.has(i) ? { ...r, ...clean } : r
+  );
 }
 
-const EDITABLE_FIELDS = ['track', 'title', 'artist', 'album', 'albumartist', 'year', 'genre'];
+const EDITABLE_FIELDS = [
+  'track',
+  'title',
+  'artist',
+  'album',
+  'albumartist',
+  'year',
+  'genre',
+];
 const ITEM_FIELDS = ['title', 'artist', 'track', 'disc'];
 
 // True if any editable field differs between row and orig.
@@ -103,7 +118,9 @@ export function rowDirty(row, orig) {
 // albumFields: { album?, albumartist?, year?, genre? } — empty values excluded.
 export function batchPayload(rows, orig, albumFields) {
   const album = Object.fromEntries(
-    Object.entries(albumFields || {}).filter(([, v]) => v != null && String(v).trim() !== '')
+    Object.entries(albumFields || {}).filter(
+      ([, v]) => v != null && String(v).trim() !== ''
+    )
   );
   const items = (rows || []).map((row, i) => {
     const item = { id: row.id };

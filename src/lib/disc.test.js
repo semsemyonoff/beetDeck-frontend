@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { basename, fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from './disc.js';
+import {
+  basename,
+  fmtMins,
+  fmtTotal,
+  parseLength,
+  discStats,
+  groupByDisc,
+} from './disc.js';
 
 describe('basename', () => {
   it('returns last path segment', () => {
@@ -88,7 +95,9 @@ describe('discStats', () => {
   });
 
   it('falls back to CDN when dir is absent', () => {
-    const stats = discStats([{ disc: 2, track_count: 5, duration_sec: 600, dir: null }]);
+    const stats = discStats([
+      { disc: 2, track_count: 5, duration_sec: 600, dir: null },
+    ]);
     expect(stats[0].dirName).toBe('CD2');
   });
 
@@ -125,7 +134,10 @@ describe('groupByDisc', () => {
   });
 
   it('defaults missing disc field to 1', () => {
-    const noDiscTracks = [{ id: 10, title: 'X' }, { id: 11, title: 'Y' }];
+    const noDiscTracks = [
+      { id: 10, title: 'X' },
+      { id: 11, title: 'Y' },
+    ];
     const singleStat = [{ disc: 1, count: 2, mins: 0, sec: 0, dirName: '' }];
     const groups = groupByDisc(noDiscTracks, singleStat);
     expect(groups[0].tracks).toHaveLength(2);

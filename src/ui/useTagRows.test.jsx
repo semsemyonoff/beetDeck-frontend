@@ -20,7 +20,9 @@ function Host({ initialRows }) {
           <span data-testid={`row-${i}-title`}>{row.title}</span>
           <span data-testid={`row-${i}-album`}>{row.album}</span>
           <span data-testid={`row-${i}-albumartist`}>{row.albumartist}</span>
-          <span data-testid={`row-${i}-dirty-title`}>{String(ed.dirty(i, 'title'))}</span>
+          <span data-testid={`row-${i}-dirty-title`}>
+            {String(ed.dirty(i, 'title'))}
+          </span>
           <button
             data-testid={`row-${i}-edit-title`}
             onClick={() => ed.setField(i, 'title', `edited-${i}`)}
@@ -35,7 +37,9 @@ function Host({ initialRows }) {
 
       <button
         data-testid="apply-bulk"
-        onClick={() => ed.applyBulk({ album: 'BulkAlbum', albumartist: 'BulkAA' })}
+        onClick={() =>
+          ed.applyBulk({ album: 'BulkAlbum', albumartist: 'BulkAA' })
+        }
       >
         apply bulk
       </button>
@@ -57,10 +61,7 @@ function Host({ initialRows }) {
       >
         set albumartist
       </button>
-      <button
-        data-testid="commit"
-        onClick={() => ed.commit()}
-      >
+      <button data-testid="commit" onClick={() => ed.commit()}>
         commit
       </button>
       <button
@@ -71,7 +72,10 @@ function Host({ initialRows }) {
               window.__lastPayload = payload;
               return Promise.resolve();
             },
-            { album: ed.rows[0]?.album || '', albumartist: ed.rows[0]?.albumartist || '' }
+            {
+              album: ed.rows[0]?.album || '',
+              albumartist: ed.rows[0]?.albumartist || '',
+            }
           )
         }
       >
@@ -82,8 +86,28 @@ function Host({ initialRows }) {
 }
 
 const ROWS = [
-  { id: 1, title: 'T1', artist: 'A', album: '', albumartist: '', year: '', genre: '', track: '1', file: '01.mp3' },
-  { id: 2, title: 'T2', artist: 'B', album: '', albumartist: '', year: '', genre: '', track: '2', file: '02.mp3' },
+  {
+    id: 1,
+    title: 'T1',
+    artist: 'A',
+    album: '',
+    albumartist: '',
+    year: '',
+    genre: '',
+    track: '1',
+    file: '01.mp3',
+  },
+  {
+    id: 2,
+    title: 'T2',
+    artist: 'B',
+    album: '',
+    albumartist: '',
+    year: '',
+    genre: '',
+    track: '2',
+    file: '02.mp3',
+  },
 ];
 
 describe('useTagRows', () => {

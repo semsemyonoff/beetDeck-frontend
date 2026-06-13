@@ -12,7 +12,9 @@ export default function FolderTree({ root, folder, files, compact }) {
       <div className="folder-tree-files">
         {files.map((f, i) => (
           <div key={i} className="folder-tree-row">
-            <span className="folder-tree-stem mono">{i === files.length - 1 ? '└─' : '├─'}</span>
+            <span className="folder-tree-stem mono">
+              {i === files.length - 1 ? '└─' : '├─'}
+            </span>
             <span className="folder-tree-file mono">{f.file}</span>
             <span className="folder-tree-dur mono">{f.duration}</span>
           </div>

@@ -1,24 +1,59 @@
 import { describe, it, expect } from 'vitest';
-import { mapApi, totals, sortArtists, filterArtists, filterAlbums, letterGroups } from './library.js';
+import {
+  mapApi,
+  totals,
+  sortArtists,
+  filterArtists,
+  filterAlbums,
+  letterGroups,
+} from './library.js';
 
 const raw = [
   {
     artist: 'Portishead',
     albums: [
-      { id: 1, album: 'Dummy', year: 1994, has_cover: true, tagged: true, ignored: false },
-      { id: 2, album: 'Third', year: 2008, has_cover: false, tagged: false, ignored: false },
+      {
+        id: 1,
+        album: 'Dummy',
+        year: 1994,
+        has_cover: true,
+        tagged: true,
+        ignored: false,
+      },
+      {
+        id: 2,
+        album: 'Third',
+        year: 2008,
+        has_cover: false,
+        tagged: false,
+        ignored: false,
+      },
     ],
   },
   {
     artist: 'Massive Attack',
     albums: [
-      { id: 3, album: 'Mezzanine', year: 1998, has_cover: true, tagged: false, ignored: true },
+      {
+        id: 3,
+        album: 'Mezzanine',
+        year: 1998,
+        has_cover: true,
+        tagged: false,
+        ignored: true,
+      },
     ],
   },
   {
     artist: '808 State',
     albums: [
-      { id: 4, album: 'Ex:El', year: 1991, has_cover: false, tagged: false, ignored: false },
+      {
+        id: 4,
+        album: 'Ex:El',
+        year: 1991,
+        has_cover: false,
+        tagged: false,
+        ignored: false,
+      },
     ],
   },
 ];

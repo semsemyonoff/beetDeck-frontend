@@ -29,7 +29,12 @@ function seedRow(t, albumData) {
   };
 }
 
-export default function TagEditorModal({ album, focusTrack, onClose, onSaved }) {
+export default function TagEditorModal({
+  album,
+  focusTrack,
+  onClose,
+  onSaved,
+}) {
   useModalDismiss(onClose);
   const tracks = album.tracks || [];
   const ed = useTagRows(tracks.map((t) => seedRow(t, album)));
@@ -86,7 +91,9 @@ export default function TagEditorModal({ album, focusTrack, onClose, onSaved }) 
   const folderName = basename(albumPath);
   const folderFiles = tracks.map((t) => ({ file: synthFile(t) }));
   const focusTitle =
-    focusTrack != null ? (tracks.find((t) => t.id === focusTrack)?.title || null) : null;
+    focusTrack != null
+      ? tracks.find((t) => t.id === focusTrack)?.title || null
+      : null;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -109,11 +116,20 @@ export default function TagEditorModal({ album, focusTrack, onClose, onSaved }) 
         </div>
 
         <div className="modal-body">
-          {flash && <div className={`flash flash-${flash.kind}`}>{flash.text}</div>}
-          {focusTitle && (
-            <div className="muted small tagedit-focus-note">Opened from: {focusTitle}</div>
+          {flash && (
+            <div className={`flash flash-${flash.kind}`}>{flash.text}</div>
           )}
-          <FolderTree root={folderRoot} folder={folderName} files={folderFiles} compact />
+          {focusTitle && (
+            <div className="muted small tagedit-focus-note">
+              Opened from: {focusTitle}
+            </div>
+          )}
+          <FolderTree
+            root={folderRoot}
+            folder={folderName}
+            files={folderFiles}
+            compact
+          />
           <TagTable ed={ed} />
           {ed.selected.size > 0 && (
             <BulkBar

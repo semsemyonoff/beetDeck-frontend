@@ -3,7 +3,14 @@ import { mapAlbum, isIdentified, needsReview } from './albums.js';
 
 describe('mapAlbum', () => {
   it('maps API shape to internal shape', () => {
-    const api = { id: 1, album: 'Dummy', year: 1994, has_cover: true, tagged: true, ignored: false };
+    const api = {
+      id: 1,
+      album: 'Dummy',
+      year: 1994,
+      has_cover: true,
+      tagged: true,
+      ignored: false,
+    };
     const result = mapAlbum(api);
     expect(result).toEqual({
       id: 1,
@@ -33,10 +40,25 @@ describe('isIdentified / needsReview truth table', () => {
   // isIdentified = badge (green "identified"): true only when tagged
   // needsReview   = filter: true when neither tagged nor ignored
   const cases = [
-    { tagged: true,  ignored: false, expectedIdent: true,  expectedReview: false },
-    { tagged: false, ignored: true,  expectedIdent: false, expectedReview: false }, // ignored ≠ identified
-    { tagged: true,  ignored: true,  expectedIdent: true,  expectedReview: false },
-    { tagged: false, ignored: false, expectedIdent: false, expectedReview: true  },
+    {
+      tagged: true,
+      ignored: false,
+      expectedIdent: true,
+      expectedReview: false,
+    },
+    {
+      tagged: false,
+      ignored: true,
+      expectedIdent: false,
+      expectedReview: false,
+    }, // ignored ≠ identified
+    { tagged: true, ignored: true, expectedIdent: true, expectedReview: false },
+    {
+      tagged: false,
+      ignored: false,
+      expectedIdent: false,
+      expectedReview: true,
+    },
   ];
 
   for (const { tagged, ignored, expectedIdent, expectedReview } of cases) {

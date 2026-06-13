@@ -8,10 +8,18 @@ function Score({ score }) {
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, score));
   const off = c - (pct / 100) * c;
-  const tone = pct >= 95 ? 'var(--ok)' : pct >= 85 ? 'var(--accent)' : 'var(--warn)';
+  const tone =
+    pct >= 95 ? 'var(--ok)' : pct >= 85 ? 'var(--accent)' : 'var(--warn)';
   return (
     <svg viewBox="0 0 32 32" width="32" height="32">
-      <circle cx="16" cy="16" r={r} fill="none" stroke="var(--border)" strokeWidth="3" />
+      <circle
+        cx="16"
+        cy="16"
+        r={r}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth="3"
+      />
       <circle
         cx="16"
         cy="16"
@@ -39,13 +47,22 @@ function Score({ score }) {
   );
 }
 
-function SearchForm({ artistName, albumTitle, albumYear, params, setParam, onSearch, onCancel }) {
+function SearchForm({
+  artistName,
+  albumTitle,
+  albumYear,
+  params,
+  setParam,
+  onSearch,
+  onCancel,
+}) {
   return (
     <div className="search-form-body">
       <div className="search-form">
         <p className="search-form-intro">
-          By default beets searches MusicBrainz with the tags read from the files. Override any
-          field to refine the lookup, or paste a Release ID to fetch a specific one.
+          By default beets searches MusicBrainz with the tags read from the
+          files. Override any field to refine the lookup, or paste a Release ID
+          to fetch a specific one.
         </p>
 
         <div className="detected-row">
@@ -93,7 +110,8 @@ function SearchForm({ artistName, albumTitle, albumYear, params, setParam, onSea
           </label>
           <label className="form-field form-field-wide">
             <span className="form-label">
-              MusicBrainz Release ID <span className="muted xs">(optional — exact match)</span>
+              MusicBrainz Release ID{' '}
+              <span className="muted xs">(optional — exact match)</span>
             </span>
             <input
               className="form-input mono"
@@ -106,7 +124,9 @@ function SearchForm({ artistName, albumTitle, albumYear, params, setParam, onSea
       </div>
 
       <div className="modal-foot search-form-foot">
-        <span className="muted small">Tip: clear all fields to fall back to file tags.</span>
+        <span className="muted small">
+          Tip: clear all fields to fall back to file tags.
+        </span>
         <div className="row-end">
           <button className="btn btn-ghost" onClick={onCancel}>
             Cancel
@@ -129,7 +149,14 @@ function SearchingState({ note }) {
   );
 }
 
-export default function IdentifyModal({ albumId, artistName, albumTitle, albumYear, onClose, onConfirmed }) {
+export default function IdentifyModal({
+  albumId,
+  artistName,
+  albumTitle,
+  albumYear,
+  onClose,
+  onConfirmed,
+}) {
   useModalDismiss(onClose);
   const [phase, setPhase] = useState('form'); // form | searching | results | error
   const [params, setParams] = useState({ artist: '', album: '', mbid: '' });
@@ -141,12 +168,15 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
   const [confirming, setConfirming] = useState(false);
   const pollRef = useRef(null);
 
-  useEffect(() => () => {
-    if (pollRef.current) {
-      window.clearTimeout(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (pollRef.current) {
+        window.clearTimeout(pollRef.current);
+        pollRef.current = null;
+      }
+    },
+    []
+  );
 
   const setParam = (k, v) => setParams((p) => ({ ...p, [k]: v }));
 
@@ -284,7 +314,10 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className={'modal modal-identify' + (phase === 'results' ? '' : ' modal-identify-form')}
+        className={
+          'modal modal-identify' +
+          (phase === 'results' ? '' : ' modal-identify-form')
+        }
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
@@ -324,7 +357,10 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
             <div className="error">{error || 'Identification failed.'}</div>
             <div className="modal-foot">
               <div className="row-end">
-                <button className="btn btn-ghost" onClick={() => setPhase('form')}>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setPhase('form')}
+                >
                   <Icon name="edit" size={12} /> Back to search
                 </button>
                 <button className="btn btn-ghost" onClick={onClose}>
@@ -354,7 +390,10 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                   ))
                 )}
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setPhase('form')}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setPhase('form')}
+              >
                 <Icon name="edit" size={12} /> Refine search
               </button>
             </div>
@@ -374,7 +413,9 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                   return (
                     <button
                       key={c.mb_albumid || i}
-                      className={'candidate' + (picked === i ? ' candidate-active' : '')}
+                      className={
+                        'candidate' + (picked === i ? ' candidate-active' : '')
+                      }
                       onClick={() => onPick(i)}
                     >
                       <div className="candidate-score-ring">
@@ -388,7 +429,9 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                         </div>
                         <div className="candidate-meta">
                           {c.media ? <span>{c.media}</span> : null}
-                          {c.media && c.track_count ? <span className="dot">·</span> : null}
+                          {c.media && c.track_count ? (
+                            <span className="dot">·</span>
+                          ) : null}
                           <span>{c.track_count} tracks</span>
                           {c.data_source ? (
                             <>
@@ -398,7 +441,9 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                           ) : null}
                         </div>
                         {c.label ? (
-                          <div className="candidate-meta candidate-meta-faint">{c.label}</div>
+                          <div className="candidate-meta candidate-meta-faint">
+                            {c.label}
+                          </div>
                         ) : null}
                       </div>
                       {picked === i ? <Icon name="check" size={14} /> : null}
@@ -425,24 +470,37 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                 ) : (
                   <div className="diff-list">
                     {diffRows.map((row) => (
-                      <div key={row.field} className={'diff-row diff-row-' + row.status}>
+                      <div
+                        key={row.field}
+                        className={'diff-row diff-row-' + row.status}
+                      >
                         <span className="diff-field">{row.field}</span>
                         <span className="diff-cells">
                           <span className="diff-before">
-                            {row.current === '—' ? <span className="muted">empty</span> : row.current}
+                            {row.current === '—' ? (
+                              <span className="muted">empty</span>
+                            ) : (
+                              row.current
+                            )}
                           </span>
                           <span className="diff-arrow">
                             <Icon name="chevron" size={10} />
                           </span>
                           <span className="diff-after">
-                            {row.proposed === '—' ? <span className="muted">remove</span> : row.proposed}
+                            {row.proposed === '—' ? (
+                              <span className="muted">remove</span>
+                            ) : (
+                              row.proposed
+                            )}
                           </span>
                         </span>
                         <span className="diff-tag">
                           {row.status === 'same' && (
                             <span className="diff-tag-same">unchanged</span>
                           )}
-                          {row.status === 'add' && <span className="diff-tag-add">+ add</span>}
+                          {row.status === 'add' && (
+                            <span className="diff-tag-add">+ add</span>
+                          )}
                           {row.status === 'change' && (
                             <span className="diff-tag-change">~ change</span>
                           )}
@@ -462,7 +520,9 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                 </strong>
                 {candidate?.mb_albumid ? (
                   <span className="muted xs">
-                    <span className="mono">{String(candidate.mb_albumid).slice(0, 8)}…</span>
+                    <span className="mono">
+                      {String(candidate.mb_albumid).slice(0, 8)}…
+                    </span>
                   </span>
                 ) : null}
               </div>
@@ -476,7 +536,9 @@ export default function IdentifyModal({ albumId, artistName, albumTitle, albumYe
                   onClick={onConfirm}
                 >
                   <Icon name="check" size={12} />{' '}
-                  {confirming ? 'Applying…' : `Apply ${changeCount} change${changeCount === 1 ? '' : 's'}`}
+                  {confirming
+                    ? 'Applying…'
+                    : `Apply ${changeCount} change${changeCount === 1 ? '' : 's'}`}
                 </button>
               </div>
             </div>

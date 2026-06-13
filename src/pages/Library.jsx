@@ -4,11 +4,26 @@ import Segmented from '../ui/Segmented.jsx';
 import { Cover, CoverStack } from '../ui/Cover.jsx';
 import UntaggedGroup from '../ui/UntaggedGroup.jsx';
 import { navigate } from '../useHashRoute.js';
-import { mapApi, totals, sortArtists, filterArtists, filterAlbums, letterGroups } from '../lib/library.js';
+import {
+  mapApi,
+  totals,
+  sortArtists,
+  filterArtists,
+  filterAlbums,
+  letterGroups,
+} from '../lib/library.js';
 import { isIdentified } from '../lib/albums.js';
 import { groupUntagged, excludeUntagged } from '../lib/tagEditor.js';
 
-function LibraryHeader({ stats, filter, setFilter, layout, setLayout, sort, setSort }) {
+function LibraryHeader({
+  stats,
+  filter,
+  setFilter,
+  layout,
+  setLayout,
+  sort,
+  setSort,
+}) {
   return (
     <div className="lib-header">
       <div className="lib-header-row">
@@ -40,7 +55,11 @@ function LibraryHeader({ stats, filter, setFilter, layout, setLayout, sort, setS
             options={[
               { value: 'all', label: 'All', badge: stats.albums },
               { value: 'ident', label: 'Identified' },
-              { value: 'noident', label: 'Needs review', badge: stats.notIdent },
+              {
+                value: 'noident',
+                label: 'Needs review',
+                badge: stats.notIdent,
+              },
             ]}
           />
         </div>
@@ -52,8 +71,16 @@ function LibraryHeader({ stats, filter, setFilter, layout, setLayout, sort, setS
           onChange={setLayout}
           size="sm"
           options={[
-            { value: 'index', label: 'Index', icon: <Icon name="list" size={12} /> },
-            { value: 'wall', label: 'Wall', icon: <Icon name="grid" size={12} /> },
+            {
+              value: 'index',
+              label: 'Index',
+              icon: <Icon name="list" size={12} />,
+            },
+            {
+              value: 'wall',
+              label: 'Wall',
+              icon: <Icon name="grid" size={12} />,
+            },
           ]}
         />
 
@@ -87,9 +114,15 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
   };
   const isExpanded = (name) => expanded.has(name) || filter === 'noident';
 
-  const filteredArtists = useMemo(() => filterArtists(artists, filter), [artists, filter]);
+  const filteredArtists = useMemo(
+    () => filterArtists(artists, filter),
+    [artists, filter]
+  );
 
-  const groups = useMemo(() => letterGroups(filteredArtists), [filteredArtists]);
+  const groups = useMemo(
+    () => letterGroups(filteredArtists),
+    [filteredArtists]
+  );
 
   return (
     <div className="lib-index">
@@ -101,16 +134,26 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
             {list.map((artist) => {
               const open = isExpanded(artist.name);
               const visibleAlbums = filterAlbums(artist.albums, filter);
-              const identCount = artist.albums.filter((a) => a.identified).length;
+              const identCount = artist.albums.filter(
+                (a) => a.identified
+              ).length;
               const totalAll = artist.albums.length;
-              const totalShown = filter === 'all' ? totalAll : visibleAlbums.length;
+              const totalShown =
+                filter === 'all' ? totalAll : visibleAlbums.length;
               return (
                 <div
                   key={artist.name}
                   className={'lib-row' + (open ? ' lib-row-open' : '')}
                 >
-                  <button className="lib-row-head" onClick={() => toggle(artist.name)}>
-                    <span className={'lib-chevron' + (open ? ' lib-chevron-open' : '')}>
+                  <button
+                    className="lib-row-head"
+                    onClick={() => toggle(artist.name)}
+                  >
+                    <span
+                      className={
+                        'lib-chevron' + (open ? ' lib-chevron-open' : '')
+                      }
+                    >
                       <Icon name="chevron" size={12} />
                     </span>
                     <CoverStack albums={artist.albums} size={32} />
@@ -126,7 +169,8 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
                     <span className="lib-row-meta">
                       {identCount < totalAll ? (
                         <span className="warn small">
-                          <Icon name="alert" size={10} /> {totalAll - identCount}
+                          <Icon name="alert" size={10} />{' '}
+                          {totalAll - identCount}
                         </span>
                       ) : null}
                       <span className="lib-row-count">{totalShown}</span>
@@ -140,7 +184,12 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
                           className="lib-album-chip"
                           onClick={() => onAlbum(artist, al)}
                         >
-                          <Cover album={al} size={56} rounded={4} showTitle={false} />
+                          <Cover
+                            album={al}
+                            size={56}
+                            rounded={4}
+                            showTitle={false}
+                          />
                           <div className="lib-album-chip-info">
                             <div className="lib-album-chip-title">
                               {al.title}
@@ -207,7 +256,9 @@ function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
                 <span className="wall-card-year">{album.year}</span>
               </div>
             </div>
-            {!album.identified ? <span className="wall-card-badge">needs review</span> : null}
+            {!album.identified ? (
+              <span className="wall-card-badge">needs review</span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -254,27 +305,41 @@ export default function Library() {
   const artists = useMemo(() => {
     if (!data || data._notInitialized) return [];
     const sorted = sortArtists(mapApi(data), sort);
-    const ids = (untaggedItems || []).map((item) => item.album_id).filter(Boolean);
+    const ids = (untaggedItems || [])
+      .map((item) => item.album_id)
+      .filter(Boolean);
     return excludeUntagged(sorted, ids);
   }, [data, sort, untaggedItems]);
 
   const stats = useMemo(() => totals(artists), [artists]);
 
-  const onArtist = (artist) => navigate({ name: 'artist', artist: artist.name });
+  const onArtist = (artist) =>
+    navigate({ name: 'artist', artist: artist.name });
   const onAlbum = (_artist, album) => navigate({ name: 'album', id: album.id });
 
   if (error) {
-    return <div className="page page-library"><div className="error">Failed to load: {error}</div></div>;
+    return (
+      <div className="page page-library">
+        <div className="error">Failed to load: {error}</div>
+      </div>
+    );
   }
   if (!data) {
-    return <div className="page page-library"><div className="muted">Loading…</div></div>;
+    return (
+      <div className="page page-library">
+        <div className="muted">Loading…</div>
+      </div>
+    );
   }
   if (data._notInitialized) {
     return (
       <div className="page page-library">
         <div className="empty-state">
           <h2>Library not initialized</h2>
-          <p className="muted">The beets database has not been created yet. Run a full scan to import your music library.</p>
+          <p className="muted">
+            The beets database has not been created yet. Run a full scan to
+            import your music library.
+          </p>
         </div>
       </div>
     );

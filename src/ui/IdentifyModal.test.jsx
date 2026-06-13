@@ -40,7 +40,9 @@ describe('IdentifyModal', () => {
   it('renders search form phase by default', () => {
     vi.stubGlobal('fetch', vi.fn());
     render(<IdentifyModal {...BASE} onClose={vi.fn()} onConfirmed={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /search musicbrainz/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /search musicbrainz/i })
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -63,11 +65,15 @@ describe('IdentifyModal', () => {
 
     const onClose = vi.fn();
     const onConfirmed = vi.fn();
-    render(<IdentifyModal {...BASE} onClose={onClose} onConfirmed={onConfirmed} />);
+    render(
+      <IdentifyModal {...BASE} onClose={onClose} onConfirmed={onConfirmed} />
+    );
 
     // Trigger search — identify POST fires, setTimeout(pollStatus, 400) is queued
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /search musicbrainz/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /search musicbrainz/i })
+      );
     });
     expect(screen.getByText(/querying musicbrainz/i)).toBeInTheDocument();
 
@@ -105,14 +111,18 @@ describe('IdentifyModal', () => {
     render(<IdentifyModal {...BASE} onClose={vi.fn()} onConfirmed={vi.fn()} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /search musicbrainz/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /search musicbrainz/i })
+      );
     });
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     expect(screen.getByText(/no candidates/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /back to search/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /back to search/i })
+    ).toBeInTheDocument();
   });
 
   it('Refine search returns to form with preserved search params', async () => {
@@ -131,20 +141,26 @@ describe('IdentifyModal', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /search musicbrainz/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /search musicbrainz/i })
+      );
     });
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     // Results phase shows the Refine search button
-    expect(screen.getByRole('button', { name: /refine search/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /refine search/i })
+    ).toBeInTheDocument();
 
     // Navigate back to form
     fireEvent.click(screen.getByRole('button', { name: /refine search/i }));
 
     // Form is restored with the previously typed value
     expect(screen.getByDisplayValue('Custom Query')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /search musicbrainz/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /search musicbrainz/i })
+    ).toBeInTheDocument();
   });
 });

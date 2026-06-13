@@ -23,7 +23,16 @@ function Cell({ value, ph, onChange, mono, dirty, align }) {
 }
 
 export default function TagTable({ ed, showFile }) {
-  const { rows, setField, selected, toggle, allSelected, selectAll, clearSel, dirty } = ed;
+  const {
+    rows,
+    setField,
+    selected,
+    toggle,
+    allSelected,
+    selectAll,
+    clearSel,
+    dirty,
+  } = ed;
   return (
     <div className="tte">
       <div className="tte-row tte-head">

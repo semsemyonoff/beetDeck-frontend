@@ -26,7 +26,13 @@ function defaultPalette(title) {
 
 import { useEffect, useState } from 'react';
 
-export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = false }) {
+export function Cover({
+  album,
+  size = 200,
+  rounded = 6,
+  showTitle = true,
+  dim = false,
+}) {
   const title = album.title || album.album || '';
   const id = album.id;
   const hasCover = album.has_cover === true || album.hasCover === true;
@@ -38,7 +44,12 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
     return (
       <div
         className={'cover' + (dim ? ' cover-dim' : '')}
-        style={{ width: size, height: size, borderRadius: rounded, flex: '0 0 ' + size + 'px' }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: rounded,
+          flex: '0 0 ' + size + 'px',
+        }}
       >
         <img
           src={`/api/album/${id}/cover`}
@@ -56,7 +67,10 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
     );
   }
 
-  const palette = album.palette && album.palette.length ? album.palette : defaultPalette(title);
+  const palette =
+    album.palette && album.palette.length
+      ? album.palette
+      : defaultPalette(title);
   const seed = hash(title + '/' + palette.join(','));
   const r = rng(seed);
   const pick = (i) => palette[i % palette.length];
@@ -100,15 +114,34 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
       <>
         <rect width={W} height={H} fill={c0} />
         <polygon points={`0,${H} ${p},0 ${W},0 ${W},${H}`} fill={c1} />
-        <polygon points={`0,${H} ${p / 2},${H * 0.6} ${p},0 0,0`} fill={c2} opacity="0.55" />
+        <polygon
+          points={`0,${H} ${p / 2},${H * 0.6} ${p},0 0,0`}
+          fill={c2}
+          opacity="0.55"
+        />
       </>
     );
   } else if (variant === 3) {
     composition = (
       <>
         <rect width={W} height={H} fill={c0} />
-        <circle cx="50" cy="50" r="42" fill="none" stroke={c1} strokeWidth="4" />
-        <circle cx="50" cy="50" r="28" fill="none" stroke={c2} strokeWidth="3" opacity="0.8" />
+        <circle
+          cx="50"
+          cy="50"
+          r="42"
+          fill="none"
+          stroke={c1}
+          strokeWidth="4"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r="28"
+          fill="none"
+          stroke={c2}
+          strokeWidth="3"
+          opacity="0.8"
+        />
         <circle cx="50" cy="50" r="14" fill={c1} />
       </>
     );
@@ -116,7 +149,12 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
     composition = (
       <>
         <rect width={W} height={H} fill={c0} />
-        <circle cx={20 + r() * 60} cy={20 + r() * 30} r={18 + r() * 10} fill={c1} />
+        <circle
+          cx={20 + r() * 60}
+          cy={20 + r() * 30}
+          r={18 + r() * 10}
+          fill={c1}
+        />
         <rect y={70} width={W} height={30} fill={c2} opacity="0.7" />
       </>
     );
@@ -144,7 +182,12 @@ export function Cover({ album, size = 200, rounded = 6, showTitle = true, dim = 
   return (
     <div
       className={'cover' + (dim ? ' cover-dim' : '')}
-      style={{ width: size, height: size, borderRadius: rounded, flex: '0 0 ' + size + 'px' }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: rounded,
+        flex: '0 0 ' + size + 'px',
+      }}
     >
       <svg
         viewBox={`0 0 ${W} ${H}`}

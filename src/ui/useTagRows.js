@@ -1,5 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
-import { applyBulk as libApplyBulk, rowDirty, summarize, batchPayload } from '../lib/tagEditor.js';
+import {
+  applyBulk as libApplyBulk,
+  rowDirty,
+  summarize,
+  batchPayload,
+} from '../lib/tagEditor.js';
 
 // Normalise an initial row list into the editor row shape.
 function initRows(initialRows) {
@@ -41,10 +46,13 @@ export function useTagRows(initialRows) {
 
   const allSelected = selected.size === rows.length && rows.length > 0;
 
-  const applyBulk = useCallback((vals) => {
-    setRows((prev) => libApplyBulk(prev, selected, vals));
-    setSaved(false);
-  }, [selected]);
+  const applyBulk = useCallback(
+    (vals) => {
+      setRows((prev) => libApplyBulk(prev, selected, vals));
+      setSaved(false);
+    },
+    [selected]
+  );
 
   const dirty = useCallback(
     (rowIndex, key) => {

@@ -34,7 +34,11 @@ export default function UntaggedGroup({ folders, wall }) {
   if (!folders || !folders.length) return null;
 
   return (
-    <section className={'lib-group unt-banner-group' + (wall ? ' unt-banner-wall' : '')}>
+    <section
+      className={
+        'lib-group unt-banner-group' + (wall ? ' unt-banner-wall' : '')
+      }
+    >
       {wall ? null : (
         <h3 className="lib-group-letter unt-banner-letter">
           <Icon name="alert" size={13} />
@@ -46,12 +50,18 @@ export default function UntaggedGroup({ folders, wall }) {
             <Icon name="alert" size={18} />
           </span>
           <span className="unt-banner-text">
-            <span className="unt-banner-title">{folders.length} folders need tagging</span>
+            <span className="unt-banner-title">
+              {folders.length} folders need tagging
+            </span>
             <span className="unt-banner-sub">
               {fileCount} loose files grouped by directory
             </span>
           </span>
-          <span className={'unt-banner-toggle' + (open ? ' unt-banner-toggle-open' : '')}>
+          <span
+            className={
+              'unt-banner-toggle' + (open ? ' unt-banner-toggle-open' : '')
+            }
+          >
             {open ? 'Hide' : 'Review'} <Icon name="chevron" size={13} />
           </span>
         </button>

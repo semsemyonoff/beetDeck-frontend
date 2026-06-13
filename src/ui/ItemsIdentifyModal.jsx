@@ -9,10 +9,18 @@ function Score({ score }) {
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, score));
   const off = c - (pct / 100) * c;
-  const tone = pct >= 95 ? 'var(--ok)' : pct >= 85 ? 'var(--accent)' : 'var(--warn)';
+  const tone =
+    pct >= 95 ? 'var(--ok)' : pct >= 85 ? 'var(--accent)' : 'var(--warn)';
   return (
     <svg viewBox="0 0 32 32" width="32" height="32">
-      <circle cx="16" cy="16" r={r} fill="none" stroke="var(--border)" strokeWidth="3" />
+      <circle
+        cx="16"
+        cy="16"
+        r={r}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth="3"
+      />
       <circle
         cx="16"
         cy="16"
@@ -40,7 +48,12 @@ function Score({ score }) {
   );
 }
 
-export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum, onClose }) {
+export default function ItemsIdentifyModal({
+  itemIds,
+  searchArtist,
+  searchAlbum,
+  onClose,
+}) {
   useModalDismiss(onClose);
   const [phase, setPhase] = useState('searching'); // searching | results | error
   const [error, setError] = useState(null);
@@ -141,7 +154,11 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
         body: JSON.stringify(body),
       });
       let d = null;
-      try { d = await r.json(); } catch { /* json parse failed */ }
+      try {
+        d = await r.json();
+      } catch {
+        /* json parse failed */
+      }
       if (!r.ok) {
         setError(d?.error || `Identify start failed (HTTP ${r.status})`);
         setPhase('error');
@@ -202,7 +219,10 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className={'modal modal-identify' + (phase === 'results' ? '' : ' modal-identify-form')}
+        className={
+          'modal modal-identify' +
+          (phase === 'results' ? '' : ' modal-identify-form')
+        }
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
@@ -212,7 +232,10 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
             </div>
             <h3 className="modal-title">
               {searchAlbum || 'Unknown Album'}
-              <span className="muted"> — {searchArtist || 'Unknown Artist'}</span>
+              <span className="muted">
+                {' '}
+                — {searchArtist || 'Unknown Artist'}
+              </span>
             </h3>
           </div>
           <button className="btn-icon" onClick={onClose}>
@@ -260,7 +283,9 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
                   return (
                     <button
                       key={c.mb_albumid || i}
-                      className={'candidate' + (picked === i ? ' candidate-active' : '')}
+                      className={
+                        'candidate' + (picked === i ? ' candidate-active' : '')
+                      }
                       onClick={() => onPick(i)}
                     >
                       <div className="candidate-score-ring">
@@ -274,7 +299,9 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
                         </div>
                         <div className="candidate-meta">
                           {c.media ? <span>{c.media}</span> : null}
-                          {c.media && c.track_count ? <span className="dot">·</span> : null}
+                          {c.media && c.track_count ? (
+                            <span className="dot">·</span>
+                          ) : null}
                           <span>{c.track_count} tracks</span>
                           {c.data_source ? (
                             <>
@@ -284,7 +311,9 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
                           ) : null}
                         </div>
                         {c.label ? (
-                          <div className="candidate-meta candidate-meta-faint">{c.label}</div>
+                          <div className="candidate-meta candidate-meta-faint">
+                            {c.label}
+                          </div>
                         ) : null}
                       </div>
                       {picked === i ? <Icon name="check" size={14} /> : null}
@@ -311,24 +340,37 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
                 ) : (
                   <div className="diff-list">
                     {diffRows.map((row) => (
-                      <div key={row.field} className={'diff-row diff-row-' + row.status}>
+                      <div
+                        key={row.field}
+                        className={'diff-row diff-row-' + row.status}
+                      >
                         <span className="diff-field">{row.field}</span>
                         <span className="diff-cells">
                           <span className="diff-before">
-                            {row.current === '—' ? <span className="muted">empty</span> : row.current}
+                            {row.current === '—' ? (
+                              <span className="muted">empty</span>
+                            ) : (
+                              row.current
+                            )}
                           </span>
                           <span className="diff-arrow">
                             <Icon name="chevron" size={10} />
                           </span>
                           <span className="diff-after">
-                            {row.proposed === '—' ? <span className="muted">remove</span> : row.proposed}
+                            {row.proposed === '—' ? (
+                              <span className="muted">remove</span>
+                            ) : (
+                              row.proposed
+                            )}
                           </span>
                         </span>
                         <span className="diff-tag">
                           {row.status === 'same' && (
                             <span className="diff-tag-same">unchanged</span>
                           )}
-                          {row.status === 'add' && <span className="diff-tag-add">+ add</span>}
+                          {row.status === 'add' && (
+                            <span className="diff-tag-add">+ add</span>
+                          )}
                           {row.status === 'change' && (
                             <span className="diff-tag-change">~ change</span>
                           )}
@@ -348,7 +390,9 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
                 </strong>
                 {candidate?.mb_albumid ? (
                   <span className="muted xs">
-                    <span className="mono">{String(candidate.mb_albumid).slice(0, 8)}…</span>
+                    <span className="mono">
+                      {String(candidate.mb_albumid).slice(0, 8)}…
+                    </span>
                   </span>
                 ) : null}
               </div>
@@ -362,7 +406,9 @@ export default function ItemsIdentifyModal({ itemIds, searchArtist, searchAlbum,
                   onClick={onConfirm}
                 >
                   <Icon name="check" size={12} />{' '}
-                  {confirming ? 'Applying…' : `Apply ${changeCount} change${changeCount === 1 ? '' : 's'}`}
+                  {confirming
+                    ? 'Applying…'
+                    : `Apply ${changeCount} change${changeCount === 1 ? '' : 's'}`}
                 </button>
               </div>
             </div>

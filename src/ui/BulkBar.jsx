@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import Icon from './Icon.jsx';
 
-const BULK_EMPTY = { album: '', albumartist: '', artist: '', year: '', genre: '' };
+const BULK_EMPTY = {
+  album: '',
+  albumartist: '',
+  artist: '',
+  year: '',
+  genre: '',
+};
 
 const FIELDS = [
   { k: 'album', label: 'Album' },
@@ -31,7 +37,9 @@ export default function BulkBar({ count, onApply, onClear }) {
         {FIELDS.map((f) => (
           <label
             key={f.k}
-            className={'tte-bulk-field' + (f.narrow ? ' tte-bulk-field-narrow' : '')}
+            className={
+              'tte-bulk-field' + (f.narrow ? ' tte-bulk-field-narrow' : '')
+            }
           >
             <span className="tte-bulk-label">{f.label}</span>
             <input

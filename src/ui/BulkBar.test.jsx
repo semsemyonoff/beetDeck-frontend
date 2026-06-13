@@ -23,7 +23,9 @@ describe('BulkBar', () => {
     // FIELDS order: album, albumartist, artist, year, genre — index 0 is album
     const inputs = screen.getAllByPlaceholderText('leave as-is');
     fireEvent.change(inputs[0], { target: { value: 'My Album' } });
-    expect(screen.getByRole('button', { name: /apply to 2/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /apply to 2/i })
+    ).not.toBeDisabled();
   });
 
   it('Deselect button calls onClear', () => {
@@ -57,6 +59,8 @@ describe('BulkBar', () => {
 
   it('Apply button shows count in label', () => {
     render(<BulkBar count={5} onApply={vi.fn()} onClear={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /apply to 5/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /apply to 5/i })
+    ).toBeInTheDocument();
   });
 });

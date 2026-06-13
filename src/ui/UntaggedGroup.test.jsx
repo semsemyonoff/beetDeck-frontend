@@ -12,8 +12,24 @@ const FOLDERS = [
     name: 'Album',
     albumId: 1,
     files: [
-      { id: 10, file: '01.mp3', title: '', artist: '', album: '', track: '', path: '/Music/Artist A/Album/01.mp3' },
-      { id: 11, file: '02.mp3', title: '', artist: '', album: '', track: '', path: '/Music/Artist A/Album/02.mp3' },
+      {
+        id: 10,
+        file: '01.mp3',
+        title: '',
+        artist: '',
+        album: '',
+        track: '',
+        path: '/Music/Artist A/Album/01.mp3',
+      },
+      {
+        id: 11,
+        file: '02.mp3',
+        title: '',
+        artist: '',
+        album: '',
+        track: '',
+        path: '/Music/Artist A/Album/02.mp3',
+      },
     ],
   },
   {
@@ -22,7 +38,15 @@ const FOLDERS = [
     name: 'Loose',
     albumId: null,
     files: [
-      { id: 20, file: 'song.mp3', title: '', artist: '', album: '', track: '', path: '/Music/Loose/song.mp3' },
+      {
+        id: 20,
+        file: 'song.mp3',
+        title: '',
+        artist: '',
+        album: '',
+        track: '',
+        path: '/Music/Loose/song.mp3',
+      },
     ],
   },
 ];
@@ -122,28 +146,58 @@ const LIB_DATA = [
   {
     artist: 'Unknown Artist',
     albums: [
-      { id: 99, album: 'Unknown Album', year: null, has_cover: false, tagged: false, ignored: false },
+      {
+        id: 99,
+        album: 'Unknown Album',
+        year: null,
+        has_cover: false,
+        tagged: false,
+        ignored: false,
+      },
     ],
   },
   {
     artist: 'Real Artist',
     albums: [
-      { id: 42, album: 'Real Album', year: 2020, has_cover: false, tagged: true, ignored: false },
+      {
+        id: 42,
+        album: 'Real Album',
+        year: 2020,
+        has_cover: false,
+        tagged: true,
+        ignored: false,
+      },
     ],
   },
 ];
 
 const UNTAGGED_ITEMS = [
-  { id: 1, title: '', artist: '', album: '', path: '/Music/Loose/track.mp3', track: 1, album_id: 99 },
+  {
+    id: 1,
+    title: '',
+    artist: '',
+    album: '',
+    path: '/Music/Loose/track.mp3',
+    track: 1,
+    album_id: 99,
+  },
 ];
 
 function mockFetch(libData, untaggedItems) {
   return vi.fn().mockImplementation((url) => {
     if (url === '/api/library') {
-      return Promise.resolve({ ok: true, status: 200, json: async () => libData });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => libData,
+      });
     }
     if (url === '/api/items/untagged') {
-      return Promise.resolve({ ok: true, status: 200, json: async () => untaggedItems });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => untaggedItems,
+      });
     }
     return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
   });

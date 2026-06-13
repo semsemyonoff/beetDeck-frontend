@@ -78,7 +78,11 @@ function FolderEditor({ folder }) {
   return (
     <>
       {flash && <div className={`flash flash-${flash.kind}`}>{flash.text}</div>}
-      <FolderTree root={folder.root} folder={folder.name} files={folder.files} />
+      <FolderTree
+        root={folder.root}
+        folder={folder.name}
+        files={folder.files}
+      />
       <div className="tte-toolbar">
         <button
           className="btn btn-primary btn-sm"
@@ -86,7 +90,9 @@ function FolderEditor({ folder }) {
           onClick={handleSave}
         >
           <Icon name="check" size={12} />{' '}
-          {saving ? 'Saving…' : `Save${ed.dirtyCount > 0 ? ` (${ed.dirtyCount})` : ''}`}
+          {saving
+            ? 'Saving…'
+            : `Save${ed.dirtyCount > 0 ? ` (${ed.dirtyCount})` : ''}`}
         </button>
         <button
           className="btn btn-ghost btn-sm"
@@ -100,7 +106,8 @@ function FolderEditor({ folder }) {
       </div>
       {!canIdentify && (
         <div className="tte-gate muted small">
-          Set <strong>Album</strong> and <strong>Album Artist</strong> to enable identification.
+          Set <strong>Album</strong> and <strong>Album Artist</strong> to enable
+          identification.
         </div>
       )}
       <TagTable ed={ed} showFile />
@@ -141,14 +148,21 @@ export default function Untagged({ dir }) {
     load();
   }, [load]);
 
-  const folders = useMemo(() => groupUntagged(untaggedItems || []), [untaggedItems]);
-  const folder = dir != null ? (folders.find((f) => f.dir === dir) ?? null) : null;
+  const folders = useMemo(
+    () => groupUntagged(untaggedItems || []),
+    [untaggedItems]
+  );
+  const folder =
+    dir != null ? (folders.find((f) => f.dir === dir) ?? null) : null;
 
   if (fetchError) {
     return (
       <div className="page page-untagged">
         <div className="crumbs">
-          <button className="crumb" onClick={() => navigate({ name: 'library' })}>
+          <button
+            className="crumb"
+            onClick={() => navigate({ name: 'library' })}
+          >
             <Icon name="arrow-left" size={12} /> Library
           </button>
         </div>
@@ -169,7 +183,10 @@ export default function Untagged({ dir }) {
     return (
       <div className="page page-untagged">
         <div className="crumbs">
-          <button className="crumb" onClick={() => navigate({ name: 'library' })}>
+          <button
+            className="crumb"
+            onClick={() => navigate({ name: 'library' })}
+          >
             <Icon name="arrow-left" size={12} /> Library
           </button>
         </div>
@@ -197,7 +214,10 @@ export default function Untagged({ dir }) {
     return (
       <div className="page page-untagged">
         <div className="crumbs">
-          <button className="crumb" onClick={() => navigate({ name: 'untagged' })}>
+          <button
+            className="crumb"
+            onClick={() => navigate({ name: 'untagged' })}
+          >
             <Icon name="arrow-left" size={12} /> Untagged
           </button>
         </div>
@@ -216,7 +236,10 @@ export default function Untagged({ dir }) {
           <Icon name="arrow-left" size={12} /> Library
         </button>
         <span className="crumb-sep">/</span>
-        <button className="crumb" onClick={() => navigate({ name: 'untagged' })}>
+        <button
+          className="crumb"
+          onClick={() => navigate({ name: 'untagged' })}
+        >
           Untagged
         </button>
         <span className="crumb-sep">/</span>

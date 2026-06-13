@@ -46,9 +46,33 @@ describe('dirname', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ITEMS = [
-  { id: 1, title: 'Alpha', artist: 'Art', album: 'Alb', path: '/m/FolderA/01.mp3', track: 1, album_id: 10 },
-  { id: 2, title: 'Beta',  artist: 'Art', album: 'Alb', path: '/m/FolderA/02.mp3', track: 2, album_id: 10 },
-  { id: 3, title: 'Gamma', artist: 'B',   album: '',    path: '/m/FolderB/01.mp3', track: 1, album_id: 20 },
+  {
+    id: 1,
+    title: 'Alpha',
+    artist: 'Art',
+    album: 'Alb',
+    path: '/m/FolderA/01.mp3',
+    track: 1,
+    album_id: 10,
+  },
+  {
+    id: 2,
+    title: 'Beta',
+    artist: 'Art',
+    album: 'Alb',
+    path: '/m/FolderA/02.mp3',
+    track: 2,
+    album_id: 10,
+  },
+  {
+    id: 3,
+    title: 'Gamma',
+    artist: 'B',
+    album: '',
+    path: '/m/FolderB/01.mp3',
+    track: 1,
+    album_id: 20,
+  },
 ];
 
 describe('groupUntagged', () => {
@@ -74,8 +98,24 @@ describe('groupUntagged', () => {
 
   it('sets albumId to null when files have mixed album_ids', () => {
     const mixed = [
-      { id: 1, title: 'A', artist: '', album: '', path: '/x/01.mp3', track: 1, album_id: 10 },
-      { id: 2, title: 'B', artist: '', album: '', path: '/x/02.mp3', track: 2, album_id: 99 },
+      {
+        id: 1,
+        title: 'A',
+        artist: '',
+        album: '',
+        path: '/x/01.mp3',
+        track: 1,
+        album_id: 10,
+      },
+      {
+        id: 2,
+        title: 'B',
+        artist: '',
+        album: '',
+        path: '/x/02.mp3',
+        track: 2,
+        album_id: 99,
+      },
     ];
     const groups = groupUntagged(mixed);
     expect(groups[0].albumId).toBeNull();
@@ -85,17 +125,47 @@ describe('groupUntagged', () => {
     const groups = groupUntagged(ITEMS);
     const a = groups.find((g) => g.name === 'FolderA');
     expect(a.files).toHaveLength(2);
-    expect(a.files[0]).toMatchObject({ id: 1, file: '01.mp3', title: 'Alpha', track: '1' });
+    expect(a.files[0]).toMatchObject({
+      id: 1,
+      file: '01.mp3',
+      title: 'Alpha',
+      track: '1',
+    });
   });
 
   it('normalises missing title/artist/album to empty strings', () => {
-    const items = [{ id: 5, title: null, artist: undefined, album: null, path: '/m/X/01.mp3', track: null, album_id: 1 }];
+    const items = [
+      {
+        id: 5,
+        title: null,
+        artist: undefined,
+        album: null,
+        path: '/m/X/01.mp3',
+        track: null,
+        album_id: 1,
+      },
+    ];
     const groups = groupUntagged(items);
-    expect(groups[0].files[0]).toMatchObject({ title: '', artist: '', album: '', track: '' });
+    expect(groups[0].files[0]).toMatchObject({
+      title: '',
+      artist: '',
+      album: '',
+      track: '',
+    });
   });
 
   it('handles a single-file folder', () => {
-    const items = [{ id: 7, title: 'Solo', artist: 'S', album: 'SA', path: '/solo/01.mp3', track: 1, album_id: 42 }];
+    const items = [
+      {
+        id: 7,
+        title: 'Solo',
+        artist: 'S',
+        album: 'SA',
+        path: '/solo/01.mp3',
+        track: 1,
+        album_id: 42,
+      },
+    ];
     const groups = groupUntagged(items);
     expect(groups).toHaveLength(1);
     expect(groups[0].files).toHaveLength(1);
@@ -114,8 +184,14 @@ describe('groupUntagged', () => {
 
 const ARTISTS = [
   { name: 'Unknown Artist', albums: [{ id: 10, title: 'Loose' }] },
-  { name: 'Known Band',     albums: [{ id: 20, title: 'EP' }, { id: 30, title: 'LP' }] },
-  { name: 'Solo Act',       albums: [{ id: 40, title: 'Demo' }] },
+  {
+    name: 'Known Band',
+    albums: [
+      { id: 20, title: 'EP' },
+      { id: 30, title: 'LP' },
+    ],
+  },
+  { name: 'Solo Act', albums: [{ id: 40, title: 'Demo' }] },
 ];
 
 describe('excludeUntagged', () => {
@@ -155,9 +231,30 @@ describe('excludeUntagged', () => {
 describe('summarize', () => {
   it('picks most-common non-empty album', () => {
     const rows = [
-      { album: 'X', albumartist: 'AA', artist: 'A', title: 'T1', year: '2020', genre: '' },
-      { album: 'X', albumartist: 'AA', artist: 'A', title: 'T2', year: '2020', genre: '' },
-      { album: 'Y', albumartist: 'AA', artist: 'A', title: '',   year: '2020', genre: '' },
+      {
+        album: 'X',
+        albumartist: 'AA',
+        artist: 'A',
+        title: 'T1',
+        year: '2020',
+        genre: '',
+      },
+      {
+        album: 'X',
+        albumartist: 'AA',
+        artist: 'A',
+        title: 'T2',
+        year: '2020',
+        genre: '',
+      },
+      {
+        album: 'Y',
+        albumartist: 'AA',
+        artist: 'A',
+        title: '',
+        year: '2020',
+        genre: '',
+      },
     ];
     const s = summarize(rows);
     expect(s.album).toBe('X');
@@ -168,34 +265,87 @@ describe('summarize', () => {
 
   it('falls back albumArtist to consistent artist when albumartist is empty', () => {
     const rows = [
-      { album: 'X', albumartist: '', artist: 'Solo', title: 'T', year: '', genre: '' },
-      { album: 'X', albumartist: '', artist: 'Solo', title: 'T', year: '', genre: '' },
+      {
+        album: 'X',
+        albumartist: '',
+        artist: 'Solo',
+        title: 'T',
+        year: '',
+        genre: '',
+      },
+      {
+        album: 'X',
+        albumartist: '',
+        artist: 'Solo',
+        title: 'T',
+        year: '',
+        genre: '',
+      },
     ];
     expect(summarize(rows).albumArtist).toBe('Solo');
   });
 
   it('does not fall back albumArtist when artists are inconsistent', () => {
     const rows = [
-      { album: 'X', albumartist: '', artist: 'A', title: 'T', year: '', genre: '' },
-      { album: 'X', albumartist: '', artist: 'B', title: 'T', year: '', genre: '' },
+      {
+        album: 'X',
+        albumartist: '',
+        artist: 'A',
+        title: 'T',
+        year: '',
+        genre: '',
+      },
+      {
+        album: 'X',
+        albumartist: '',
+        artist: 'B',
+        title: 'T',
+        year: '',
+        genre: '',
+      },
     ];
     expect(summarize(rows).albumArtist).toBe('');
     expect(summarize(rows).artistConsistent).toBe(false);
   });
 
   it('canIdentify is true when album and albumArtist are both set', () => {
-    const rows = [{ album: 'EP', albumartist: 'Band', artist: 'Band', title: 'T', year: '', genre: '' }];
+    const rows = [
+      {
+        album: 'EP',
+        albumartist: 'Band',
+        artist: 'Band',
+        title: 'T',
+        year: '',
+        genre: '',
+      },
+    ];
     expect(summarize(rows).canIdentify).toBe(true);
   });
 
   it('canIdentify is false when album is missing', () => {
-    const rows = [{ album: '', albumartist: 'Band', artist: 'Band', title: 'T', year: '', genre: '' }];
+    const rows = [
+      {
+        album: '',
+        albumartist: 'Band',
+        artist: 'Band',
+        title: 'T',
+        year: '',
+        genre: '',
+      },
+    ];
     expect(summarize(rows).canIdentify).toBe(false);
   });
 
   it('returns empty/zero values for empty rows', () => {
     const s = summarize([]);
-    expect(s).toEqual({ album: '', albumArtist: '', artistConsistent: true, titled: 0, count: 0, canIdentify: false });
+    expect(s).toEqual({
+      album: '',
+      albumArtist: '',
+      artistConsistent: true,
+      titled: 0,
+      count: 0,
+      canIdentify: false,
+    });
   });
 });
 
@@ -211,14 +361,20 @@ describe('applyBulk', () => {
   ];
 
   it('applies non-empty vals only to selected rows', () => {
-    const result = applyBulk(rows, new Set([0, 2]), { album: 'NewAlbum', albumartist: 'AA' });
+    const result = applyBulk(rows, new Set([0, 2]), {
+      album: 'NewAlbum',
+      albumartist: 'AA',
+    });
     expect(result[0].album).toBe('NewAlbum');
     expect(result[1].album).toBe('');
     expect(result[2].album).toBe('NewAlbum');
   });
 
   it('ignores empty-string vals', () => {
-    const result = applyBulk(rows, new Set([0]), { album: '', albumartist: 'AA' });
+    const result = applyBulk(rows, new Set([0]), {
+      album: '',
+      albumartist: 'AA',
+    });
     expect(result[0].album).toBe('');
     expect(result[0].albumartist).toBe('AA');
   });
@@ -241,13 +397,37 @@ describe('applyBulk', () => {
 
 describe('rowDirty', () => {
   it('returns false when row matches orig', () => {
-    const r = { track: '1', title: 'T', artist: 'A', album: 'X', albumartist: '', year: '', genre: '' };
+    const r = {
+      track: '1',
+      title: 'T',
+      artist: 'A',
+      album: 'X',
+      albumartist: '',
+      year: '',
+      genre: '',
+    };
     expect(rowDirty(r, { ...r })).toBe(false);
   });
 
   it('returns true when any field differs', () => {
-    const row  = { track: '1', title: 'Changed', artist: 'A', album: 'X', albumartist: '', year: '', genre: '' };
-    const orig = { track: '1', title: 'Old',     artist: 'A', album: 'X', albumartist: '', year: '', genre: '' };
+    const row = {
+      track: '1',
+      title: 'Changed',
+      artist: 'A',
+      album: 'X',
+      albumartist: '',
+      year: '',
+      genre: '',
+    };
+    const orig = {
+      track: '1',
+      title: 'Old',
+      artist: 'A',
+      album: 'X',
+      albumartist: '',
+      year: '',
+      genre: '',
+    };
     expect(rowDirty(row, orig)).toBe(true);
   });
 });
@@ -264,21 +444,34 @@ describe('batchPayload', () => {
 
   it('always includes every row id in items', () => {
     const rows = orig.map((r) => ({ ...r }));
-    const { items } = batchPayload(rows, orig, { album: 'X', albumartist: 'AA' });
+    const { items } = batchPayload(rows, orig, {
+      album: 'X',
+      albumartist: 'AA',
+    });
     expect(items.map((i) => i.id)).toEqual([1, 2]);
   });
 
   it('album-only save emits all row ids with no per-item fields', () => {
     const rows = orig.map((r) => ({ ...r }));
-    const { album, items } = batchPayload(rows, orig, { album: 'EP', albumartist: 'Band', year: '2023', genre: 'Rock' });
+    const { album, items } = batchPayload(rows, orig, {
+      album: 'EP',
+      albumartist: 'Band',
+      year: '2023',
+      genre: 'Rock',
+    });
     expect(items).toEqual([{ id: 1 }, { id: 2 }]);
-    expect(album).toEqual({ album: 'EP', albumartist: 'Band', year: '2023', genre: 'Rock' });
+    expect(album).toEqual({
+      album: 'EP',
+      albumartist: 'Band',
+      year: '2023',
+      genre: 'Rock',
+    });
   });
 
   it('includes changed per-item fields alongside id', () => {
     const rows = [
       { id: 1, title: 'New T1', artist: 'A', track: '1', disc: undefined },
-      { id: 2, title: 'T2',     artist: 'A', track: '2', disc: undefined },
+      { id: 2, title: 'T2', artist: 'A', track: '2', disc: undefined },
     ];
     const { items } = batchPayload(rows, orig, {});
     expect(items[0]).toMatchObject({ id: 1, title: 'New T1' });
@@ -287,7 +480,12 @@ describe('batchPayload', () => {
 
   it('strips empty-string values from album section', () => {
     const rows = orig.map((r) => ({ ...r }));
-    const { album } = batchPayload(rows, orig, { album: 'X', albumartist: '', year: '', genre: '' });
+    const { album } = batchPayload(rows, orig, {
+      album: 'X',
+      albumartist: '',
+      year: '',
+      genre: '',
+    });
     expect(album).toEqual({ album: 'X' });
   });
 

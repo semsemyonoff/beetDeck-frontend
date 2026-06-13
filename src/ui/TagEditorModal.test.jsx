@@ -14,8 +14,20 @@ const ALBUM = {
   genre: 'Rock',
   path: '/music/Test Artist/Test Album',
   tracks: [
-    { id: 1, title: 'First Track', artist: 'Test Artist', track: 1, format: 'mp3' },
-    { id: 2, title: 'Second Track', artist: 'Test Artist', track: 2, format: 'mp3' },
+    {
+      id: 1,
+      title: 'First Track',
+      artist: 'Test Artist',
+      track: 1,
+      format: 'mp3',
+    },
+    {
+      id: 2,
+      title: 'Second Track',
+      artist: 'Test Artist',
+      track: 2,
+      format: 'mp3',
+    },
   ],
 };
 
@@ -26,14 +38,18 @@ describe('TagEditorModal', () => {
 
   it('renders track titles from album data', () => {
     vi.stubGlobal('fetch', vi.fn());
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
     expect(screen.getByDisplayValue('First Track')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Second Track')).toBeInTheDocument();
   });
 
   it('shows album and artist in the modal heading', () => {
     vi.stubGlobal('fetch', vi.fn());
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
     const heading = screen.getByRole('heading', { level: 3 });
     expect(heading).toHaveTextContent('Test Album');
     expect(heading).toHaveTextContent('Test Artist');
@@ -41,17 +57,23 @@ describe('TagEditorModal', () => {
 
   it('Write button is disabled when no edits made', () => {
     vi.stubGlobal('fetch', vi.fn());
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
     const writeBtn = screen.getByRole('button', { name: /write/i });
     expect(writeBtn).toBeDisabled();
   });
 
   it('editing a cell enables Write and issues metadata-batch POST with all ids', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(ok({ status: 'ok', warnings: [] }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ status: 'ok', warnings: [] }));
     vi.stubGlobal('fetch', fetchMock);
     const onSaved = vi.fn();
 
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={onSaved} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={onSaved} />
+    );
 
     const titleInput = screen.getByDisplayValue('First Track');
     fireEvent.change(titleInput, { target: { value: 'New Title' } });
@@ -82,10 +104,14 @@ describe('TagEditorModal', () => {
   it('shows flash warning when backend returns warnings', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(ok({ status: 'ok', warnings: ['item 99 not found'] }));
+      .mockResolvedValueOnce(
+        ok({ status: 'ok', warnings: ['item 99 not found'] })
+      );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
 
     fireEvent.change(screen.getByDisplayValue('First Track'), {
       target: { value: 'Changed' },
@@ -101,11 +127,15 @@ describe('TagEditorModal', () => {
   it('passes backend warnings to onSaved so the parent can qualify success', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(ok({ status: 'ok', warnings: ['file write failed: /x.mp3'] }));
+      .mockResolvedValueOnce(
+        ok({ status: 'ok', warnings: ['file write failed: /x.mp3'] })
+      );
     vi.stubGlobal('fetch', fetchMock);
     const onSaved = vi.fn();
 
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={onSaved} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={onSaved} />
+    );
 
     fireEvent.change(screen.getByDisplayValue('First Track'), {
       target: { value: 'Changed' },
@@ -116,16 +146,22 @@ describe('TagEditorModal', () => {
     });
 
     expect(onSaved).toHaveBeenCalledOnce();
-    expect(onSaved.mock.calls[0][0]).toEqual({ warnings: ['file write failed: /x.mp3'] });
+    expect(onSaved.mock.calls[0][0]).toEqual({
+      warnings: ['file write failed: /x.mp3'],
+    });
   });
 
   it('shows error flash when POST fails', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ error: 'bad request' }) });
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'bad request' }),
+    });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
 
     fireEvent.change(screen.getByDisplayValue('First Track'), {
       target: { value: 'Changed' },
@@ -140,14 +176,23 @@ describe('TagEditorModal', () => {
 
   it('shows focus note when focusTrack is set', () => {
     vi.stubGlobal('fetch', vi.fn());
-    render(<TagEditorModal album={ALBUM} focusTrack={2} onClose={vi.fn()} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal
+        album={ALBUM}
+        focusTrack={2}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
     expect(screen.getByText(/opened from: second track/i)).toBeInTheDocument();
   });
 
   it('Escape calls onClose', () => {
     vi.stubGlobal('fetch', vi.fn());
     const onClose = vi.fn();
-    render(<TagEditorModal album={ALBUM} onClose={onClose} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={onClose} onSaved={vi.fn()} />
+    );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -155,7 +200,9 @@ describe('TagEditorModal', () => {
   it('backdrop click calls onClose', () => {
     vi.stubGlobal('fetch', vi.fn());
     const onClose = vi.fn();
-    render(<TagEditorModal album={ALBUM} onClose={onClose} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={onClose} onSaved={vi.fn()} />
+    );
     fireEvent.click(document.querySelector('.modal-backdrop'));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -163,7 +210,9 @@ describe('TagEditorModal', () => {
   it('Cancel button calls onClose', () => {
     vi.stubGlobal('fetch', vi.fn());
     const onClose = vi.fn();
-    render(<TagEditorModal album={ALBUM} onClose={onClose} onSaved={vi.fn()} />);
+    render(
+      <TagEditorModal album={ALBUM} onClose={onClose} onSaved={vi.fn()} />
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
