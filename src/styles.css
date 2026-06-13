@@ -1068,7 +1068,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 }
 
 /* ---------- Untagged page ---------- */
-.page-untagged { padding: 24px; }
+.page-untagged { padding: 24px; max-width: 1500px; margin: 0 auto; }
 .page-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
@@ -1081,38 +1081,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 .untagged-header p { max-width: 560px; margin-top: 6px; }
 .untagged-stats { display: flex; gap: 24px; }
 .untagged-stats strong { font-size: 22px; font-weight: 700; }
-.untagged-toolbar {
-  display: flex; gap: 8px; align-items: center;
-  margin: 12px 0 8px;
-}
-.untagged-table {
-  display: flex; flex-direction: column;
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--surface-1); overflow: hidden;
-  margin-bottom: 28px;
-}
-.untagged-row {
-  display: grid;
-  grid-template-columns: 36px minmax(140px, 1.2fr) minmax(120px, 1fr) minmax(120px, 1fr) 72px;
-  gap: 8px; align-items: center;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
-}
-.untagged-row:last-child { border-bottom: none; }
-.untagged-row-head {
-  background: var(--surface-2);
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--text-faint);
-  padding: 8px 10px;
-}
-.untagged-row-on { background: var(--surface-2); }
-.untagged-check { display: inline-flex; align-items: center; justify-content: center; }
-.form-input-sm { height: 28px; font-size: 12px; padding: 0 8px; }
-.untagged-identify {
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--surface-1); padding: 16px;
-  display: flex; flex-direction: column; gap: 12px;
-}
 .flash {
   padding: 8px 12px; border-radius: 6px; font-size: 13px;
   margin-bottom: 12px; border: 1px solid var(--border);
@@ -1161,3 +1129,273 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 .search-item:hover { background: var(--surface-2); }
 .search-item-title { font-size: 13px; color: var(--text); }
 .search-item-sub   { font-size: 11.5px; color: var(--text-mute); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Untagged group in Library — banner + folder rows (.unt-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.unt-banner-letter {
+  color: var(--warn);
+  display: inline-flex; align-items: center; justify-content: flex-start;
+}
+
+.unt-folder {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center; gap: var(--s-3);
+  width: 100%; text-align: left;
+  padding: 10px var(--s-4);
+  transition: background 120ms;
+}
+.unt-folder:hover { background: color-mix(in oklab, var(--warn) 8%, transparent); }
+.unt-folder-glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--warn);
+}
+.unt-folder-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.unt-folder-name {
+  font-size: 14px; font-weight: 500; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.unt-folder-path {
+  font-size: 11px; color: var(--text-mute);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.unt-folder-meta { display: inline-flex; align-items: center; gap: var(--s-3); }
+.unt-folder-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--warn-soft); color: var(--warn);
+}
+.unt-folder-count {
+  font-size: 11.5px; color: var(--text-dim);
+  background: var(--surface-2); padding: 2px 8px; border-radius: 999px;
+  min-width: 28px; text-align: center;
+}
+.unt-folder-chevron { color: var(--text-mute); display: inline-flex; }
+.unt-folder:hover .unt-folder-chevron { color: var(--warn); transform: translateX(2px); transition: transform 120ms; }
+
+.unt-banner {
+  border: 1px solid color-mix(in oklab, var(--warn) 50%, var(--border));
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.unt-banner-bar {
+  display: grid; grid-template-columns: 44px 1fr auto;
+  align-items: center; gap: var(--s-4);
+  width: 100%; text-align: left;
+  padding: var(--s-4);
+  background:
+    radial-gradient(600px 120px at 0% 0%, color-mix(in oklab, var(--warn) 16%, transparent), transparent),
+    color-mix(in oklab, var(--warn) 9%, var(--surface-0));
+}
+.unt-banner-icon {
+  width: 44px; height: 44px; border-radius: var(--r-md);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--warn-soft); color: var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn) 35%, transparent);
+}
+.unt-banner-text { display: flex; flex-direction: column; gap: 2px; }
+.unt-banner-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.unt-banner-sub { font-size: 12.5px; color: var(--text-dim); }
+.unt-banner-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; color: var(--warn);
+  padding: 6px 12px; border-radius: var(--r-sm);
+  background: var(--warn-soft);
+}
+.unt-banner-toggle-open svg { transform: rotate(90deg); }
+.unt-banner-wall .unt-banner { width: 100%; }
+.unt-banner-rows {
+  border-top: 1px solid color-mix(in oklab, var(--warn) 22%, var(--border-soft));
+  background: var(--surface-0);
+}
+.unt-banner-rows > .unt-folder { border-bottom: 1px solid var(--border-soft); }
+.unt-banner-rows > .unt-folder:last-child { border-bottom: none; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Folder tree (location card)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.folder-tree {
+  border: 1px solid var(--border-soft); border-radius: var(--r-md);
+  background: var(--surface-0); overflow: hidden;
+}
+.folder-tree-head {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 10px var(--s-4);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  font-size: 12px;
+}
+.folder-tree-head svg { color: var(--text-mute); }
+.folder-tree-root { color: var(--text-mute); }
+.folder-tree-name { color: var(--text); }
+.folder-tree-count {
+  margin-left: auto; font-family: var(--f-mono); font-size: 10.5px;
+  color: var(--text-mute); background: var(--surface-2); padding: 2px 8px; border-radius: 999px;
+}
+.folder-tree-files {
+  padding: 8px var(--s-4); display: flex; flex-direction: column; gap: 1px;
+  max-height: 168px; overflow-y: auto;
+}
+.folder-tree-compact .folder-tree-files { max-height: 120px; }
+.folder-tree-row {
+  display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: baseline;
+  font-size: 12px; padding: 1px 0;
+}
+.folder-tree-stem { color: var(--text-faint); }
+.folder-tree-file { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-tree-dur { color: var(--text-mute); font-size: 11px; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Track tag editor table (.tte)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.tte {
+  border: 1px solid var(--border-soft); border-radius: var(--r-lg);
+  background: var(--surface-0); overflow: hidden; margin-top: var(--s-3);
+}
+.tte-row {
+  display: grid;
+  grid-template-columns: 34px 58px minmax(220px, 1.6fr) 1fr 1fr 78px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+}
+.tte-row:last-child { border-bottom: none; }
+.tte-head {
+  height: 38px; background: var(--surface-1);
+  font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-mute);
+  position: sticky; top: var(--topbar-h); z-index: 2;
+}
+.tte-th { padding: 0 10px; display: inline-flex; align-items: baseline; gap: 8px; }
+.tte-th-sub { font-size: 9px; opacity: 0.7; letter-spacing: 0.04em; }
+.tte-col-num { justify-content: center; text-align: center; }
+.tte-col-year { justify-content: center; text-align: center; }
+.tte-row:not(.tte-head):hover { background: var(--surface-1); }
+.tte-row-sel { background: var(--accent-soft) !important; }
+.tte-row-sel:hover { background: color-mix(in oklab, var(--accent) 22%, transparent) !important; }
+
+.tte-chk { display: inline-flex; align-items: center; justify-content: center; height: 100%; cursor: pointer; }
+.tte-chk input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+
+.tte-cell { position: relative; display: flex; align-items: center; padding: 4px 6px; min-width: 0; }
+.tte-cell-center { justify-content: center; }
+.tte-input {
+  width: 100%; background: transparent;
+  border: 1px solid transparent; border-radius: var(--r-xs);
+  padding: 6px 8px; color: var(--text); font-size: 13.5px; line-height: 1.2;
+  outline: none; transition: background 100ms, border-color 100ms, box-shadow 100ms;
+  text-overflow: ellipsis;
+}
+.tte-cell-center .tte-input { text-align: center; }
+.tte-input::placeholder { color: var(--text-faint); }
+.tte-cell:hover .tte-input { border-color: var(--border-soft); background: var(--surface-2); }
+.tte-input:focus {
+  border-color: var(--accent); background: var(--surface-0);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.tte-cell-dirty .tte-input { background: color-mix(in oklab, var(--warn) 12%, transparent); }
+.tte-dirty-dot {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: var(--warn);
+  box-shadow: 0 0 0 2px var(--surface-0);
+}
+
+.tte-title-cell { display: flex; flex-direction: column; gap: 1px; padding: 4px 6px; min-width: 0; }
+.tte-title-cell .tte-cell { padding: 0; }
+.tte-file {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--text-mute); padding: 0 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tte-file svg { color: var(--text-faint); flex: 0 0 auto; }
+
+/* toolbar + gate banner inside the per-folder editor */
+.tte-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: var(--s-4) 0 var(--s-3);
+}
+.tte-gate {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px var(--s-4); margin-bottom: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--warn-soft); color: color-mix(in oklab, var(--warn) 85%, white);
+  font-size: 12.5px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn) 30%, transparent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Bulk bar
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.tte-bulk {
+  margin-top: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--sh-2);
+  overflow: hidden;
+}
+.page-untagged .tte-bulk {
+  position: sticky; bottom: 16px; z-index: 10;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5), inset 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+.tte-bulk-head {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: 10px var(--s-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+.tte-bulk-count {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; color: var(--accent-fg);
+  background: var(--accent); padding: 3px 12px; border-radius: 999px;
+}
+.tte-bulk-hint { flex: 1; }
+.tte-bulk-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr 90px 1fr auto;
+  gap: var(--s-3); align-items: end;
+  padding: var(--s-4);
+}
+.tte-bulk-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.tte-bulk-label {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-mute);
+}
+.tte-bulk-input {
+  height: 36px; padding: 0 12px; border-radius: var(--r-sm);
+  background: var(--surface-0); color: var(--text);
+  border: 1px solid var(--border-soft); font-size: 13px; outline: none;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.tte-bulk-input::placeholder { color: var(--text-faint); }
+.tte-bulk-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tte-bulk-apply { height: 36px; }
+.tte-bulk-apply:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Tag editor modal
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-tagedit { max-width: 1080px; height: min(840px, 92vh); }
+.tagedit-focus-note {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: var(--r-sm);
+  background: var(--accent-soft); color: color-mix(in oklab, var(--accent) 80%, white);
+  font-size: 12px;
+}
+.modal-tagedit .tte-bulk { margin: 0; border-radius: 0; border-left: none; border-right: none; box-shadow: none; }
+.modal-tagedit .tte { margin-top: 0; }
+.modal-tagedit .tte-head { top: 0; }
+
+@media (max-width: 920px) {
+  .unt-hero { grid-template-columns: 1fr; }
+  .untagged-header { grid-template-columns: 1fr; }
+  .tte-row { grid-template-columns: 30px 46px 1.4fr 1fr 70px; }
+  .tte-row .tte-cell:nth-child(4) { display: none; }
+  .tte-bulk-fields { grid-template-columns: 1fr 1fr; }
+  .tte-bulk-apply { grid-column: 1 / -1; }
+}
