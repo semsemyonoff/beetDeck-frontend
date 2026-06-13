@@ -1587,6 +1587,16 @@ h4 {
 .candidate-meta-faint {
   font-family: var(--f-mono);
 }
+.candidate-mbid {
+  color: var(--text-mute);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--border);
+  white-space: nowrap;
+}
+.candidate-mbid:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .candidate-score-ring {
   display: flex;
   align-items: center;
@@ -1624,7 +1634,7 @@ h4 {
 }
 .diff-row {
   display: grid;
-  grid-template-columns: 18px 130px 1fr 90px;
+  grid-template-columns: 130px 1fr 90px;
   align-items: center;
   gap: var(--s-3);
   padding: 10px 12px;

@@ -281,12 +281,21 @@ export default function ItemsIdentifyModal({
                 {candidates.map((c, i) => {
                   const score = distanceToScore(c.distance);
                   return (
-                    <button
+                    <div
                       key={c.mb_albumid || i}
                       className={
                         'candidate' + (picked === i ? ' candidate-active' : '')
                       }
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={picked === i}
                       onClick={() => onPick(i)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onPick(i);
+                        }
+                      }}
                     >
                       <div className="candidate-score-ring">
                         <Score score={score} />
@@ -310,14 +319,29 @@ export default function ItemsIdentifyModal({
                             </>
                           ) : null}
                         </div>
-                        {c.label ? (
+                        {c.label || c.mb_albumid ? (
                           <div className="candidate-meta candidate-meta-faint">
-                            {c.label}
+                            {c.label ? <span>{c.label}</span> : null}
+                            {c.label && c.mb_albumid ? (
+                              <span className="dot">·</span>
+                            ) : null}
+                            {c.mb_albumid ? (
+                              <a
+                                className="candidate-mbid"
+                                href={`https://musicbrainz.org/release/${c.mb_albumid}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Open release on MusicBrainz"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {String(c.mb_albumid).slice(0, 8)}… ↗
+                              </a>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
                       {picked === i ? <Icon name="check" size={14} /> : null}
-                    </button>
+                    </div>
                   );
                 })}
               </aside>
