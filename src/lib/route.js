@@ -15,7 +15,19 @@ export function parse(hash) {
   if (head === 'album' && rest.length > 0) {
     return { name: 'album', id: rest[0] };
   }
-  if (head === 'untagged') return { name: 'untagged' };
+  if (head === 'untagged') {
+    if (rest.length > 0) {
+      const rawDir = rest.join('/');
+      let dir;
+      try {
+        dir = decodeURIComponent(rawDir);
+      } catch {
+        dir = rawDir;
+      }
+      return { name: 'untagged', dir };
+    }
+    return { name: 'untagged' };
+  }
   return { name: 'library' };
 }
 
@@ -27,6 +39,10 @@ export function navigate(target) {
   } else if (target.name === 'album') {
     window.location.hash = '#/album/' + target.id;
   } else if (target.name === 'untagged') {
-    window.location.hash = '#/untagged';
+    if (target.dir != null) {
+      window.location.hash = '#/untagged/' + encodeURIComponent(target.dir);
+    } else {
+      window.location.hash = '#/untagged';
+    }
   }
 }
