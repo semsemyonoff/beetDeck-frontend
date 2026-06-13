@@ -5,7 +5,7 @@ import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
 import { mapAlbum, isIdentified } from '../lib/albums.js';
 
-export default function Artist({ name }) {
+export default function Artist({ name, dataVersion = 0 }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -28,7 +28,7 @@ export default function Artist({ name }) {
     return () => {
       aborted = true;
     };
-  }, [name]);
+  }, [name, dataVersion]);
 
   const albums = useMemo(
     () => (data ? (data.albums || []).map(mapAlbum) : []),
@@ -139,8 +139,12 @@ export default function Artist({ name }) {
               <div className="album-card-meta">
                 <span>{al.year}</span>
                 {isIdentified(al) ? (
-                  <span className="ok small">
-                    <Icon name="check" size={10} />
+                  <span className="dot-ok">
+                    <Icon name="check" size={11} />
+                  </span>
+                ) : al.ignored ? (
+                  <span className="dot-ignored">
+                    <Icon name="check" size={11} />
                   </span>
                 ) : !al.identified ? (
                   <span className="warn small">

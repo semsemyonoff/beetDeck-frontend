@@ -195,11 +195,15 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
                               {al.title}
                               {isIdentified(al) ? (
                                 <span className="dot-ok">
-                                  <Icon name="check" size={10} />
+                                  <Icon name="check" size={11} />
+                                </span>
+                              ) : al.ignored ? (
+                                <span className="dot-ignored">
+                                  <Icon name="check" size={11} />
                                 </span>
                               ) : !al.identified ? (
                                 <span className="dot-warn">
-                                  <Icon name="alert" size={10} />
+                                  <Icon name="alert" size={11} />
                                 </span>
                               ) : null}
                             </div>
@@ -231,7 +235,7 @@ function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
   }, [artists, filter]);
 
   return (
-    <>
+    <div className="lib-wall-wrap">
       {filter !== 'ident' ? <UntaggedGroup folders={folders} wall /> : null}
       <div className="lib-wall">
         {items.map(({ artist, album }) => (
@@ -256,17 +260,25 @@ function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
                 <span className="wall-card-year">{album.year}</span>
               </div>
             </div>
-            {!album.identified ? (
+            {isIdentified(album) ? (
+              <span className="wall-card-check wall-card-check-ok">
+                <Icon name="check" size={12} />
+              </span>
+            ) : album.ignored ? (
+              <span className="wall-card-check wall-card-check-ignored">
+                <Icon name="check" size={12} />
+              </span>
+            ) : (
               <span className="wall-card-badge">needs review</span>
-            ) : null}
+            )}
           </button>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
-export default function Library() {
+export default function Library({ dataVersion = 0 }) {
   const [data, setData] = useState(null);
   const [untaggedItems, setUntaggedItems] = useState([]);
   const [error, setError] = useState(null);
@@ -298,7 +310,7 @@ export default function Library() {
     return () => {
       aborted = true;
     };
-  }, []);
+  }, [dataVersion]);
 
   const folders = useMemo(() => groupUntagged(untaggedItems), [untaggedItems]);
 

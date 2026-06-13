@@ -718,21 +718,26 @@ h4 {
   font-family: var(--f-mono);
 }
 .dot-ok,
-.dot-warn {
+.dot-warn,
+.dot-ignored {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  flex: 0 0 auto;
 }
 .dot-ok {
   background: var(--ok-soft);
   color: var(--ok);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ok) 40%, transparent);
 }
-.dot-warn {
+.dot-warn,
+.dot-ignored {
   background: var(--warn-soft);
   color: var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn) 40%, transparent);
 }
 .lib-album-chip-more {
   background: transparent;
@@ -819,6 +824,26 @@ h4 {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
+  background: var(--warn);
+  color: #1a1a1a;
+}
+.wall-card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.wall-card-check-ok {
+  background: var(--ok);
+  color: #0f1a0f;
+}
+.wall-card-check-ignored {
   background: var(--warn);
   color: #1a1a1a;
 }
@@ -2273,6 +2298,14 @@ h4 {
 }
 .unt-banner-toggle-open svg {
   transform: rotate(90deg);
+}
+.lib-wall-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.unt-banner-wall {
+  display: block;
 }
 .unt-banner-wall .unt-banner {
   width: 100%;
