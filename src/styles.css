@@ -2504,7 +2504,7 @@ h4 {
   text-transform: uppercase;
   color: var(--text-mute);
   position: sticky;
-  top: var(--topbar-h);
+  top: 0;
   z-index: 2;
 }
 .tte-th {
@@ -2636,9 +2636,39 @@ h4 {
 .tte-toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
   margin: var(--s-4) 0 var(--s-3);
+}
+.tte-toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tte-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.tte-resolved-k {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-mute);
+}
+.tte-resolved-v {
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 500;
+}
+.tte-resolved-empty {
+  font-size: 12.5px;
+  color: var(--warn);
+  font-style: italic;
 }
 .tte-gate {
   display: flex;
@@ -2771,9 +2801,6 @@ h4 {
 }
 .modal-tagedit .tte {
   margin-top: 0;
-}
-.modal-tagedit .tte-head {
-  top: 0;
 }
 
 @media (max-width: 920px) {

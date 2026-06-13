@@ -84,25 +84,41 @@ function FolderEditor({ folder }) {
         files={folder.files}
       />
       <div className="tte-toolbar">
-        <button
-          className="btn btn-primary btn-sm"
-          disabled={saving || ed.dirtyCount === 0}
-          onClick={handleSave}
-        >
-          <Icon name="check" size={12} />{' '}
-          {saving
-            ? 'Saving…'
-            : `Save${ed.dirtyCount > 0 ? ` (${ed.dirtyCount})` : ''}`}
-        </button>
-        <button
-          className="btn btn-ghost btn-sm"
-          disabled={!canIdentify}
-          title={canIdentify ? undefined : 'Set Album and Album Artist first'}
-          aria-label="Identify via MusicBrainz"
-          onClick={canIdentify ? () => setIdentifyOpen(true) : undefined}
-        >
-          <Icon name="sparkles" size={12} /> Identify via MusicBrainz
-        </button>
+        <div className="tte-toolbar-status">
+          <span className="tte-resolved-k">album</span>
+          {ed.summary.album ? (
+            <span className="tte-resolved-v">{ed.summary.album}</span>
+          ) : (
+            <span className="tte-resolved-empty">not set</span>
+          )}
+          <span className="tte-resolved-k">album artist</span>
+          {ed.summary.albumArtist ? (
+            <span className="tte-resolved-v">{ed.summary.albumArtist}</span>
+          ) : (
+            <span className="tte-resolved-empty">not set</span>
+          )}
+        </div>
+        <div className="tte-toolbar-actions">
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={saving || ed.dirtyCount === 0}
+            onClick={handleSave}
+          >
+            <Icon name="check" size={12} />{' '}
+            {saving
+              ? 'Saving…'
+              : `Save${ed.dirtyCount > 0 ? ` (${ed.dirtyCount})` : ''}`}
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={!canIdentify}
+            title={canIdentify ? undefined : 'Set Album and Album Artist first'}
+            aria-label="Identify via MusicBrainz"
+            onClick={canIdentify ? () => setIdentifyOpen(true) : undefined}
+          >
+            <Icon name="sparkles" size={12} /> Identify via MusicBrainz
+          </button>
+        </div>
       </div>
       {!canIdentify && (
         <div className="tte-gate muted small">
@@ -130,7 +146,7 @@ function FolderEditor({ folder }) {
   );
 }
 
-export default function Untagged({ dir }) {
+export default function Untagged({ dir, dataVersion = 0 }) {
   const [untaggedItems, setUntaggedItems] = useState(null);
   const [fetchError, setFetchError] = useState(null);
 
@@ -146,7 +162,7 @@ export default function Untagged({ dir }) {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, dataVersion]);
 
   const folders = useMemo(
     () => groupUntagged(untaggedItems || []),
