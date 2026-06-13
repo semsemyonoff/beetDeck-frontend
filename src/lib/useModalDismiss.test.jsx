@@ -12,7 +12,9 @@ describe('useModalDismiss', () => {
     const onClose = vi.fn();
     render(<TestModal onClose={onClose} />);
     act(() => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
     });
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -21,8 +23,12 @@ describe('useModalDismiss', () => {
     const onClose = vi.fn();
     render(<TestModal onClose={onClose} />);
     act(() => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+      );
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
+      );
     });
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -32,7 +38,9 @@ describe('useModalDismiss', () => {
     const { unmount } = render(<TestModal onClose={onClose} />);
     unmount();
     act(() => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
     });
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -40,7 +48,9 @@ describe('useModalDismiss', () => {
   it('does not register listener when onClose is null', () => {
     expect(() => render(<TestModal onClose={null} />)).not.toThrow();
     act(() => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
     });
   });
 
@@ -50,7 +60,9 @@ describe('useModalDismiss', () => {
     const { rerender } = render(<TestModal onClose={first} />);
     rerender(<TestModal onClose={second} />);
     act(() => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
     });
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledOnce();

@@ -8,10 +8,18 @@ function Score({ score }) {
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, score));
   const off = c - (pct / 100) * c;
-  const tone = pct >= 95 ? 'var(--ok)' : pct >= 85 ? 'var(--accent)' : 'var(--warn)';
+  const tone =
+    pct >= 95 ? 'var(--ok)' : pct >= 85 ? 'var(--accent)' : 'var(--warn)';
   return (
     <svg viewBox="0 0 32 32" width="32" height="32">
-      <circle cx="16" cy="16" r={r} fill="none" stroke="var(--border)" strokeWidth="3" />
+      <circle
+        cx="16"
+        cy="16"
+        r={r}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth="3"
+      />
       <circle
         cx="16"
         cy="16"
@@ -65,7 +73,8 @@ export default function Untagged() {
       const data = await r.json();
       setItems(data);
       const e = {};
-      for (const it of data) e[it.id] = { title: it.title, artist: it.artist, album: it.album };
+      for (const it of data)
+        e[it.id] = { title: it.title, artist: it.artist, album: it.album };
       setEdits(e);
     } catch (e) {
       setError(String(e));
@@ -86,7 +95,10 @@ export default function Untagged() {
   }, []);
 
   const setEdit = (id, field, value) =>
-    setEdits((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), [field]: value } }));
+    setEdits((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), [field]: value },
+    }));
 
   const toggle = (id) =>
     setSelected((prev) => {
@@ -156,7 +168,9 @@ export default function Untagged() {
       });
       const d = r.ok ? await r.json() : null;
       if (!r.ok || !d?.task_id) {
-        setIdentifyError(d?.error || `Identify start failed (HTTP ${r.status})`);
+        setIdentifyError(
+          d?.error || `Identify start failed (HTTP ${r.status})`
+        );
         setPhase('error');
         return;
       }
@@ -309,8 +323,8 @@ export default function Untagged() {
           </div>
           <h1 className="page-title">Untagged</h1>
           <p className="muted small">
-            Files belonging to albums without an album-artist. Edit a single file inline, or pick
-            several and identify them as one album.
+            Files belonging to albums without an album-artist. Edit a single
+            file inline, or pick several and identify them as one album.
           </p>
         </div>
         <div className="untagged-stats">
@@ -335,18 +349,29 @@ export default function Untagged() {
       ) : (
         <>
           <div className="untagged-toolbar">
-            <button className="btn btn-ghost btn-sm" onClick={() => selectAll(true)}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => selectAll(true)}
+            >
               Select all
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => selectAll(false)}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => selectAll(false)}
+            >
               Clear
             </button>
             <button
               className="btn btn-primary btn-sm"
-              disabled={!selected.size || phase === 'searching' || phase === 'confirming'}
+              disabled={
+                !selected.size ||
+                phase === 'searching' ||
+                phase === 'confirming'
+              }
               onClick={startIdentify}
             >
-              <Icon name="sparkles" size={12} /> Identify selected ({selected.size})
+              <Icon name="sparkles" size={12} /> Identify selected (
+              {selected.size})
             </button>
           </div>
 
@@ -364,7 +389,9 @@ export default function Untagged() {
               return (
                 <div
                   key={it.id}
-                  className={'untagged-row' + (checked ? ' untagged-row-on' : '')}
+                  className={
+                    'untagged-row' + (checked ? ' untagged-row-on' : '')
+                  }
                 >
                   <label className="untagged-check">
                     <input
@@ -424,7 +451,9 @@ export default function Untagged() {
               className="form-input"
               value={override.artist}
               placeholder="Override artist search"
-              onChange={(e) => setOverride((p) => ({ ...p, artist: e.target.value }))}
+              onChange={(e) =>
+                setOverride((p) => ({ ...p, artist: e.target.value }))
+              }
             />
           </label>
           <label className="form-field">
@@ -435,7 +464,9 @@ export default function Untagged() {
               className="form-input"
               value={override.album}
               placeholder="Override album search"
-              onChange={(e) => setOverride((p) => ({ ...p, album: e.target.value }))}
+              onChange={(e) =>
+                setOverride((p) => ({ ...p, album: e.target.value }))
+              }
             />
           </label>
         </div>
@@ -473,7 +504,9 @@ export default function Untagged() {
                   return (
                     <button
                       key={c.mb_albumid || i}
-                      className={'candidate' + (picked === i ? ' candidate-active' : '')}
+                      className={
+                        'candidate' + (picked === i ? ' candidate-active' : '')
+                      }
                       onClick={() => onPick(i)}
                     >
                       <div className="candidate-score-ring">
@@ -487,7 +520,9 @@ export default function Untagged() {
                         </div>
                         <div className="candidate-meta">
                           {c.media ? <span>{c.media}</span> : null}
-                          {c.media && c.track_count ? <span className="dot">·</span> : null}
+                          {c.media && c.track_count ? (
+                            <span className="dot">·</span>
+                          ) : null}
                           <span>{c.track_count} tracks</span>
                           {c.data_source ? (
                             <>
@@ -521,23 +556,40 @@ export default function Untagged() {
                 ) : (
                   <div className="diff-list">
                     {albumDiffRows.map((row) => (
-                      <div key={row.field} className={'diff-row diff-row-' + row.status}>
+                      <div
+                        key={row.field}
+                        className={'diff-row diff-row-' + row.status}
+                      >
                         <span className="diff-field">{row.field}</span>
                         <span className="diff-cells">
                           <span className="diff-before">
-                            {row.current === '—' ? <span className="muted">empty</span> : row.current}
+                            {row.current === '—' ? (
+                              <span className="muted">empty</span>
+                            ) : (
+                              row.current
+                            )}
                           </span>
                           <span className="diff-arrow">
                             <Icon name="chevron" size={10} />
                           </span>
                           <span className="diff-after">
-                            {row.proposed === '—' ? <span className="muted">remove</span> : row.proposed}
+                            {row.proposed === '—' ? (
+                              <span className="muted">remove</span>
+                            ) : (
+                              row.proposed
+                            )}
                           </span>
                         </span>
                         <span className="diff-tag">
-                          {row.status === 'same' && <span className="diff-tag-same">unchanged</span>}
-                          {row.status === 'add' && <span className="diff-tag-add">+ add</span>}
-                          {row.status === 'change' && <span className="diff-tag-change">~ change</span>}
+                          {row.status === 'same' && (
+                            <span className="diff-tag-same">unchanged</span>
+                          )}
+                          {row.status === 'add' && (
+                            <span className="diff-tag-add">+ add</span>
+                          )}
+                          {row.status === 'change' && (
+                            <span className="diff-tag-change">~ change</span>
+                          )}
                         </span>
                       </div>
                     ))}
@@ -556,11 +608,15 @@ export default function Untagged() {
               <div className="row-end">
                 <button
                   className="btn btn-primary"
-                  disabled={phase === 'confirming' || applyLoading || !candidate}
+                  disabled={
+                    phase === 'confirming' || applyLoading || !candidate
+                  }
                   onClick={confirm}
                 >
                   <Icon name="check" size={12} />{' '}
-                  {phase === 'confirming' ? 'Creating…' : 'Confirm & create album'}
+                  {phase === 'confirming'
+                    ? 'Creating…'
+                    : 'Confirm & create album'}
                 </button>
               </div>
             </div>

@@ -1,5 +1,10 @@
 export default function Icon({ name, size = 14 }) {
-  const s = { width: size, height: size, display: 'inline-block', verticalAlign: '-2px' };
+  const s = {
+    width: size,
+    height: size,
+    display: 'inline-block',
+    verticalAlign: '-2px',
+  };
   const sw = 1.6;
   const common = {
     fill: 'none',
@@ -173,7 +178,10 @@ export default function Icon({ name, size = 14 }) {
     case 'moon':
       return (
         <svg viewBox="0 0 24 24" style={s}>
-          <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" {...common} />
+          <path
+            d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"
+            {...common}
+          />
         </svg>
       );
     case 'sun':

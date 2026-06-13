@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { distanceToScore, buildDiffRows, buildAlbumDiffRows, buildLyricsPreview } from './diff.js';
+import {
+  distanceToScore,
+  buildDiffRows,
+  buildAlbumDiffRows,
+  buildLyricsPreview,
+} from './diff.js';
 
 describe('distanceToScore', () => {
   it('distance 0 = score 100', () => {
@@ -50,14 +55,18 @@ describe('buildDiffRows', () => {
   });
 
   it('classifies empty old as add', () => {
-    const rows = buildDiffRows({ album: { title: { old: '', new: 'New Title' } } });
+    const rows = buildDiffRows({
+      album: { title: { old: '', new: 'New Title' } },
+    });
     expect(rows[0].status).toBe('add');
     expect(rows[0].current).toBe('—');
     expect(rows[0].proposed).toBe('New Title');
   });
 
   it('classifies differing values as change', () => {
-    const rows = buildDiffRows({ album: { title: { old: 'Old', new: 'New' } } });
+    const rows = buildDiffRows({
+      album: { title: { old: 'Old', new: 'New' } },
+    });
     expect(rows[0].status).toBe('change');
   });
 

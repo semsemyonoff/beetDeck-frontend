@@ -11,11 +11,17 @@ describe('buildScanSummary', () => {
   });
 
   it('treats empty arrays as zero counts', () => {
-    expect(buildScanSummary({ added: [], removed: [] })).toEqual({ added: 0, removed: 0 });
+    expect(buildScanSummary({ added: [], removed: [] })).toEqual({
+      added: 0,
+      removed: 0,
+    });
   });
 
   it('defaults removed to 0 when missing', () => {
-    expect(buildScanSummary({ added: [{ id: 1 }] })).toEqual({ added: 1, removed: 0 });
+    expect(buildScanSummary({ added: [{ id: 1 }] })).toEqual({
+      added: 1,
+      removed: 0,
+    });
   });
 
   it('returns null when no diff is present (no snapshot)', () => {

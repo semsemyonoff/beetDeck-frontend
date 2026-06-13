@@ -34,7 +34,10 @@ export default function App() {
             setScanStatus('done');
             setScanSummary(buildScanSummary(d));
           }
-          setTimeout(() => { setScanStatus(null); setScanSummary(null); }, 3000);
+          setTimeout(() => {
+            setScanStatus(null);
+            setScanSummary(null);
+          }, 3000);
         }
       } catch {
         clearInterval(scanPollRef.current);
@@ -68,7 +71,10 @@ export default function App() {
   return (
     <div className="app">
       <Topbar
-        onNavHome={() => { closeSearch(); navigate({ name: 'library' }); }}
+        onNavHome={() => {
+          closeSearch();
+          navigate({ name: 'library' });
+        }}
         onSearch={handleSearch}
         onScanStart={handleScanStart}
       />
@@ -76,7 +82,12 @@ export default function App() {
         <div className={`scan-banner scan-banner--${scanStatus}`}>
           {scanStatus === 'running' && 'Scanning library…'}
           {scanStatus === 'done' && (
-            <>Scan complete{scanSummary != null ? ` · +${scanSummary.added} / −${scanSummary.removed} tracks` : ''}</>
+            <>
+              Scan complete
+              {scanSummary != null
+                ? ` · +${scanSummary.added} / −${scanSummary.removed} tracks`
+                : ''}
+            </>
           )}
           {scanStatus === 'error' && 'Scan failed'}
         </div>
@@ -84,14 +95,25 @@ export default function App() {
       {searchResults && (
         <div className="search-overlay" onClick={closeSearch}>
           <div className="search-results" onClick={(e) => e.stopPropagation()}>
-            {!searchResults.artists?.length && !searchResults.albums?.length && !searchResults.tracks?.length && (
-              <div className="search-empty">No results for &ldquo;{search.q}&rdquo;</div>
-            )}
+            {!searchResults.artists?.length &&
+              !searchResults.albums?.length &&
+              !searchResults.tracks?.length && (
+                <div className="search-empty">
+                  No results for &ldquo;{search.q}&rdquo;
+                </div>
+              )}
             {searchResults.artists?.length > 0 && (
               <div className="search-section">
                 <div className="search-section-label">Artists</div>
                 {searchResults.artists.map((name) => (
-                  <button key={name} className="search-item" onClick={() => { closeSearch(); navigate({ name: 'artist', artist: name }); }}>
+                  <button
+                    key={name}
+                    className="search-item"
+                    onClick={() => {
+                      closeSearch();
+                      navigate({ name: 'artist', artist: name });
+                    }}
+                  >
                     {name}
                   </button>
                 ))}
@@ -101,7 +123,14 @@ export default function App() {
               <div className="search-section">
                 <div className="search-section-label">Albums</div>
                 {searchResults.albums.map((a) => (
-                  <button key={a.id} className="search-item" onClick={() => { closeSearch(); navigate({ name: 'album', id: a.id }); }}>
+                  <button
+                    key={a.id}
+                    className="search-item"
+                    onClick={() => {
+                      closeSearch();
+                      navigate({ name: 'album', id: a.id });
+                    }}
+                  >
                     <span className="search-item-title">{a.album}</span>
                     <span className="search-item-sub">{a.albumartist}</span>
                   </button>
@@ -112,9 +141,18 @@ export default function App() {
               <div className="search-section">
                 <div className="search-section-label">Tracks</div>
                 {searchResults.tracks.map((t) => (
-                  <button key={t.id} className="search-item" onClick={() => { closeSearch(); navigate({ name: 'album', id: t.album_id }); }}>
+                  <button
+                    key={t.id}
+                    className="search-item"
+                    onClick={() => {
+                      closeSearch();
+                      navigate({ name: 'album', id: t.album_id });
+                    }}
+                  >
                     <span className="search-item-title">{t.title}</span>
-                    <span className="search-item-sub">{t.album} · {t.albumartist}</span>
+                    <span className="search-item-sub">
+                      {t.album} · {t.albumartist}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -124,7 +162,9 @@ export default function App() {
       )}
       <main>
         {route.name === 'library' && <Library />}
-        {route.name === 'artist' && <Artist key={route.artist} name={route.artist} />}
+        {route.name === 'artist' && (
+          <Artist key={route.artist} name={route.artist} />
+        )}
         {route.name === 'album' && <Album key={route.id} id={route.id} />}
         {route.name === 'untagged' && <Untagged />}
       </main>

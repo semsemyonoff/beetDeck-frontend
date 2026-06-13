@@ -3,7 +3,13 @@ import Icon from '../ui/Icon.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
-import { fmtMins, fmtTotal, parseLength, discStats, groupByDisc } from '../lib/disc.js';
+import {
+  fmtMins,
+  fmtTotal,
+  parseLength,
+  discStats,
+  groupByDisc,
+} from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
 import { isIdentified } from '../lib/albums.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
@@ -58,10 +64,13 @@ export default function Album({ id }) {
   useEffect(() => () => window.clearTimeout(flashTimerRef.current), []);
 
   const inlineModalClose =
-    genrePreview !== null ? () => setGenrePreview(null) :
-    genreEdit !== null ? () => setGenreEdit(null) :
-    coverPreview !== null ? () => setCoverPreview(null) :
-    null;
+    genrePreview !== null
+      ? () => setGenrePreview(null)
+      : genreEdit !== null
+        ? () => setGenreEdit(null)
+        : coverPreview !== null
+          ? () => setCoverPreview(null)
+          : null;
   useModalDismiss(inlineModalClose);
 
   useEffect(() => {
@@ -105,7 +114,10 @@ export default function Album({ id }) {
 
   const totalSec = useMemo(() => {
     if (!data) return 0;
-    return (data.tracks || []).reduce((acc, t) => acc + parseLength(t.length), 0);
+    return (data.tracks || []).reduce(
+      (acc, t) => acc + parseLength(t.length),
+      0
+    );
   }, [data]);
 
   const coverImgSrc = data?.has_cover
@@ -137,7 +149,12 @@ export default function Album({ id }) {
   };
   const artistName = data.albumartist || '';
   const tracks = data.tracks || [];
-  const genres = data.genre ? data.genre.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  const genres = data.genre
+    ? data.genre
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
 
   const onLyricsExpand = async (item) => {
     const key = `${item.disc || 1}:${item.id}`;
@@ -152,7 +169,10 @@ export default function Album({ id }) {
         const d = r.ok ? await r.json() : { has_lyrics: false };
         setLyricsCache((prev) => ({ ...prev, [item.id]: d }));
       } catch (e) {
-        setLyricsCache((prev) => ({ ...prev, [item.id]: { has_lyrics: false, error: String(e) } }));
+        setLyricsCache((prev) => ({
+          ...prev,
+          [item.id]: { has_lyrics: false, error: String(e) },
+        }));
       }
     }
   };
@@ -191,7 +211,10 @@ export default function Album({ id }) {
     const { ok, data: d } = await postJson(`/api/album/${data.id}/ignore`);
     setBusy(null);
     if (ok) {
-      showFlash('ok', d?.ignored ? 'Marked as ignored.' : 'Cleared ignored flag.');
+      showFlash(
+        'ok',
+        d?.ignored ? 'Marked as ignored.' : 'Cleared ignored flag.'
+      );
       reload();
     } else {
       showFlash('err', d?.error || 'Ignore failed.');
@@ -210,12 +233,17 @@ export default function Album({ id }) {
   };
   const handleGenreConfirm = async () => {
     setBusy('genre-confirm');
-    const { ok, data: d } = await postJson(`/api/album/${data.id}/genre/confirm`);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/genre/confirm`
+    );
     setBusy(null);
     setGenrePreview(null);
     if (ok) {
       const partial = d?.status === 'partial';
-      showFlash(partial ? 'warn' : 'ok', `Genre saved: ${d?.genre || ''}${partial ? ' (partial write)' : ''}`);
+      showFlash(
+        partial ? 'warn' : 'ok',
+        `Genre saved: ${d?.genre || ''}${partial ? ' (partial write)' : ''}`
+      );
       reload();
     } else {
       showFlash('err', d?.error || 'Genre confirm failed.');
@@ -225,12 +253,17 @@ export default function Album({ id }) {
     const value = (genreEdit || '').trim();
     if (!value) return;
     setBusy('genre-save');
-    const { ok, data: d } = await postJson(`/api/album/${data.id}/genre/save`, { genre: value });
+    const { ok, data: d } = await postJson(`/api/album/${data.id}/genre/save`, {
+      genre: value,
+    });
     setBusy(null);
     setGenreEdit(null);
     if (ok) {
       const partial = d?.status === 'partial';
-      showFlash(partial ? 'warn' : 'ok', `Genre saved: ${d?.genre || value}${partial ? ' (partial write)' : ''}`);
+      showFlash(
+        partial ? 'warn' : 'ok',
+        `Genre saved: ${d?.genre || value}${partial ? ' (partial write)' : ''}`
+      );
       reload();
     } else {
       showFlash('err', d?.error || 'Genre save failed.');
@@ -256,7 +289,9 @@ export default function Album({ id }) {
   };
   const handleCoverConfirm = async () => {
     setBusy('cover-confirm');
-    const { ok, data: d } = await postJson(`/api/album/${data.id}/cover/confirm`);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/cover/confirm`
+    );
     setBusy(null);
     setCoverPreview(null);
     if (ok) {
@@ -275,9 +310,16 @@ export default function Album({ id }) {
     let respData = null;
     let ok = false;
     try {
-      const r = await fetch(`/api/album/${data.id}/cover/upload`, { method: 'POST', body: form });
+      const r = await fetch(`/api/album/${data.id}/cover/upload`, {
+        method: 'POST',
+        body: form,
+      });
       ok = r.ok;
-      try { respData = await r.json(); } catch { respData = null; }
+      try {
+        respData = await r.json();
+      } catch {
+        respData = null;
+      }
     } catch (e) {
       respData = { error: String(e) };
     }
@@ -293,7 +335,9 @@ export default function Album({ id }) {
 
   const handleLyricsFetchAll = async () => {
     setBusy('lyrics-fetch');
-    const { ok, data: d } = await postJson(`/api/album/${data.id}/lyrics/fetch`);
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/lyrics/fetch`
+    );
     if (!ok) {
       setBusy(null);
       showFlash('err', d?.error || 'Bulk lyrics fetch failed.');
@@ -304,11 +348,19 @@ export default function Album({ id }) {
     if (!found.length) {
       setBusy(null);
       const anyFound = allTracks.some((t) => t.found);
-      showFlash('err', anyFound ? 'All tracks already have lyrics.' : 'No lyrics found for any track.');
+      showFlash(
+        'err',
+        anyFound
+          ? 'All tracks already have lyrics.'
+          : 'No lyrics found for any track.'
+      );
       return;
     }
     const item_ids = found.map((t) => t.item_id);
-    const { ok: ok2, data: d2 } = await postJson(`/api/album/${data.id}/lyrics/confirm`, { item_ids });
+    const { ok: ok2, data: d2 } = await postJson(
+      `/api/album/${data.id}/lyrics/confirm`,
+      { item_ids }
+    );
     setBusy(null);
     if (ok2) {
       const failed = (d2?.failed || []).length;
@@ -342,7 +394,10 @@ export default function Album({ id }) {
 
   const startLyricsEdit = (item) => {
     const payload = lyricsCache[item.id];
-    setLyricsEditState((prev) => ({ ...prev, [item.id]: payload?.lyrics || '' }));
+    setLyricsEditState((prev) => ({
+      ...prev,
+      [item.id]: payload?.lyrics || '',
+    }));
     setTrackErrorForId(item.id, null);
   };
 
@@ -450,26 +505,40 @@ export default function Album({ id }) {
         )}
       </div>
 
-      {flash && (
-        <div className={`flash flash-${flash.kind}`}>{flash.text}</div>
-      )}
+      {flash && <div className={`flash flash-${flash.kind}`}>{flash.text}</div>}
 
       <header className="album-hero">
         <div className="album-hero-cover">
           {coverImgSrc && !heroCoverError ? (
             <div
               className="cover"
-              style={{ width: 260, height: 260, borderRadius: 8, flex: '0 0 260px' }}
+              style={{
+                width: 260,
+                height: 260,
+                borderRadius: 8,
+                flex: '0 0 260px',
+              }}
             >
               <img
                 src={coverImgSrc}
                 alt=""
                 onError={() => setHeroCoverError(true)}
-                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                }}
               />
             </div>
           ) : (
-            <Cover album={{ ...album, has_cover: false }} size={260} rounded={8} showTitle={false} />
+            <Cover
+              album={{ ...album, has_cover: false }}
+              size={260}
+              rounded={8}
+              showTitle={false}
+            />
           )}
         </div>
         <div className="album-hero-text">
@@ -480,7 +549,9 @@ export default function Album({ id }) {
                 <Icon name="check" size={10} /> identified
               </span>
             ) : null}
-            {data.ignored ? <span className="badge badge-info">ignored</span> : null}
+            {data.ignored ? (
+              <span className="badge badge-info">ignored</span>
+            ) : null}
             {data.multi_disc ? (
               <span className="badge badge-info">{stats.length}-disc</span>
             ) : null}
@@ -496,7 +567,8 @@ export default function Album({ id }) {
             ) : null}
             <span className="dot">·</span>
             <span>
-              {tracks.length} tracks{data.multi_disc ? ` across ${stats.length} discs` : ''}
+              {tracks.length} tracks
+              {data.multi_disc ? ` across ${stats.length} discs` : ''}
             </span>
             <span className="dot">·</span>
             <span>{fmtTotal(totalSec)}</span>
@@ -505,7 +577,9 @@ export default function Album({ id }) {
           {genres.length > 0 && (
             <div className="album-hero-tags">
               {genres.map((g) => (
-                <span key={g} className="tag-chip">{g}</span>
+                <span key={g} className="tag-chip">
+                  {g}
+                </span>
               ))}
             </div>
           )}
@@ -560,7 +634,8 @@ export default function Album({ id }) {
                 disabled={busy === 'ignore'}
                 onClick={handleIgnore}
               >
-                <Icon name="ignore" size={12} /> {data.ignored ? 'Unignore' : 'Ignore'}
+                <Icon name="ignore" size={12} />{' '}
+                {data.ignored ? 'Unignore' : 'Ignore'}
               </button>
             </ActionGroup>
             <ActionGroup label="Genre">
@@ -648,22 +723,32 @@ export default function Album({ id }) {
               return (
                 <div
                   key={t.id}
-                  className={'album-track-row' + (isOpen ? ' album-track-row-open' : '')}
+                  className={
+                    'album-track-row' + (isOpen ? ' album-track-row-open' : '')
+                  }
                 >
                   <div className="album-track-main">
-                    <span className="td td-num">{String(trackNum).padStart(2, '0')}</span>
+                    <span className="td td-num">
+                      {String(trackNum).padStart(2, '0')}
+                    </span>
                     <span className="td td-title">{t.title || '—'}</span>
                     <span className="td td-artist">{t.artist || ''}</span>
                     <span className="td td-dur">{t.length || ''}</span>
                     <span className="td td-actions">
                       <button
-                        className={'track-mini-btn' + (hasLyrics === false ? ' track-mini-btn-empty' : '')}
+                        className={
+                          'track-mini-btn' +
+                          (hasLyrics === false ? ' track-mini-btn-empty' : '')
+                        }
                         onClick={() => onLyricsExpand(t)}
                       >
                         <Icon name="lyrics" size={11} />{' '}
                         {hasLyrics === false ? 'no lyrics' : 'lyrics'}
                       </button>
-                      <button className="track-mini-btn" onClick={() => openTagsModal(t)}>
+                      <button
+                        className="track-mini-btn"
+                        onClick={() => openTagsModal(t)}
+                      >
                         <Icon name="tag" size={11} /> tags
                       </button>
                     </span>
@@ -675,7 +760,9 @@ export default function Album({ id }) {
                       ) : (
                         <>
                           {trackError[t.id] && (
-                            <div className="track-lyrics-error">{trackError[t.id]}</div>
+                            <div className="track-lyrics-error">
+                              {trackError[t.id]}
+                            </div>
                           )}
                           {lyricsEditState[t.id] !== undefined ? (
                             <div className="lyrics-edit-area">
@@ -684,7 +771,10 @@ export default function Album({ id }) {
                                 value={lyricsEditState[t.id]}
                                 rows={8}
                                 onChange={(e) =>
-                                  setLyricsEditState((prev) => ({ ...prev, [t.id]: e.target.value }))
+                                  setLyricsEditState((prev) => ({
+                                    ...prev,
+                                    [t.id]: e.target.value,
+                                  }))
                                 }
                               />
                               <div className="lyrics-edit-actions">
@@ -713,7 +803,9 @@ export default function Album({ id }) {
                                   </pre>
                                 </div>
                                 <div>
-                                  <div className="muted small">Found online</div>
+                                  <div className="muted small">
+                                    Found online
+                                  </div>
                                   <pre className="lyrics-pre lyrics-compare-pane">
                                     {lyricsFetchPreview[t.id].new}
                                   </pre>
@@ -729,7 +821,9 @@ export default function Album({ id }) {
                                 <button
                                   className="btn btn-primary"
                                   disabled={!!trackBusy[t.id]}
-                                  onClick={() => handleTrackLyricsConfirmFetch(t)}
+                                  onClick={() =>
+                                    handleTrackLyricsConfirmFetch(t)
+                                  }
                                 >
                                   <Icon name="check" size={12} /> Confirm
                                 </button>
@@ -740,10 +834,13 @@ export default function Album({ id }) {
                               <div className="lyrics-toolbar">
                                 {lyrPayload.has_lyrics ? (
                                   <span className="lyrics-badge">
-                                    <Icon name="check" size={10} /> {lyrPayload.source || 'embedded'}
+                                    <Icon name="check" size={10} />{' '}
+                                    {lyrPayload.source || 'embedded'}
                                   </span>
                                 ) : (
-                                  <span className="muted small">No lyrics for this track.</span>
+                                  <span className="muted small">
+                                    No lyrics for this track.
+                                  </span>
                                 )}
                                 <div className="lyrics-toolbar-actions">
                                   {lyrPayload.has_lyrics && (
@@ -764,9 +861,12 @@ export default function Album({ id }) {
                                   <button
                                     className="track-mini-btn"
                                     disabled={!!trackBusy[t.id]}
-                                    onClick={() => handleTrackLyricsFetchOnline(t)}
+                                    onClick={() =>
+                                      handleTrackLyricsFetchOnline(t)
+                                    }
                                   >
-                                    <Icon name="download" size={11} /> fetch online
+                                    <Icon name="download" size={11} /> fetch
+                                    online
                                   </button>
                                   {t.has_lrc && (
                                     <button
@@ -782,9 +882,15 @@ export default function Album({ id }) {
                               {lyrPayload.has_lyrics && (
                                 <div className="lyrics-preview">
                                   <pre className="lyrics-pre">
-                                    {(lyrPayload.lyrics || '').split('\n').slice(0, 8).join('\n')}
+                                    {(lyrPayload.lyrics || '')
+                                      .split('\n')
+                                      .slice(0, 8)
+                                      .join('\n')}
                                   </pre>
-                                  <button className="lyrics-fade" onClick={() => openLyricsModal(t)}>
+                                  <button
+                                    className="lyrics-fade"
+                                    onClick={() => openLyricsModal(t)}
+                                  >
                                     click to expand →
                                   </button>
                                 </div>
@@ -810,7 +916,10 @@ export default function Album({ id }) {
                 <div className="modal-eyebrow">Genre · Last.fm preview</div>
                 <h3 className="modal-title">{album.title}</h3>
               </div>
-              <button className="btn-icon" onClick={() => setGenrePreview(null)}>
+              <button
+                className="btn-icon"
+                onClick={() => setGenrePreview(null)}
+              >
                 <Icon name="x" size={14} />
               </button>
             </div>
@@ -818,17 +927,24 @@ export default function Album({ id }) {
               <dl className="genre-preview-dl">
                 <div>
                   <dt className="muted small">Current</dt>
-                  <dd>{genrePreview.old || <span className="muted">empty</span>}</dd>
+                  <dd>
+                    {genrePreview.old || <span className="muted">empty</span>}
+                  </dd>
                 </div>
                 <div>
                   <dt className="muted small">Proposed</dt>
-                  <dd>{genrePreview.next || <span className="muted">empty</span>}</dd>
+                  <dd>
+                    {genrePreview.next || <span className="muted">empty</span>}
+                  </dd>
                 </div>
               </dl>
             </div>
             <div className="modal-foot">
               <div className="row-end">
-                <button className="btn btn-ghost" onClick={() => setGenrePreview(null)}>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setGenrePreview(null)}
+                >
                   Cancel
                 </button>
                 <button
@@ -869,7 +985,10 @@ export default function Album({ id }) {
             </div>
             <div className="modal-foot">
               <div className="row-end">
-                <button className="btn btn-ghost" onClick={() => setGenreEdit(null)}>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setGenreEdit(null)}
+                >
                   Cancel
                 </button>
                 <button
@@ -890,10 +1009,15 @@ export default function Album({ id }) {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <div className="modal-eyebrow">Cover · {coverPreview.source}</div>
+                <div className="modal-eyebrow">
+                  Cover · {coverPreview.source}
+                </div>
                 <h3 className="modal-title">{album.title}</h3>
               </div>
-              <button className="btn-icon" onClick={() => setCoverPreview(null)}>
+              <button
+                className="btn-icon"
+                onClick={() => setCoverPreview(null)}
+              >
                 <Icon name="x" size={14} />
               </button>
             </div>
@@ -901,12 +1025,19 @@ export default function Album({ id }) {
               <img
                 src={coverPreview.url}
                 alt=""
-                style={{ maxWidth: '320px', maxHeight: '320px', borderRadius: 8 }}
+                style={{
+                  maxWidth: '320px',
+                  maxHeight: '320px',
+                  borderRadius: 8,
+                }}
               />
             </div>
             <div className="modal-foot">
               <div className="row-end">
-                <button className="btn btn-ghost" onClick={() => setCoverPreview(null)}>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setCoverPreview(null)}
+                >
                   Cancel
                 </button>
                 <button
@@ -964,7 +1095,9 @@ function LyricsModal({ item, payload, onClose }) {
       <div className="modal modal-lyrics" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
-            <div className="modal-eyebrow">Lyrics · {payload?.source || 'unknown'}</div>
+            <div className="modal-eyebrow">
+              Lyrics · {payload?.source || 'unknown'}
+            </div>
             <h3 className="modal-title">{item.title}</h3>
           </div>
           <button className="btn-icon" onClick={onClose}>

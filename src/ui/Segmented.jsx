@@ -9,7 +9,9 @@ export default function Segmented({ value, options, onChange, size = 'md' }) {
         >
           {o.icon ? <span className="seg-icon">{o.icon}</span> : null}
           {o.label}
-          {o.badge != null ? <span className="seg-badge">{o.badge}</span> : null}
+          {o.badge != null ? (
+            <span className="seg-badge">{o.badge}</span>
+          ) : null}
         </button>
       ))}
     </div>

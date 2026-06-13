@@ -6,7 +6,9 @@ const THEME_ORDER = ['auto', 'light', 'dark'];
 
 function effectiveTheme(mode) {
   if (mode !== 'auto') return mode;
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  return window.matchMedia('(prefers-color-scheme: light)').matches
+    ? 'light'
+    : 'dark';
 }
 
 function applyTheme(mode) {
@@ -14,7 +16,9 @@ function applyTheme(mode) {
 }
 
 export default function Topbar({ onNavHome, onSearch, onScanStart }) {
-  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('theme') || 'auto');
+  const [themeMode, setThemeMode] = useState(
+    () => localStorage.getItem('theme') || 'auto'
+  );
   const [query, setQuery] = useState('');
   const debounceRef = useRef(null);
 
@@ -33,7 +37,10 @@ export default function Topbar({ onNavHome, onSearch, onScanStart }) {
   }, [themeMode]);
 
   const cycleTheme = () => {
-    setThemeMode((prev) => THEME_ORDER[(THEME_ORDER.indexOf(prev) + 1) % THEME_ORDER.length]);
+    setThemeMode(
+      (prev) =>
+        THEME_ORDER[(THEME_ORDER.indexOf(prev) + 1) % THEME_ORDER.length]
+    );
   };
 
   const startScan = async (mode) => {
@@ -58,7 +65,9 @@ export default function Topbar({ onNavHome, onSearch, onScanStart }) {
         return;
       }
       try {
-        const resp = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+        const resp = await fetch(
+          `/api/search?q=${encodeURIComponent(trimmed)}`
+        );
         const data = resp.ok ? await resp.json() : null;
         onSearch({ q: trimmed, results: data });
       } catch (err) {

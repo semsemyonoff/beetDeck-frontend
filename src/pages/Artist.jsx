@@ -30,11 +30,16 @@ export default function Artist({ name }) {
     };
   }, [name]);
 
-  const albums = useMemo(() => (data ? (data.albums || []).map(mapAlbum) : []), [data]);
+  const albums = useMemo(
+    () => (data ? (data.albums || []).map(mapAlbum) : []),
+    [data]
+  );
   const total = albums.length;
   const ident = albums.filter((a) => a.identified).length;
   const years = albums.map((a) => a.year).filter(Boolean);
-  const range = years.length ? `${Math.min(...years)} – ${Math.max(...years)}` : '—';
+  const range = years.length
+    ? `${Math.min(...years)} – ${Math.max(...years)}`
+    : '—';
 
   const visible = useMemo(() => {
     let list = albums;
@@ -102,7 +107,8 @@ export default function Artist({ name }) {
             )}
           </div>
           <p className="artist-hero-hint muted small">
-            Album-level actions live on each album. Open one to identify, edit tags, or fetch lyrics.
+            Album-level actions live on each album. Open one to identify, edit
+            tags, or fetch lyrics.
           </p>
         </div>
       </header>

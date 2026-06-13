@@ -75,6 +75,7 @@ works behind the dev proxy and in production. In dev, `vite.config.js` proxies
 New fields on existing endpoints are treated as additive only.
 
 Patterns used against the API:
+
 - `App.jsx` polls `GET /api/rescan/status` on an interval while a rescan runs.
 - `IdentifyModal.jsx` drives the identify flow (`identify` → poll `status` → `apply` → `confirm`).
 
@@ -107,6 +108,7 @@ dwe cmd frontend.npm --set args="run test:cov"     # with coverage
 ```
 
 Or directly (host node, from `services/frontend/src/`):
+
 ```bash
 npm test               # vitest run
 npm run test:watch     # vitest (watch)
@@ -127,7 +129,7 @@ npm run test:cov       # vitest run --coverage
 - Light theme overrides surface/text/border tokens via `:root[data-theme="light"]`.
   Do NOT add a `[data-theme="dark"]` selector (specificity trap).
 - The `<html>` element's `data-theme` attribute is set by an inline script in
-  `index.html` *before* the module loads (prevents FOUC).
+  `index.html` _before_ the module loads (prevents FOUC).
 - The Topbar cycles `auto → light → dark`, persisting to `localStorage.theme`.
 - Shared tokens (`--accent: #ec4868`, `--ok`, `--warn`, `--danger`) are not
   overridden per theme unless contrast requires it.
