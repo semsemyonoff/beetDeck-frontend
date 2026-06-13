@@ -13,7 +13,31 @@ import {
 } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
 import { isIdentified } from '../lib/albums.js';
+import { isSynced, parseLyricLines } from '../lib/lyrics.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
+
+// Render LRC lines as a [timestamp | text] grid; blank lines show a ♪ glyph.
+function LyricLines({ text, limit }) {
+  let lines = parseLyricLines(text);
+  if (limit != null) lines = lines.slice(0, limit);
+  return lines.map((ln, i) => {
+    const blank = !ln.text.trim();
+    return (
+      <div
+        key={i}
+        className={'lyric-line' + (blank ? ' lyric-line-blank' : '')}
+      >
+        <span className="lyric-ts mono">{ln.ts ? `[${ln.ts}]` : ''}</span>
+        <span className="lyric-text">{blank ? '♪' : ln.text}</span>
+      </div>
+    );
+  });
+}
+
+// Small inline spinner shown inside a button while its action is running.
+function BtnSpinner() {
+  return <span className="btn-spinner" aria-hidden="true" />;
+}
 
 function ActionGroup({ label, children }) {
   return (
@@ -39,7 +63,7 @@ async function postJson(url, body) {
   return { ok: resp.ok, status: resp.status, data };
 }
 
-export default function Album({ id }) {
+export default function Album({ id, dataVersion = 0 }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [version, setVersion] = useState(0);
@@ -54,6 +78,7 @@ export default function Album({ id }) {
   const [genreEdit, setGenreEdit] = useState(null); // string
   const [coverPreview, setCoverPreview] = useState(null); // {source, url}
   const [identifyOpen, setIdentifyOpen] = useState(false);
+  const [coverViewer, setCoverViewer] = useState(false);
   const [tagEditorModal, setTagEditorModal] = useState(null); // null | {focusTrack: id|null}
   const [lyricsEditState, setLyricsEditState] = useState({});
   const [lyricsFetchPreview, setLyricsFetchPreview] = useState({});
@@ -74,7 +99,9 @@ export default function Album({ id }) {
           ? () => setCoverPreview(null)
           : tagEditorModal !== null
             ? () => setTagEditorModal(null)
-            : null;
+            : coverViewer
+              ? () => setCoverViewer(false)
+              : null;
   useModalDismiss(inlineModalClose);
 
   useEffect(() => {
@@ -95,7 +122,7 @@ export default function Album({ id }) {
     return () => {
       aborted = true;
     };
-  }, [id, version]);
+  }, [id, version, dataVersion]);
 
   const reload = () => setVersion((v) => v + 1);
   const refreshCover = () => setCoverV((v) => v + 1);
@@ -415,13 +442,13 @@ export default function Album({ id }) {
 
   const handleTrackLyricsSave = async (item) => {
     const text = lyricsEditState[item.id] ?? '';
-    setTrackBusyForId(item.id, true);
+    setTrackBusyForId(item.id, 'save');
     setTrackErrorForId(item.id, null);
     const { ok, data: d } = await postJson(
       `/api/album/${data.id}/track/${item.id}/lyrics/save`,
       { lyrics: text }
     );
-    setTrackBusyForId(item.id, false);
+    setTrackBusyForId(item.id, null);
     if (ok) {
       cancelLyricsEdit(item);
       showFlash('ok', 'Lyrics saved.');
@@ -432,12 +459,12 @@ export default function Album({ id }) {
   };
 
   const handleTrackLyricsFetchOnline = async (item) => {
-    setTrackBusyForId(item.id, true);
+    setTrackBusyForId(item.id, 'fetch');
     setTrackErrorForId(item.id, null);
     const { ok, data: d } = await postJson(
       `/api/album/${data.id}/track/${item.id}/lyrics/fetch`
     );
-    setTrackBusyForId(item.id, false);
+    setTrackBusyForId(item.id, null);
     if (!ok) {
       setTrackErrorForId(item.id, d?.error || 'Lyrics fetch failed.');
       return;
@@ -460,12 +487,12 @@ export default function Album({ id }) {
   };
 
   const handleTrackLyricsConfirmFetch = async (item) => {
-    setTrackBusyForId(item.id, true);
+    setTrackBusyForId(item.id, 'confirm');
     setTrackErrorForId(item.id, null);
     const { ok, data: d } = await postJson(
       `/api/album/${data.id}/track/${item.id}/lyrics/confirm`
     );
-    setTrackBusyForId(item.id, false);
+    setTrackBusyForId(item.id, null);
     if (ok) {
       cancelLyricsFetchPreview(item);
       showFlash('ok', 'Lyrics saved.');
@@ -476,12 +503,12 @@ export default function Album({ id }) {
   };
 
   const handleTrackLyricsEmbed = async (item) => {
-    setTrackBusyForId(item.id, true);
+    setTrackBusyForId(item.id, 'embed');
     setTrackErrorForId(item.id, null);
     const { ok, data: d } = await postJson(
       `/api/album/${data.id}/track/${item.id}/lyrics/embed`
     );
-    setTrackBusyForId(item.id, false);
+    setTrackBusyForId(item.id, null);
     if (ok) {
       showFlash('ok', 'Lyrics embedded from .lrc.');
       await refreshTrackLyrics(item);
@@ -515,7 +542,17 @@ export default function Album({ id }) {
         <div className="album-hero-cover">
           {coverImgSrc && !heroCoverError ? (
             <div
-              className="cover"
+              className="cover cover-zoomable"
+              role="button"
+              tabIndex={0}
+              aria-label="View cover at full size"
+              onClick={() => setCoverViewer(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setCoverViewer(true);
+                }
+              }}
               style={{
                 width: 260,
                 height: 260,
@@ -535,6 +572,9 @@ export default function Album({ id }) {
                   borderRadius: 8,
                 }}
               />
+              <span className="cover-zoom-hint">
+                <Icon name="search" size={16} />
+              </span>
             </div>
           ) : (
             <Cover
@@ -554,7 +594,9 @@ export default function Album({ id }) {
               </span>
             ) : null}
             {data.ignored ? (
-              <span className="badge badge-info">ignored</span>
+              <span className="badge badge-warn">
+                <Icon name="check" size={10} /> ignored
+              </span>
             ) : null}
             {data.multi_disc ? (
               <span className="badge badge-info">{stats.length}-disc</span>
@@ -598,7 +640,17 @@ export default function Album({ id }) {
             {data.mb_albumid ? (
               <div>
                 <dt>MusicBrainz</dt>
-                <dd className="mono">{data.mb_albumid}</dd>
+                <dd className="mono">
+                  <a
+                    className="mb-link"
+                    href={`https://musicbrainz.org/release/${data.mb_albumid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Open release on MusicBrainz"
+                  >
+                    {data.mb_albumid} ↗
+                  </a>
+                </dd>
               </div>
             ) : null}
             <div>
@@ -654,7 +706,12 @@ export default function Album({ id }) {
                 disabled={busy === 'genre-fetch'}
                 onClick={handleGenreFetch}
               >
-                <Icon name="download" size={12} /> Fetch
+                {busy === 'genre-fetch' ? (
+                  <BtnSpinner />
+                ) : (
+                  <Icon name="download" size={12} />
+                )}{' '}
+                Fetch
               </button>
               <button
                 className="btn btn-action"
@@ -669,14 +726,24 @@ export default function Album({ id }) {
                 disabled={busy === 'cover-fetch'}
                 onClick={handleCoverFetch}
               >
-                <Icon name="download" size={12} /> Fetch
+                {busy === 'cover-fetch' ? (
+                  <BtnSpinner />
+                ) : (
+                  <Icon name="download" size={12} />
+                )}{' '}
+                Fetch
               </button>
               <button
                 className="btn btn-action"
                 disabled={busy === 'cover-upload'}
                 onClick={() => uploadRef.current?.click()}
               >
-                <Icon name="upload" size={12} /> Upload
+                {busy === 'cover-upload' ? (
+                  <BtnSpinner />
+                ) : (
+                  <Icon name="upload" size={12} />
+                )}{' '}
+                Upload
               </button>
               <input
                 ref={uploadRef}
@@ -696,7 +763,12 @@ export default function Album({ id }) {
                 disabled={busy === 'lyrics-fetch'}
                 onClick={handleLyricsFetchAll}
               >
-                <Icon name="download" size={12} /> Fetch all
+                {busy === 'lyrics-fetch' ? (
+                  <BtnSpinner />
+                ) : (
+                  <Icon name="download" size={12} />
+                )}{' '}
+                Fetch all
               </button>
             </ActionGroup>
           </div>
@@ -805,7 +877,12 @@ export default function Album({ id }) {
                                   disabled={!!trackBusy[t.id]}
                                   onClick={() => handleTrackLyricsSave(t)}
                                 >
-                                  <Icon name="check" size={12} /> Save
+                                  {trackBusy[t.id] === 'save' ? (
+                                    <BtnSpinner />
+                                  ) : (
+                                    <Icon name="check" size={12} />
+                                  )}{' '}
+                                  Save
                                 </button>
                               </div>
                             </div>
@@ -841,7 +918,12 @@ export default function Album({ id }) {
                                     handleTrackLyricsConfirmFetch(t)
                                   }
                                 >
-                                  <Icon name="check" size={12} /> Confirm
+                                  {trackBusy[t.id] === 'confirm' ? (
+                                    <BtnSpinner />
+                                  ) : (
+                                    <Icon name="check" size={12} />
+                                  )}{' '}
+                                  Confirm
                                 </button>
                               </div>
                             </div>
@@ -852,6 +934,9 @@ export default function Album({ id }) {
                                   <span className="lyrics-badge">
                                     <Icon name="check" size={10} />{' '}
                                     {lyrPayload.source || 'embedded'}
+                                    {isSynced(lyrPayload.lyrics)
+                                      ? ' · synced'
+                                      : ''}
                                   </span>
                                 ) : (
                                   <span className="muted small">
@@ -859,14 +944,6 @@ export default function Album({ id }) {
                                   </span>
                                 )}
                                 <div className="lyrics-toolbar-actions">
-                                  {lyrPayload.has_lyrics && (
-                                    <button
-                                      className="track-mini-btn"
-                                      onClick={() => openLyricsModal(t)}
-                                    >
-                                      expand ↗
-                                    </button>
-                                  )}
                                   <button
                                     className="track-mini-btn"
                                     disabled={!!trackBusy[t.id]}
@@ -881,8 +958,12 @@ export default function Album({ id }) {
                                       handleTrackLyricsFetchOnline(t)
                                     }
                                   >
-                                    <Icon name="download" size={11} /> fetch
-                                    online
+                                    {trackBusy[t.id] === 'fetch' ? (
+                                      <BtnSpinner />
+                                    ) : (
+                                      <Icon name="download" size={11} />
+                                    )}{' '}
+                                    fetch online
                                   </button>
                                   {t.has_lrc && (
                                     <button
@@ -890,19 +971,40 @@ export default function Album({ id }) {
                                       disabled={!!trackBusy[t.id]}
                                       onClick={() => handleTrackLyricsEmbed(t)}
                                     >
-                                      embed .lrc
+                                      {trackBusy[t.id] === 'embed' ? (
+                                        <>
+                                          <BtnSpinner /> embed .lrc
+                                        </>
+                                      ) : (
+                                        'embed .lrc'
+                                      )}
+                                    </button>
+                                  )}
+                                  {lyrPayload.has_lyrics && (
+                                    <button
+                                      className="track-mini-btn"
+                                      onClick={() => openLyricsModal(t)}
+                                    >
+                                      expand ↗
                                     </button>
                                   )}
                                 </div>
                               </div>
                               {lyrPayload.has_lyrics && (
                                 <div className="lyrics-preview">
-                                  <pre className="lyrics-pre">
-                                    {(lyrPayload.lyrics || '')
-                                      .split('\n')
-                                      .slice(0, 8)
-                                      .join('\n')}
-                                  </pre>
+                                  {isSynced(lyrPayload.lyrics) ? (
+                                    <LyricLines
+                                      text={lyrPayload.lyrics}
+                                      limit={8}
+                                    />
+                                  ) : (
+                                    <pre className="lyrics-pre">
+                                      {(lyrPayload.lyrics || '')
+                                        .split('\n')
+                                        .slice(0, 8)
+                                        .join('\n')}
+                                    </pre>
+                                  )}
                                   <button
                                     className="lyrics-fade"
                                     onClick={() => openLyricsModal(t)}
@@ -968,7 +1070,12 @@ export default function Album({ id }) {
                   disabled={busy === 'genre-confirm'}
                   onClick={handleGenreConfirm}
                 >
-                  <Icon name="check" size={12} /> Confirm
+                  {busy === 'genre-confirm' ? (
+                    <BtnSpinner />
+                  ) : (
+                    <Icon name="check" size={12} />
+                  )}{' '}
+                  Confirm
                 </button>
               </div>
             </div>
@@ -1012,7 +1119,12 @@ export default function Album({ id }) {
                   disabled={busy === 'genre-save' || !(genreEdit || '').trim()}
                   onClick={handleGenreSave}
                 >
-                  <Icon name="check" size={12} /> Save
+                  {busy === 'genre-save' ? (
+                    <BtnSpinner />
+                  ) : (
+                    <Icon name="check" size={12} />
+                  )}{' '}
+                  Save
                 </button>
               </div>
             </div>
@@ -1061,7 +1173,12 @@ export default function Album({ id }) {
                   disabled={busy === 'cover-confirm'}
                   onClick={handleCoverConfirm}
                 >
-                  <Icon name="check" size={12} /> Confirm
+                  {busy === 'cover-confirm' ? (
+                    <BtnSpinner />
+                  ) : (
+                    <Icon name="check" size={12} />
+                  )}{' '}
+                  Confirm
                 </button>
               </div>
             </div>
@@ -1074,6 +1191,18 @@ export default function Album({ id }) {
           item={lyricsModal.item}
           payload={lyricsModal.payload}
           onClose={() => setLyricsModal(null)}
+          onEdit={() => {
+            const it = lyricsModal.item;
+            setLyricsModal(null);
+            setExpandedKey(`${it.disc || 1}:${it.id}`);
+            startLyricsEdit(it);
+          }}
+          onRefetch={() => {
+            const it = lyricsModal.item;
+            setLyricsModal(null);
+            setExpandedKey(`${it.disc || 1}:${it.id}`);
+            handleTrackLyricsFetchOnline(it);
+          }}
         />
       )}
 
@@ -1101,6 +1230,27 @@ export default function Album({ id }) {
         />
       )}
 
+      {coverViewer && coverImgSrc && (
+        <div
+          className="cover-viewer-backdrop"
+          onClick={() => setCoverViewer(false)}
+        >
+          <button
+            className="btn-icon cover-viewer-close"
+            onClick={() => setCoverViewer(false)}
+            aria-label="Close"
+          >
+            <Icon name="x" size={16} />
+          </button>
+          <img
+            className="cover-viewer-img"
+            src={coverImgSrc}
+            alt={album.title}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {tagEditorModal && (
         <TagEditorModal
           album={data}
@@ -1124,15 +1274,19 @@ export default function Album({ id }) {
   );
 }
 
-function LyricsModal({ item, payload, onClose }) {
+function LyricsModal({ item, payload, onClose, onEdit, onRefetch }) {
   useModalDismiss(onClose);
+  const text = payload?.lyrics || '';
+  const hasLyrics = !!payload?.has_lyrics;
+  const synced = hasLyrics && isSynced(text);
+  const source = payload?.source || 'unknown';
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal-lyrics" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>
             <div className="modal-eyebrow">
-              Lyrics · {payload?.source || 'unknown'}
+              Lyrics · {synced ? 'synced' : source}
             </div>
             <h3 className="modal-title">{item.title}</h3>
           </div>
@@ -1141,12 +1295,31 @@ function LyricsModal({ item, payload, onClose }) {
           </button>
         </div>
         <div className="modal-body">
-          {payload?.has_lyrics ? (
-            <pre className="lyrics-pre lyrics-full">{payload.lyrics || ''}</pre>
-          ) : (
+          {!hasLyrics ? (
             <div className="muted">No lyrics available.</div>
+          ) : synced ? (
+            <div className="lyrics-full">
+              <LyricLines text={text} />
+            </div>
+          ) : (
+            <pre className="lyrics-pre lyrics-full">{text}</pre>
           )}
         </div>
+        {hasLyrics && (
+          <div className="modal-foot">
+            <span className="muted small">
+              From <strong>{source}</strong> · {text.length} chars
+            </span>
+            <div className="row-end">
+              <button className="btn btn-ghost" onClick={onEdit}>
+                <Icon name="edit" size={12} /> Edit
+              </button>
+              <button className="btn btn-ghost" onClick={onRefetch}>
+                <Icon name="refresh" size={12} /> Re-fetch
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

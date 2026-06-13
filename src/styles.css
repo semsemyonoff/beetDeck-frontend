@@ -1176,6 +1176,10 @@ h4 {
   background: var(--ok-soft);
   color: var(--ok);
 }
+.badge-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
 
 /* disc section header inside the track table */
 .disc-section-head {
@@ -1511,6 +1515,12 @@ h4 {
   padding: var(--s-4) var(--s-6);
   border-top: 1px solid var(--border-soft);
   background: var(--surface-1);
+}
+/* Keep the action buttons pinned to the right edge even when the footer has
+   no left-hand info block (a lone .row-end would otherwise sit left under
+   justify-content: space-between). */
+.modal-foot > .row-end {
+  margin-left: auto;
 }
 .lyrics-full {
   font-family: var(--f-mono);
@@ -1894,6 +1904,79 @@ h4 {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* small in-button spinner — loading feedback on async actions */
+.btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.8;
+  animation: spin 0.7s linear infinite;
+  vertical-align: -1px;
+  flex: 0 0 auto;
+}
+
+/* MusicBrainz release-id link in the album meta list */
+.mb-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.mb-link:hover {
+  opacity: 0.85;
+}
+
+/* clickable hero cover → full-size viewer */
+.cover-zoomable {
+  position: relative;
+  cursor: zoom-in;
+}
+.cover-zoom-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.34);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 140ms;
+  pointer-events: none;
+}
+.cover-zoomable:hover .cover-zoom-hint,
+.cover-zoomable:focus-visible .cover-zoom-hint {
+  opacity: 1;
+}
+
+/* full-size cover lightbox */
+.cover-viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-6);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  animation: fade-in 140ms ease;
+  cursor: zoom-out;
+}
+.cover-viewer-img {
+  max-width: min(90vw, 900px);
+  max-height: 90vh;
+  border-radius: var(--r-md);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+.cover-viewer-close {
+  position: absolute;
+  top: var(--s-5);
+  right: var(--s-5);
 }
 
 /* identify — summary bar (collapsed search params on results page) */
