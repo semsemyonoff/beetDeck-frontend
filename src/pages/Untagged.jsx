@@ -4,6 +4,7 @@ import FolderTree from '../ui/FolderTree.jsx';
 import TagTable from '../ui/TagTable.jsx';
 import BulkBar from '../ui/BulkBar.jsx';
 import UntaggedGroup from '../ui/UntaggedGroup.jsx';
+import ItemsIdentifyModal from '../ui/ItemsIdentifyModal.jsx';
 import { useTagRows } from '../ui/useTagRows.js';
 import { groupUntagged } from '../lib/tagEditor.js';
 import { navigate } from '../useHashRoute.js';
@@ -28,6 +29,7 @@ function FolderEditor({ folder }) {
   const ed = useTagRows(folder.files.map(seedRow));
   const [flash, setFlash] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [identifyOpen, setIdentifyOpen] = useState(false);
   const flashTimerRef = useRef(null);
 
   useEffect(() => () => clearTimeout(flashTimerRef.current), []);
@@ -91,6 +93,7 @@ function FolderEditor({ folder }) {
           disabled={!canIdentify}
           title={canIdentify ? undefined : 'Set Album and Album Artist first'}
           aria-label="Identify via MusicBrainz"
+          onClick={canIdentify ? () => setIdentifyOpen(true) : undefined}
         >
           <Icon name="sparkles" size={12} /> Identify via MusicBrainz
         </button>
@@ -106,6 +109,14 @@ function FolderEditor({ folder }) {
           count={ed.selected.size}
           onApply={(vals) => ed.applyBulk(vals)}
           onClear={() => ed.clearSel()}
+        />
+      )}
+      {identifyOpen && (
+        <ItemsIdentifyModal
+          itemIds={folder.files.map((f) => f.id)}
+          searchArtist={ed.summary.albumArtist}
+          searchAlbum={ed.summary.album}
+          onClose={() => setIdentifyOpen(false)}
         />
       )}
     </>
