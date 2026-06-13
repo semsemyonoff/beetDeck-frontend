@@ -126,7 +126,7 @@ export default function App() {
         {route.name === 'library' && <Library />}
         {route.name === 'artist' && <Artist key={route.artist} name={route.artist} />}
         {route.name === 'album' && <Album key={route.id} id={route.id} />}
-        {route.name === 'untagged' && <Untagged />}
+        {route.name === 'untagged' && <Untagged key={route.dir || '__index'} dir={route.dir} />}
       </main>
     </div>
   );
