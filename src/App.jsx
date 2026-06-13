@@ -12,6 +12,7 @@ export default function App() {
   const [search, setSearch] = useState({ q: '', results: null });
   const [scanStatus, setScanStatus] = useState(null); // null | 'running' | 'done' | 'error'
   const [scanSummary, setScanSummary] = useState(null); // { added, removed } | null
+  const [dataVersion, setDataVersion] = useState(0); // bumped when a scan changes the library
   const scanPollRef = useRef(null);
 
   const handleSearch = ({ q, results }) => {
@@ -31,8 +32,14 @@ export default function App() {
             setScanStatus('error');
             setScanSummary(null);
           } else {
+            const summary = buildScanSummary(d);
             setScanStatus('done');
-            setScanSummary(buildScanSummary(d));
+            setScanSummary(summary);
+            // Refresh the current page's data in place when the scan actually
+            // changed the library, so new/removed albums show without a reload.
+            if (summary && summary.added + summary.removed > 0) {
+              setDataVersion((v) => v + 1);
+            }
           }
           setTimeout(() => {
             setScanStatus(null);
@@ -160,14 +167,24 @@ export default function App() {
           </div>
         </div>
       )}
-      <main>
-        {route.name === 'library' && <Library />}
+      <main className="app-main">
+        {route.name === 'library' && <Library dataVersion={dataVersion} />}
         {route.name === 'artist' && (
-          <Artist key={route.artist} name={route.artist} />
+          <Artist
+            key={route.artist}
+            name={route.artist}
+            dataVersion={dataVersion}
+          />
         )}
-        {route.name === 'album' && <Album key={route.id} id={route.id} />}
+        {route.name === 'album' && (
+          <Album key={route.id} id={route.id} dataVersion={dataVersion} />
+        )}
         {route.name === 'untagged' && (
-          <Untagged key={route.dir || '__index'} dir={route.dir} />
+          <Untagged
+            key={route.dir || '__index'}
+            dir={route.dir}
+            dataVersion={dataVersion}
+          />
         )}
       </main>
     </div>
