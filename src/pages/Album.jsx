@@ -151,7 +151,13 @@ export default function Album({ id, dataVersion = 0 }) {
     );
   }, [data]);
 
+  // Hero renders at 260px; request a downscaled WebP thumbnail (400 is the
+  // largest allowlisted size, crisp at 260px even on HiDPI). The full-size
+  // viewer below is the only place that loads the untouched original.
   const coverImgSrc = data?.has_cover
+    ? `/api/album/${data.id}/cover?size=400&v=${coverV}`
+    : null;
+  const coverFullSrc = data?.has_cover
     ? `/api/album/${data.id}/cover?v=${coverV}`
     : null;
 
@@ -1230,7 +1236,7 @@ export default function Album({ id, dataVersion = 0 }) {
         />
       )}
 
-      {coverViewer && coverImgSrc && (
+      {coverViewer && coverFullSrc && (
         <div
           className="cover-viewer-backdrop"
           onClick={() => setCoverViewer(false)}
@@ -1244,7 +1250,7 @@ export default function Album({ id, dataVersion = 0 }) {
           </button>
           <img
             className="cover-viewer-img"
-            src={coverImgSrc}
+            src={coverFullSrc}
             alt={album.title}
             onClick={(e) => e.stopPropagation()}
           />

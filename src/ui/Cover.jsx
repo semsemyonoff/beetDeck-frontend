@@ -26,12 +26,27 @@ function defaultPalette(title) {
 
 import { useEffect, useState } from 'react';
 
+// Backend-allowlisted cover-thumbnail sizes (mirror of COVER_THUMB_SIZES on the
+// server). Covers are always served as a downscaled WebP thumbnail; only the
+// album-page full-size viewer requests the untouched original.
+const THUMB_SIZES = [64, 128, 256, 400];
+
+// Smallest allowlisted thumbnail that still covers the rendered box at the
+// device pixel ratio (so it stays crisp on HiDPI), capped at the largest size.
+function thumbSizeFor(displaySize) {
+  const target = displaySize * (window.devicePixelRatio || 1);
+  return (
+    THUMB_SIZES.find((s) => s >= target) ?? THUMB_SIZES[THUMB_SIZES.length - 1]
+  );
+}
+
 export function Cover({
   album,
   size = 200,
   rounded = 6,
   showTitle = true,
   dim = false,
+  coverSize = null,
 }) {
   const title = album.title || album.album || '';
   const id = album.id;
@@ -41,6 +56,9 @@ export function Cover({
   useEffect(() => setCoverFailed(false), [id, hasCover]);
 
   if (hasCover && id != null && !coverFailed) {
+    // Always request a downscaled WebP thumbnail sized to the display box;
+    // coverSize is an explicit override for callers that know better.
+    const src = `/api/album/${id}/cover?size=${coverSize ?? thumbSizeFor(size)}`;
     return (
       <div
         className={'cover' + (dim ? ' cover-dim' : '')}
@@ -52,7 +70,7 @@ export function Cover({
         }}
       >
         <img
-          src={`/api/album/${id}/cover`}
+          src={src}
           alt=""
           onError={() => setCoverFailed(true)}
           style={{
