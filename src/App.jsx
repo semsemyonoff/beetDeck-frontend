@@ -13,6 +13,7 @@ export default function App() {
   const [scanStatus, setScanStatus] = useState(null); // null | 'running' | 'done' | 'error'
   const [scanSummary, setScanSummary] = useState(null); // { added, removed } | null
   const [dataVersion, setDataVersion] = useState(0); // bumped when a scan changes the library
+  const [version, setVersion] = useState(null); // { beetdeck, beets } | null
   const scanPollRef = useRef(null);
 
   const handleSearch = ({ q, results }) => {
@@ -71,6 +72,13 @@ export default function App() {
 
   useEffect(() => () => clearInterval(scanPollRef.current), []);
 
+  useEffect(() => {
+    fetch('/api/version')
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((v) => { if (v) setVersion(v); });
+  }, []);
+
   const closeSearch = () => setSearch({ q: '', results: null });
 
   const searchResults = search.results;
@@ -84,6 +92,7 @@ export default function App() {
         }}
         onSearch={handleSearch}
         onScanStart={handleScanStart}
+        version={version}
       />
       {scanStatus && (
         <div className={`scan-banner scan-banner--${scanStatus}`}>
