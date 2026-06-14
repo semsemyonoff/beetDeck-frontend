@@ -22,8 +22,14 @@ describe('parse', () => {
     expect(parse('#/album/42')).toEqual({ name: 'album', id: '42' });
   });
 
-  it('returns untagged route', () => {
+  it('returns bare untagged route', () => {
     expect(parse('#/untagged')).toEqual({ name: 'untagged' });
+  });
+
+  it('returns untagged route with decoded dir', () => {
+    const dir = '/Music/Loose Bits';
+    const encoded = encodeURIComponent(dir);
+    expect(parse(`#/untagged/${encoded}`)).toEqual({ name: 'untagged', dir });
   });
 
   it('falls back to library for unknown routes', () => {
@@ -116,14 +122,27 @@ describe('navigate', () => {
     expect(window.location.hash).toBe('#/album/99');
   });
 
-  it('sets untagged hash', () => {
+  it('sets bare untagged hash', () => {
     navigate({ name: 'untagged' });
     expect(window.location.hash).toBe('#/untagged');
+  });
+
+  it('sets untagged hash with encoded dir', () => {
+    navigate({ name: 'untagged', dir: '/Music/Loose Bits' });
+    expect(window.location.hash).toBe(
+      '#/untagged/' + encodeURIComponent('/Music/Loose Bits')
+    );
   });
 
   it('artist navigate round-trips through parse', () => {
     const artist = 'Sigur Rós';
     navigate({ name: 'artist', artist });
     expect(parse(window.location.hash)).toEqual({ name: 'artist', artist });
+  });
+
+  it('untagged dir with spaces and slashes round-trips through parse', () => {
+    const dir = '/Music/Loose Bits';
+    navigate({ name: 'untagged', dir });
+    expect(parse(window.location.hash)).toEqual({ name: 'untagged', dir });
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover, CoverStack } from '../ui/Cover.jsx';
+import UntaggedGroup from '../ui/UntaggedGroup.jsx';
 import { navigate } from '../useHashRoute.js';
 import {
   mapApi,
@@ -12,6 +13,7 @@ import {
   letterGroups,
 } from '../lib/library.js';
 import { isIdentified } from '../lib/albums.js';
+import { groupUntagged, excludeUntagged } from '../lib/tagEditor.js';
 
 function LibraryHeader({
   stats,
@@ -82,14 +84,6 @@ function LibraryHeader({
           ]}
         />
 
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={() => navigate({ name: 'untagged' })}
-          title="Loose files without an album-artist"
-        >
-          <Icon name="alert" size={12} /> Untagged files
-        </button>
-
         <div className="lib-sort">
           <span className="muted small">Sort</span>
           <Segmented
@@ -108,7 +102,7 @@ function LibraryHeader({
   );
 }
 
-function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
+function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const toggle = (name) => {
     setExpanded((prev) => {
@@ -132,6 +126,7 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
 
   return (
     <div className="lib-index">
+      {filter !== 'ident' ? <UntaggedGroup folders={folders} /> : null}
       {groups.map(([letter, list]) => (
         <section key={letter} className="lib-group">
           <h3 className="lib-group-letter">{letter}</h3>
@@ -200,11 +195,15 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
                               {al.title}
                               {isIdentified(al) ? (
                                 <span className="dot-ok">
-                                  <Icon name="check" size={10} />
+                                  <Icon name="check" size={11} />
+                                </span>
+                              ) : al.ignored ? (
+                                <span className="dot-ignored">
+                                  <Icon name="check" size={11} />
                                 </span>
                               ) : !al.identified ? (
                                 <span className="dot-warn">
-                                  <Icon name="alert" size={10} />
+                                  <Icon name="alert" size={11} />
                                 </span>
                               ) : null}
                             </div>
@@ -224,7 +223,7 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum }) {
   );
 }
 
-function LibraryWall({ artists, filter, onArtist, onAlbum }) {
+function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
   const items = useMemo(() => {
     const out = [];
     for (const a of artists) {
@@ -236,40 +235,52 @@ function LibraryWall({ artists, filter, onArtist, onAlbum }) {
   }, [artists, filter]);
 
   return (
-    <div className="lib-wall">
-      {items.map(({ artist, album }) => (
-        <button
-          key={album.id}
-          className="wall-card"
-          onClick={() => onAlbum(artist, album)}
-        >
-          <Cover album={album} size={170} rounded={6} showTitle={false} />
-          <div className="wall-card-info">
-            <div className="wall-card-title">{album.title}</div>
-            <div className="wall-card-meta">
-              <span
-                className="wall-card-artist"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onArtist(artist);
-                }}
-              >
-                {artist.name}
-              </span>
-              <span className="wall-card-year">{album.year}</span>
+    <div className="lib-wall-wrap">
+      {filter !== 'ident' ? <UntaggedGroup folders={folders} wall /> : null}
+      <div className="lib-wall">
+        {items.map(({ artist, album }) => (
+          <button
+            key={album.id}
+            className="wall-card"
+            onClick={() => onAlbum(artist, album)}
+          >
+            <Cover album={album} size={170} rounded={6} showTitle={false} />
+            <div className="wall-card-info">
+              <div className="wall-card-title">{album.title}</div>
+              <div className="wall-card-meta">
+                <span
+                  className="wall-card-artist"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onArtist(artist);
+                  }}
+                >
+                  {artist.name}
+                </span>
+                <span className="wall-card-year">{album.year}</span>
+              </div>
             </div>
-          </div>
-          {!album.identified ? (
-            <span className="wall-card-badge">needs review</span>
-          ) : null}
-        </button>
-      ))}
+            {isIdentified(album) ? (
+              <span className="wall-card-check wall-card-check-ok">
+                <Icon name="check" size={12} />
+              </span>
+            ) : album.ignored ? (
+              <span className="wall-card-check wall-card-check-ignored">
+                <Icon name="check" size={12} />
+              </span>
+            ) : (
+              <span className="wall-card-badge">needs review</span>
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-export default function Library() {
+export default function Library({ dataVersion = 0 }) {
   const [data, setData] = useState(null);
+  const [untaggedItems, setUntaggedItems] = useState([]);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('az');
@@ -277,14 +288,21 @@ export default function Library() {
 
   useEffect(() => {
     let aborted = false;
-    fetch('/api/library')
-      .then((r) => {
+    Promise.all([
+      fetch('/api/library').then((r) => {
         if (r.status === 503) return { _notInitialized: true };
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
-      })
-      .then((d) => {
-        if (!aborted) setData(d);
+      }),
+      fetch('/api/items/untagged')
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
+    ])
+      .then(([lib, untagged]) => {
+        if (!aborted) {
+          setData(lib);
+          setUntaggedItems(untagged);
+        }
       })
       .catch((e) => {
         if (!aborted) setError(String(e));
@@ -292,12 +310,18 @@ export default function Library() {
     return () => {
       aborted = true;
     };
-  }, []);
+  }, [dataVersion]);
+
+  const folders = useMemo(() => groupUntagged(untaggedItems), [untaggedItems]);
 
   const artists = useMemo(() => {
     if (!data || data._notInitialized) return [];
-    return sortArtists(mapApi(data), sort);
-  }, [data, sort]);
+    const sorted = sortArtists(mapApi(data), sort);
+    const ids = (untaggedItems || [])
+      .map((item) => item.album_id)
+      .filter(Boolean);
+    return excludeUntagged(sorted, ids);
+  }, [data, sort, untaggedItems]);
 
   const stats = useMemo(() => totals(artists), [artists]);
 
@@ -351,6 +375,7 @@ export default function Library() {
             filter={filter}
             onArtist={onArtist}
             onAlbum={onAlbum}
+            folders={folders}
           />
         )}
         {layout === 'wall' && (
@@ -359,6 +384,7 @@ export default function Library() {
             filter={filter}
             onArtist={onArtist}
             onAlbum={onAlbum}
+            folders={folders}
           />
         )}
       </div>
