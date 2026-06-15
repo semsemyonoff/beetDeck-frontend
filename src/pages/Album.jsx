@@ -831,19 +831,23 @@ export default function Album({ id, dataVersion = 0 }) {
                         onClick={() => onLyricsExpand(t)}
                       >
                         <Icon name="lyrics" size={11} />{' '}
-                        {hasLyrics === false ? 'no lyrics' : 'lyrics'}
+                        <span className="mini-label">
+                          {hasLyrics === false ? 'no lyrics' : 'lyrics'}
+                        </span>
                       </button>
                       <button
                         className="track-mini-btn"
                         onClick={() => openTagsModal(t)}
                       >
-                        <Icon name="tag" size={11} /> tags
+                        <Icon name="tag" size={11} />{' '}
+                        <span className="mini-label">tags</span>
                       </button>
                       <button
                         className="track-mini-btn"
                         onClick={() => setTagEditorModal({ focusTrack: t.id })}
                       >
-                        <Icon name="edit" size={11} /> edit
+                        <Icon name="edit" size={11} />{' '}
+                        <span className="mini-label">edit</span>
                       </button>
                     </span>
                   </div>
