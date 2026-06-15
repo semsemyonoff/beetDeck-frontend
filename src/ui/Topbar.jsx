@@ -17,7 +17,7 @@ function applyTheme(mode) {
   document.documentElement.setAttribute('data-theme', effectiveTheme(mode));
 }
 
-export default function Topbar({ onNavHome, onScanStart }) {
+export default function Topbar({ onNavHome, onScanStart, version }) {
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem('theme') || 'auto'
   );
@@ -214,6 +214,14 @@ export default function Topbar({ onNavHome, onScanStart }) {
       </div>
 
       <div className="topbar-right">
+        {version && (
+          <span
+            className="topbar-version"
+            title={`beetDeck v${version.beetdeck} · beets ${version.beets}`}
+          >
+            v{version.beetdeck} · beets {version.beets}
+          </span>
+        )}
         <button
           className="btn-icon"
           aria-label={`Theme: ${themeMode}`}

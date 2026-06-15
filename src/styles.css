@@ -220,6 +220,13 @@ h4 {
   gap: 6px;
   justify-self: end;
 }
+.topbar-version {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-mute);
+  white-space: nowrap;
+  padding: 0 4px;
+}
 .brand {
   display: inline-flex;
   align-items: center;
@@ -2065,6 +2072,9 @@ h4 {
     gap: var(--s-3);
   }
   .topbar-left .btn:not(.btn-primary) {
+    display: none;
+  }
+  .topbar-version {
     display: none;
   }
   .lib-group {
