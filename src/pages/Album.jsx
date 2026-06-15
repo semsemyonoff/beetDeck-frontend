@@ -828,6 +828,10 @@ export default function Album({ id, dataVersion = 0 }) {
                           'track-mini-btn' +
                           (hasLyrics === false ? ' track-mini-btn-empty' : '')
                         }
+                        title={hasLyrics === false ? 'No lyrics' : 'Lyrics'}
+                        aria-label={
+                          hasLyrics === false ? 'No lyrics' : 'Lyrics'
+                        }
                         onClick={() => onLyricsExpand(t)}
                       >
                         <Icon name="lyrics" size={11} />{' '}
@@ -837,6 +841,8 @@ export default function Album({ id, dataVersion = 0 }) {
                       </button>
                       <button
                         className="track-mini-btn"
+                        title="Tags"
+                        aria-label="Tags"
                         onClick={() => openTagsModal(t)}
                       >
                         <Icon name="tag" size={11} />{' '}
@@ -844,6 +850,8 @@ export default function Album({ id, dataVersion = 0 }) {
                       </button>
                       <button
                         className="track-mini-btn"
+                        title="Edit tags"
+                        aria-label="Edit tags"
                         onClick={() => setTagEditorModal({ focusTrack: t.id })}
                       >
                         <Icon name="edit" size={11} />{' '}

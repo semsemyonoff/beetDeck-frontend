@@ -2108,22 +2108,6 @@ h4 {
   }
 }
 
-/* ===== Tag-editor / untagged table reflow (≤920) ===== */
-@media (max-width: 920px) {
-  .tte-row {
-    grid-template-columns: 30px 46px 1.4fr 1fr 70px;
-  }
-  .tte-row .tte-cell:nth-child(4) {
-    display: none; /* hide artist col on narrow */
-  }
-  .tte-bulk-fields {
-    grid-template-columns: 1fr 1fr;
-  }
-  .tte-bulk-apply {
-    grid-column: 1 / -1;
-  }
-}
-
 /* ===== Hero / split-pane stack (≤900) ===== */
 @media (max-width: 900px) {
   .album-hero,
@@ -2315,31 +2299,8 @@ h4 {
     grid-template-columns: 60px 1fr;
   }
 
-  /* — Untagged / tag-editor table: horizontal scroll, keep every column — */
-  .tte {
-    overflow-x: auto;
-  }
-  .tte-row {
-    grid-template-columns: 34px 48px minmax(170px, 1.3fr) 1fr 1fr 64px;
-    min-width: 620px;
-  }
-  .tte-row .tte-cell:nth-child(4) {
-    display: flex; /* restore artist col in the horizontal-scroll view */
-  }
-  .tte-head {
-    position: static;
-  }
-  .tte-bulk-fields {
-    grid-template-columns: 1fr;
-  }
-  /* Legacy Untagged editor header actually reflows (was an inert grid no-op) */
-  .untagged-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .untagged-stats strong {
-    font-size: 18px;
-  }
+  /* Tag-editor / untagged responsive rules live at the end of the file, after
+     their base definitions, so they actually win the cascade. */
 
   /* — Modals become full-screen sheets — */
   .modal-backdrop {
@@ -3111,4 +3072,55 @@ h4 {
 }
 .modal-tagedit .tte {
   margin-top: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Responsive — tag-editor & untagged overrides
+ *  These MUST follow the base .tte / .untagged rules above: media queries add no
+ *  specificity, so with equal specificity the later source position wins. Kept
+ *  here (not in the tablet/mobile layer higher up) for exactly that reason.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* ===== Tag-editor / untagged table reflow (≤920) ===== */
+@media (max-width: 920px) {
+  .tte-row {
+    grid-template-columns: 30px 46px 1.4fr 1fr 70px;
+  }
+  .tte-row .tte-cell:nth-child(4) {
+    display: none; /* hide artist col on narrow */
+  }
+  .tte-bulk-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tte-bulk-apply {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ===== Phone (≤600) — horizontal-scroll table, every column kept ===== */
+@media (max-width: 600px) {
+  .tte {
+    overflow-x: auto;
+  }
+  .tte-row {
+    grid-template-columns: 34px 48px minmax(170px, 1.3fr) 1fr 1fr 64px;
+    min-width: 620px;
+  }
+  .tte-row .tte-cell:nth-child(4) {
+    display: flex; /* restore artist col in the horizontal-scroll view */
+  }
+  .tte-head {
+    position: static;
+  }
+  .tte-bulk-fields {
+    grid-template-columns: 1fr;
+  }
+  /* Legacy Untagged editor header actually reflows (was an inert grid no-op) */
+  .untagged-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .untagged-stats strong {
+    font-size: 18px;
+  }
 }
