@@ -42,6 +42,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
     │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
+    │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── Topbar.jsx

@@ -214,6 +214,11 @@ h4 {
   background: var(--border-soft);
   margin: 0 4px;
 }
+.topbar-scans {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .topbar-right {
   display: flex;
   align-items: center;
@@ -221,11 +226,20 @@ h4 {
   justify-self: end;
 }
 .topbar-version {
-  font-family: var(--f-mono);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
   color: var(--text-mute);
   white-space: nowrap;
+  letter-spacing: 0.01em;
   padding: 0 4px;
+}
+.topbar-version-app {
+  color: var(--text-dim);
+}
+.topbar-version-sep {
+  color: var(--text-faint);
 }
 .brand {
   display: inline-flex;
@@ -284,6 +298,15 @@ h4 {
 }
 .topbar-search input::placeholder {
   color: var(--text-mute);
+}
+.kbd {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  color: var(--text-mute);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 .app-main {
   padding: var(--s-7) clamp(var(--s-5), 4vw, 56px) var(--s-9);
@@ -2042,13 +2065,59 @@ h4 {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- *  Responsive
+ *  Responsive — tablet & mobile layers
+ *  Desktop is the base; below cascades progressively: 1024 (tablet) → 920
+ *  (tag-editor reflow) → 900 (hero stack) → 768 (two-row topbar) → 600 (phone).
+ *  Goal: every action stays reachable at every width.
  * ───────────────────────────────────────────────────────────────────────────── */
 
-@media (max-width: 1100px) {
+/* ===== Tablet (≤1024) — tighten gutters, denser grids, trim the topbar ===== */
+@media (max-width: 1024px) {
+  .app-main {
+    padding: var(--s-6) clamp(var(--s-4), 3vw, 32px) var(--s-8);
+  }
+  .topbar {
+    gap: var(--s-3);
+    grid-template-columns: auto minmax(150px, 1fr) auto;
+  }
+  .topbar-search {
+    min-width: 150px;
+  }
+  .lib-row-albums {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .artist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  .lib-wall {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .album-hero-title {
+    font-size: 52px;
+  }
+  .artist-hero-name {
+    font-size: 46px;
+  }
+  .album-hero {
+    grid-template-columns: 220px 1fr;
+    gap: var(--s-6);
+  }
+  .artist-hero {
+    grid-template-columns: 200px 1fr;
+    gap: var(--s-6);
+  }
+}
+
+/* ===== Hero / split-pane stack (≤900) ===== */
+@media (max-width: 900px) {
   .album-hero,
   .artist-hero {
     grid-template-columns: 1fr;
+    gap: var(--s-5);
+  }
+  .artist-hero {
+    align-items: start;
+    padding-top: var(--s-4);
   }
   .album-hero-title,
   .artist-hero-name {
@@ -2063,34 +2132,226 @@ h4 {
     border-bottom: 1px solid var(--border-soft);
   }
 }
-@media (max-width: 720px) {
+
+/* ===== Topbar → two-row (≤768): keep BOTH scans + full search + version ===== */
+@media (max-width: 768px) {
+  :root {
+    --topbar-h: 96px;
+  }
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'brand  meta'
+      'search scans';
+    align-items: center;
+    gap: 8px var(--s-3);
+    height: auto;
+    padding: 8px var(--s-3);
+  }
+  .topbar-left {
+    display: contents;
+  }
+  .brand {
+    grid-area: brand;
+  }
   .topbar-divider {
     display: none;
   }
-  .topbar {
-    grid-template-columns: auto 1fr auto;
-    gap: var(--s-3);
+  .topbar-scans {
+    grid-area: scans;
+    justify-self: end;
   }
-  .topbar-left .btn:not(.btn-primary) {
-    display: none;
+  .topbar-search {
+    grid-area: search;
+    justify-self: stretch;
+    min-width: 0;
+    max-width: none;
+  }
+  .topbar-right {
+    grid-area: meta;
+    justify-self: end;
+  }
+}
+
+/* ===== Phone (≤600) ===== */
+@media (max-width: 600px) {
+  .app-main {
+    padding: var(--s-4) var(--s-4) var(--s-8);
+  }
+
+  /* Topbar: shrink version, drop the desktop-only ⌘K hint */
+  .brand-name {
+    font-size: 15px;
   }
   .topbar-version {
+    font-size: 10.5px;
+    gap: 4px;
+  }
+  .topbar-search .kbd {
     display: none;
+  }
+  /* Scans go icon-only on phones so BOTH buttons fit beside brand + version */
+  .topbar-scans .btn {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .topbar-scans .btn-label {
+    display: none;
+  }
+
+  /* — Library — */
+  .page-title {
+    font-size: 24px;
+  }
+  .page-sub {
+    flex-wrap: wrap;
+    row-gap: 2px;
   }
   .lib-group {
     grid-template-columns: 1fr;
   }
   .lib-group-letter {
     position: static;
+    padding-top: 0;
+  }
+  .lib-row-albums {
+    grid-template-columns: 1fr;
+  }
+  .lib-wall {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--s-4) var(--s-3);
+  }
+  .segmented {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* — Artist — */
+  .artist-hero-covers {
+    width: 150px;
+    height: 140px;
+  }
+  .artist-hero-cover .cover {
+    width: 108px !important;
+    height: 108px !important;
+  }
+  .artist-hero-name {
+    font-size: 32px;
+  }
+  .artist-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .artist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+    gap: var(--s-5) var(--s-3);
+  }
+
+  /* — Album — */
+  .album-hero-cover .cover {
+    width: 150px !important;
+    height: 150px !important;
+  }
+  .album-hero-title {
+    font-size: 30px;
+  }
+  .album-hero-meta > div {
+    grid-template-columns: 84px 1fr;
   }
   .album-tracks-head {
     display: none;
   }
   .album-track-main {
-    grid-template-columns: 40px 1fr auto;
+    grid-template-columns: 30px 1fr auto auto;
+    height: 54px;
+    gap: var(--s-2);
   }
-  .album-track-main .td-artist,
-  .album-track-main .td-actions {
+  .album-track-main .td-artist {
+    display: none;
+  }
+  .td-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Track rows stay full-featured: actions become icon-only, never hidden */
+  .track-mini-btn .mini-label {
+    display: none;
+  }
+  .track-mini-btn {
+    padding: 6px;
+  }
+  .album-track-lyrics {
+    padding: 0 var(--s-3) var(--s-3) var(--s-4);
+  }
+  .lyrics-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .lyric-line,
+  .lyrics-full .lyric-line {
+    grid-template-columns: 60px 1fr;
+  }
+
+  /* Tag-editor / untagged responsive rules live at the end of the file, after
+     their base definitions, so they actually win the cascade. */
+
+  /* — Modals become full-screen sheets — */
+  .modal-backdrop {
+    padding: 0;
+  }
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .modal-identify,
+  .modal-tagedit,
+  .modal-identify-form {
+    height: 100vh !important;
+    max-height: 100vh;
+  }
+  .modal-lyrics {
+    height: auto;
+    max-height: 100vh;
+  }
+  .modal-head {
+    padding: var(--s-4);
+  }
+  .modal-body {
+    padding: var(--s-4);
+  }
+  .modal-foot {
+    padding: var(--s-3) var(--s-4);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .modal-foot .row-end {
+    flex-wrap: wrap;
+  }
+
+  /* Identify diff rows reflow to two lines */
+  .diff-row {
+    grid-template-columns: 20px 1fr;
+    row-gap: 6px;
+    padding: 10px;
+  }
+  .diff-field {
+    grid-column: 2;
+  }
+  .diff-cells {
+    grid-column: 1 / -1;
+    font-size: 12px;
+  }
+  .diff-tag {
     display: none;
   }
 }
@@ -2813,23 +3074,53 @@ h4 {
   margin-top: 0;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Responsive — tag-editor & untagged overrides
+ *  These MUST follow the base .tte / .untagged rules above: media queries add no
+ *  specificity, so with equal specificity the later source position wins. Kept
+ *  here (not in the tablet/mobile layer higher up) for exactly that reason.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/* ===== Tag-editor / untagged table reflow (≤920) ===== */
 @media (max-width: 920px) {
-  .unt-hero {
-    grid-template-columns: 1fr;
-  }
-  .untagged-header {
-    grid-template-columns: 1fr;
-  }
   .tte-row {
     grid-template-columns: 30px 46px 1.4fr 1fr 70px;
   }
   .tte-row .tte-cell:nth-child(4) {
-    display: none;
+    display: none; /* hide artist col on narrow */
   }
   .tte-bulk-fields {
     grid-template-columns: 1fr 1fr;
   }
   .tte-bulk-apply {
     grid-column: 1 / -1;
+  }
+}
+
+/* ===== Phone (≤600) — horizontal-scroll table, every column kept ===== */
+@media (max-width: 600px) {
+  .tte {
+    overflow-x: auto;
+  }
+  .tte-row {
+    grid-template-columns: 34px 48px minmax(170px, 1.3fr) 1fr 1fr 64px;
+    min-width: 620px;
+  }
+  .tte-row .tte-cell:nth-child(4) {
+    display: flex; /* restore artist col in the horizontal-scroll view */
+  }
+  .tte-head {
+    position: static;
+  }
+  .tte-bulk-fields {
+    grid-template-columns: 1fr;
+  }
+  /* Legacy Untagged editor header actually reflows (was an inert grid no-op) */
+  .untagged-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .untagged-stats strong {
+    font-size: 18px;
   }
 }
