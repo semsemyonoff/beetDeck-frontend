@@ -244,7 +244,9 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
             className="topbar-version"
             title={`beetDeck v${version.beetdeck} · beets ${version.beets}`}
           >
-            v{version.beetdeck} · beets {version.beets}
+            v<span className="topbar-version-app">{version.beetdeck}</span>
+            <span className="topbar-version-sep">·</span>
+            beets {version.beets}
           </span>
         )}
         <button
