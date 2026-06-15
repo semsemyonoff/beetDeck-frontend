@@ -214,6 +214,11 @@ h4 {
   background: var(--border-soft);
   margin: 0 4px;
 }
+.topbar-scans {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .topbar-right {
   display: flex;
   align-items: center;

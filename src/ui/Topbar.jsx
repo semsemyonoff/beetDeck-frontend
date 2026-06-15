@@ -146,12 +146,24 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
           <span className="brand-name">beetDeck</span>
         </button>
         <div className="topbar-divider" />
-        <button className="btn btn-ghost" onClick={() => startScan('quick')}>
-          <Icon name="zap" size={14} /> Quick Scan
-        </button>
-        <button className="btn btn-primary" onClick={() => startScan('full')}>
-          <Icon name="scan" size={14} /> Full Scan
-        </button>
+        <div className="topbar-scans">
+          <button
+            className="btn btn-ghost"
+            title="Quick Scan"
+            onClick={() => startScan('quick')}
+          >
+            <Icon name="zap" size={14} />
+            <span className="btn-label">Quick Scan</span>
+          </button>
+          <button
+            className="btn btn-primary"
+            title="Full Scan"
+            onClick={() => startScan('full')}
+          >
+            <Icon name="scan" size={14} />
+            <span className="btn-label">Full Scan</span>
+          </button>
+        </div>
       </div>
 
       <div className="topbar-search" ref={searchRef}>
