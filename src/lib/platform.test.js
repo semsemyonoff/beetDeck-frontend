@@ -86,6 +86,14 @@ describe('searchShortcut', () => {
     it('rejects a bare K with no modifier', () => {
       expect(sc.matches({ key: 'k' })).toBe(false);
     });
+    it('rejects Cmd+Shift+K (Shift chord)', () => {
+      expect(sc.matches({ key: 'k', metaKey: true, shiftKey: true })).toBe(
+        false
+      );
+    });
+    it('rejects Cmd+Alt+K (Alt chord)', () => {
+      expect(sc.matches({ key: 'k', metaKey: true, altKey: true })).toBe(false);
+    });
     it('rejects the wrong key', () => {
       expect(sc.matches({ key: 'j', metaKey: true })).toBe(false);
     });
@@ -103,6 +111,14 @@ describe('searchShortcut', () => {
       expect(sc.matches({ key: 'k', ctrlKey: true, metaKey: true })).toBe(
         false
       );
+    });
+    it('rejects Ctrl+Shift+K (devtools chord)', () => {
+      expect(sc.matches({ key: 'k', ctrlKey: true, shiftKey: true })).toBe(
+        false
+      );
+    });
+    it('rejects Ctrl+Alt+K (Alt chord)', () => {
+      expect(sc.matches({ key: 'k', ctrlKey: true, altKey: true })).toBe(false);
     });
     it('rejects the wrong key', () => {
       expect(sc.matches({ key: 'l', ctrlKey: true })).toBe(false);

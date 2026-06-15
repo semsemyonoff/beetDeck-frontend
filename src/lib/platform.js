@@ -23,7 +23,9 @@ export function isMac(nav = typeof navigator !== 'undefined' ? navigator : {}) {
 // searchShortcut returns the OS-aware descriptor for the topbar search hotkey:
 // the on-screen keycap label and a matcher for keydown events. macOS uses ⌘
 // (metaKey); every other platform uses Ctrl (ctrlKey). matches() rejects the
-// wrong primary modifier so Cmd+Ctrl+K etc. do not trigger.
+// wrong primary modifier so Cmd+Ctrl+K does not trigger, and rejects any
+// Shift/Alt chord so browser shortcuts like Ctrl+Shift+K (devtools) are left
+// alone.
 export function searchShortcut(
   nav = typeof navigator !== 'undefined' ? navigator : {}
 ) {
@@ -34,6 +36,7 @@ export function searchShortcut(
     matches(event) {
       if (!event || typeof event.key !== 'string') return false;
       if (event.key.toLowerCase() !== 'k') return false;
+      if (event.shiftKey || event.altKey) return false;
       return mac
         ? Boolean(event.metaKey) && !event.ctrlKey
         : Boolean(event.ctrlKey) && !event.metaKey;
