@@ -76,7 +76,9 @@ export default function App() {
     fetch('/api/version')
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
-      .then((v) => { if (v) setVersion(v); });
+      .then((v) => {
+        if (v) setVersion(v);
+      });
   }, []);
 
   const closeSearch = () => setSearch({ q: '', results: null });

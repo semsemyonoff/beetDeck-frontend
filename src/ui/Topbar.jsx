@@ -106,7 +106,10 @@ export default function Topbar({ onNavHome, onSearch, onScanStart, version }) {
 
       <div className="topbar-right">
         {version && (
-          <span className="topbar-version" title={`beetDeck v${version.beetdeck} · beets ${version.beets}`}>
+          <span
+            className="topbar-version"
+            title={`beetDeck v${version.beetdeck} · beets ${version.beets}`}
+          >
             v{version.beetdeck} · beets {version.beets}
           </span>
         )}
