@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { Cover } from './Cover.jsx';
 import { navigate } from '../useHashRoute.js';
+import { searchShortcut } from '../lib/platform.js';
 import logoUrl from '../assets/logo.png';
 
 const THEME_ORDER = ['auto', 'light', 'dark'];
+
+// OS-aware search shortcut (⌘K on mac, Ctrl K elsewhere). Computed once at
+// module load; the platform does not change during a session.
+const SHORTCUT = searchShortcut();
 
 function effectiveTheme(mode) {
   if (mode !== 'auto') return mode;
@@ -25,6 +30,7 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
   const [results, setResults] = useState(null); // null = dropdown closed
   const debounceRef = useRef(null);
   const searchRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     applyTheme(themeMode);
@@ -52,6 +58,23 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [results]);
+
+  // Global search hotkey (⌘K / Ctrl K). Bound in the capture phase to maximise
+  // the chance of winning against a browser's native Ctrl+K before it focuses
+  // the URL/search bar. Independent of the outside-click listener above.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (!SHORTCUT.matches(e)) return;
+      e.preventDefault();
+      const input = inputRef.current;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, []);
 
   const cycleTheme = () => {
     setThemeMode(
@@ -134,6 +157,7 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
       <div className="topbar-search" ref={searchRef}>
         <Icon name="search" size={14} />
         <input
+          ref={inputRef}
           placeholder="Search artists, albums, tracks…"
           value={query}
           onChange={onQueryChange}
@@ -211,6 +235,7 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
             )}
           </div>
         )}
+        <span className="kbd">{SHORTCUT.label}</span>
       </div>
 
       <div className="topbar-right">

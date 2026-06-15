@@ -285,6 +285,15 @@ h4 {
 .topbar-search input::placeholder {
   color: var(--text-mute);
 }
+.kbd {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  color: var(--text-mute);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
 .app-main {
   padding: var(--s-7) clamp(var(--s-5), 4vw, 56px) var(--s-9);
 }
