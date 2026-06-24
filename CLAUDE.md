@@ -77,6 +77,37 @@ into a route object; `navigate(target)` writes the hash. Routes:
 
 Anything unrecognized falls back to the Library route.
 
+### Adding navigable entities — RouteLink pattern
+
+All navigable UI elements (album cards, artist names, breadcrumbs, search results,
+folder rows) must be real `<a href>` elements so the browser enables middle-click,
+Ctrl/Cmd+click, and the "Open in new tab" context menu. Use the shared abstractions:
+
+- **`hrefFor(target)`** in `lib/route.js` — builds the `#/...` hash string for any
+  target object. Pure JS, no React. Use this wherever you need the URL string.
+- **`useRouteLink(target)`** in `useHashRoute.js` — returns `{ href, onClick }`.
+  The handler intercepts only a plain left-click (no modifiers, `button === 0`,
+  not `defaultPrevented`) for in-place SPA navigation; everything else falls through
+  to the browser.
+- **`isModifiedClick(e)`** in `useHashRoute.js` — `true` when the event is a
+  middle/right click or has a modifier key. Use this in side-effect `onClick`
+  callbacks (e.g. closing a search overlay only on plain clicks).
+- **`<RouteLink>`** in `ui/RouteLink.jsx` — thin `<a>` wrapper over the hook.
+  Pass `target`, optional `className`, `children`, and an optional `onClick` for
+  side effects (fires before the hook's handler). Use this for standalone links.
+
+For **nested cards** (an album link wrapping cover + title, with a sibling artist
+link): use the stretched-link pattern — no nested anchors. The card becomes a
+positioned container (`position: relative`), the primary link gets a full-card
+`::after` overlay (`z-index: 0`), and the secondary link sits above (`z-index: 1`).
+Mark decorative absolutely-positioned siblings (`pointer-events: none`) so they
+don't block the overlay. See `.wall-card` in `styles.css` for the reference
+implementation.
+
+Toggle/action buttons (`lib-row-head`, `unt-banner-bar`, scan, theme) stay plain
+`<button>` elements. Programmatic navigations that follow async actions (e.g.
+post-identify redirect) stay `navigate()`.
+
 ## Backend API
 
 The UI calls the backend with **absolute** paths (`/api/...`) so the same code
