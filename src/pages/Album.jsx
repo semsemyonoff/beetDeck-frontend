@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import { Cover } from '../ui/Cover.jsx';
-import { navigate } from '../useHashRoute.js';
+import RouteLink from '../ui/RouteLink.jsx';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import TagEditorModal from '../ui/TagEditorModal.jsx';
 import {
@@ -526,18 +526,18 @@ export default function Album({ id, dataVersion = 0 }) {
   return (
     <div className="page page-album">
       <div className="crumbs">
-        <button className="crumb" onClick={() => navigate({ name: 'library' })}>
+        <RouteLink target={{ name: 'library' }} className="crumb">
           <Icon name="arrow-left" size={12} /> Library
-        </button>
+        </RouteLink>
         {artistName && (
           <>
             <span className="crumb-sep">/</span>
-            <button
+            <RouteLink
+              target={{ name: 'artist', artist: artistName }}
               className="crumb"
-              onClick={() => navigate({ name: 'artist', artist: artistName })}
             >
               {artistName}
-            </button>
+            </RouteLink>
           </>
         )}
       </div>

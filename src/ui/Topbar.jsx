@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { Cover } from './Cover.jsx';
-import { navigate } from '../useHashRoute.js';
+import { navigate, isModifiedClick } from '../useHashRoute.js';
 import { searchShortcut } from '../lib/platform.js';
 import logoUrl from '../assets/logo.png';
+import RouteLink from './RouteLink.jsx';
 
 const THEME_ORDER = ['auto', 'light', 'dark'];
 
@@ -22,7 +23,7 @@ function applyTheme(mode) {
   document.documentElement.setAttribute('data-theme', effectiveTheme(mode));
 }
 
-export default function Topbar({ onNavHome, onScanStart, version }) {
+export default function Topbar({ onScanStart, version }) {
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem('theme') || 'auto'
   );
@@ -135,16 +136,16 @@ export default function Topbar({ onNavHome, onScanStart, version }) {
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <button
+        <RouteLink
+          target={{ name: 'library' }}
           className="brand"
-          onClick={() => {
-            closeSearch();
-            onNavHome();
+          onClick={(e) => {
+            if (!isModifiedClick(e)) closeSearch();
           }}
         >
           <img src={logoUrl} alt="" className="brand-logo" />
           <span className="brand-name">beetDeck</span>
-        </button>
+        </RouteLink>
         <div className="topbar-divider" />
         <div className="topbar-scans">
           <button

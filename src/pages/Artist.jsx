@@ -3,6 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import { navigate } from '../useHashRoute.js';
+import RouteLink from '../ui/RouteLink.jsx';
 import { mapAlbum, isIdentified } from '../lib/albums.js';
 
 export default function Artist({ name, dataVersion = 0 }) {
@@ -66,9 +67,9 @@ export default function Artist({ name, dataVersion = 0 }) {
   return (
     <div className="page page-artist">
       <div className="crumbs">
-        <button className="crumb" onClick={() => navigate({ name: 'library' })}>
+        <RouteLink target={{ name: 'library' }} className="crumb">
           <Icon name="arrow-left" size={12} /> Library
-        </button>
+        </RouteLink>
       </div>
 
       <header className="artist-hero">

@@ -3,6 +3,20 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Topbar from './Topbar.jsx';
 import { searchShortcut } from '../lib/platform.js';
 
+const origLocation = Object.getOwnPropertyDescriptor(window, 'location');
+
+function stubLocation() {
+  Object.defineProperty(window, 'location', {
+    value: { hash: '' },
+    configurable: true,
+    writable: true,
+  });
+}
+
+function restoreLocation() {
+  if (origLocation) Object.defineProperty(window, 'location', origLocation);
+}
+
 // The Topbar computes the shortcut from the real (jsdom) navigator at module
 // load, so derive the expected label/modifier from the same source instead of
 // hard-coding a platform.
@@ -28,7 +42,6 @@ function stubMatchMedia(matches = false) {
 function renderTopbar(props = {}) {
   return render(
     <Topbar
-      onNavHome={() => {}}
       onScanStart={() => {}}
       version={{ beetdeck: '0.0.0', beets: '2.10.0' }}
       {...props}
@@ -49,13 +62,41 @@ function shortcutKeyEvent({ active }) {
   });
 }
 
-describe('Topbar search hotkey', () => {
+describe('Topbar brand link', () => {
   beforeEach(() => {
     stubMatchMedia(false);
+    stubLocation();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    restoreLocation();
+  });
+
+  it('renders the brand as a link with href="#/"', () => {
+    renderTopbar();
+    const brand = screen.getByRole('link', { name: /beetDeck/i });
+    expect(brand).toBeInTheDocument();
+    expect(brand).toHaveAttribute('href', '#/');
+  });
+
+  it('plain click on brand navigates to library and closes search', () => {
+    renderTopbar();
+    const brand = screen.getByRole('link', { name: /beetDeck/i });
+    fireEvent.click(brand);
+    expect(window.location.hash).toBe('');
+  });
+});
+
+describe('Topbar search hotkey', () => {
+  beforeEach(() => {
+    stubMatchMedia(false);
+    stubLocation();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    restoreLocation();
   });
 
   it('renders the OS-aware keycap hint', () => {
