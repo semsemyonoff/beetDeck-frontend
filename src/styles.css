@@ -247,6 +247,8 @@ h4 {
   gap: var(--s-2);
   padding: 6px 8px;
   border-radius: var(--r-sm);
+  text-decoration: none;
+  color: inherit;
 }
 .brand:hover {
   background: var(--surface-1);
@@ -519,6 +521,8 @@ h4 {
   padding: 4px 8px;
   border-radius: var(--r-xs);
   color: var(--text-mute);
+  text-decoration: none;
+  cursor: pointer;
 }
 .crumb:hover {
   color: var(--text);
@@ -640,6 +644,8 @@ h4 {
   font-size: 14px;
   padding: 4px 4px;
   border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
 }
 .lib-row-name:hover {
   color: var(--accent);
@@ -706,6 +712,9 @@ h4 {
   background: var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--border-soft);
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition:
     background 120ms,
     transform 120ms;
@@ -830,6 +839,8 @@ h4 {
 }
 .wall-card-artist {
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 .wall-card-artist:hover {
   color: var(--accent);
@@ -948,6 +959,9 @@ h4 {
   gap: 10px;
   text-align: left;
   position: relative;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition: transform 160ms;
 }
 .album-card:hover {
@@ -2475,6 +2489,8 @@ h4 {
   padding: 6px 14px;
   gap: 10px;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
   transition: background 80ms;
 }
@@ -2524,6 +2540,9 @@ h4 {
   gap: var(--s-3);
   width: 100%;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   padding: 10px var(--s-4);
   transition: background 120ms;
 }
