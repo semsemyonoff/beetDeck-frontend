@@ -247,6 +247,8 @@ h4 {
   gap: var(--s-2);
   padding: 6px 8px;
   border-radius: var(--r-sm);
+  text-decoration: none;
+  color: inherit;
 }
 .brand:hover {
   background: var(--surface-1);
@@ -519,6 +521,8 @@ h4 {
   padding: 4px 8px;
   border-radius: var(--r-xs);
   color: var(--text-mute);
+  text-decoration: none;
+  cursor: pointer;
 }
 .crumb:hover {
   color: var(--text);
@@ -611,17 +615,20 @@ h4 {
 }
 
 .lib-row-head {
-  display: grid;
-  grid-template-columns: 16px 50px 1fr auto;
+  display: flex;
   align-items: center;
   gap: var(--s-3);
-  width: 100%;
   padding: var(--row-pad-y) var(--s-4);
-  text-align: left;
   transition: background 120ms;
 }
 .lib-row-head:hover {
   background: var(--surface-1);
+}
+.lib-row-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
 }
 .lib-chevron {
   display: inline-flex;
@@ -635,11 +642,14 @@ h4 {
   transform: rotate(90deg);
 }
 .lib-row-name {
+  flex: 1;
   font-weight: 500;
   color: var(--text);
   font-size: 14px;
   padding: 4px 4px;
   border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
 }
 .lib-row-name:hover {
   color: var(--accent);
@@ -706,6 +716,9 @@ h4 {
   background: var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--border-soft);
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition:
     background 120ms,
     transform 120ms;
@@ -805,6 +818,25 @@ h4 {
     0 8px 24px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.04);
 }
+.wall-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.wall-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.wall-card-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
 .wall-card-info {
   display: flex;
   flex-direction: column;
@@ -830,9 +862,18 @@ h4 {
 }
 .wall-card-artist {
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  z-index: 1;
 }
 .wall-card-artist:hover {
   color: var(--accent);
+}
+.wall-card-artist:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
 }
 .wall-card-year {
   font-family: var(--f-mono);
@@ -847,6 +888,7 @@ h4 {
   border-radius: 999px;
   background: var(--warn);
   color: #1a1a1a;
+  pointer-events: none;
 }
 .wall-card-check {
   position: absolute;
@@ -859,6 +901,7 @@ h4 {
   justify-content: center;
   border-radius: 999px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 .wall-card-check-ok {
   background: var(--ok);
@@ -948,6 +991,9 @@ h4 {
   gap: 10px;
   text-align: left;
   position: relative;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition: transform 160ms;
 }
 .album-card:hover {
@@ -2475,6 +2521,8 @@ h4 {
   padding: 6px 14px;
   gap: 10px;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
   transition: background 80ms;
 }
@@ -2524,6 +2572,9 @@ h4 {
   gap: var(--s-3);
   width: 100%;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   padding: 10px var(--s-4);
   transition: background 120ms;
 }

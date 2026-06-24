@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import Icon from './Icon.jsx';
-import { navigate } from '../useHashRoute.js';
+import RouteLink from './RouteLink.jsx';
 
 function UntaggedFolderRow({ folder }) {
   return (
-    <button
+    <RouteLink
       className="unt-folder"
-      onClick={() => navigate({ name: 'untagged', dir: folder.dir })}
+      target={{ name: 'untagged', dir: folder.dir }}
     >
       <span className="unt-folder-glyph">
         <Icon name="disc" size={14} />
@@ -24,7 +24,7 @@ function UntaggedFolderRow({ folder }) {
           <Icon name="chevron" size={13} />
         </span>
       </span>
-    </button>
+    </RouteLink>
   );
 }
 

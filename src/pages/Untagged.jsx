@@ -8,6 +8,7 @@ import ItemsIdentifyModal from '../ui/ItemsIdentifyModal.jsx';
 import { useTagRows } from '../ui/useTagRows.js';
 import { groupUntagged } from '../lib/tagEditor.js';
 import { navigate } from '../useHashRoute.js';
+import RouteLink from '../ui/RouteLink.jsx';
 
 function seedRow(f) {
   return {
@@ -175,12 +176,9 @@ export default function Untagged({ dir, dataVersion = 0 }) {
     return (
       <div className="page page-untagged">
         <div className="crumbs">
-          <button
-            className="crumb"
-            onClick={() => navigate({ name: 'library' })}
-          >
+          <RouteLink target={{ name: 'library' }} className="crumb">
             <Icon name="arrow-left" size={12} /> Library
-          </button>
+          </RouteLink>
         </div>
         <div className="error">Failed to load: {fetchError}</div>
       </div>
@@ -199,12 +197,9 @@ export default function Untagged({ dir, dataVersion = 0 }) {
     return (
       <div className="page page-untagged">
         <div className="crumbs">
-          <button
-            className="crumb"
-            onClick={() => navigate({ name: 'library' })}
-          >
+          <RouteLink target={{ name: 'library' }} className="crumb">
             <Icon name="arrow-left" size={12} /> Library
-          </button>
+          </RouteLink>
         </div>
         <header className="untagged-header">
           <div>
@@ -230,12 +225,9 @@ export default function Untagged({ dir, dataVersion = 0 }) {
     return (
       <div className="page page-untagged">
         <div className="crumbs">
-          <button
-            className="crumb"
-            onClick={() => navigate({ name: 'untagged' })}
-          >
+          <RouteLink target={{ name: 'untagged' }} className="crumb">
             <Icon name="arrow-left" size={12} /> Untagged
-          </button>
+          </RouteLink>
         </div>
         <div className="empty-state">
           <h2>Folder not found</h2>
@@ -248,16 +240,13 @@ export default function Untagged({ dir, dataVersion = 0 }) {
   return (
     <div className="page page-untagged">
       <div className="crumbs">
-        <button className="crumb" onClick={() => navigate({ name: 'library' })}>
+        <RouteLink target={{ name: 'library' }} className="crumb">
           <Icon name="arrow-left" size={12} /> Library
-        </button>
+        </RouteLink>
         <span className="crumb-sep">/</span>
-        <button
-          className="crumb"
-          onClick={() => navigate({ name: 'untagged' })}
-        >
+        <RouteLink target={{ name: 'untagged' }} className="crumb">
           Untagged
-        </button>
+        </RouteLink>
         <span className="crumb-sep">/</span>
         <span className="crumb crumb-current">{folder.name}</span>
       </div>

@@ -4,7 +4,7 @@ import Library from './pages/Library.jsx';
 import Artist from './pages/Artist.jsx';
 import Album from './pages/Album.jsx';
 import Untagged from './pages/Untagged.jsx';
-import { useHashRoute, navigate } from './useHashRoute.js';
+import { useHashRoute } from './useHashRoute.js';
 import { buildScanSummary } from './lib/scan.js';
 
 export default function App() {
@@ -78,11 +78,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Topbar
-        onNavHome={() => navigate({ name: 'library' })}
-        onScanStart={handleScanStart}
-        version={version}
-      />
+      <Topbar onScanStart={handleScanStart} version={version} />
       {scanStatus && (
         <div className={`scan-banner scan-banner--${scanStatus}`}>
           {scanStatus === 'running' && 'Scanning library…'}

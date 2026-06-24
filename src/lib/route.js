@@ -31,18 +31,23 @@ export function parse(hash) {
   return { name: 'library' };
 }
 
+export function hrefFor(target) {
+  if (!target || target.name === 'library') return '#/';
+  if (target.name === 'artist')
+    return '#/artist/' + encodeURIComponent(target.artist);
+  if (target.name === 'album') return '#/album/' + target.id;
+  if (target.name === 'untagged') {
+    if (target.dir != null)
+      return '#/untagged/' + encodeURIComponent(target.dir);
+    return '#/untagged';
+  }
+  return '#/';
+}
+
 export function navigate(target) {
   if (!target || target.name === 'library') {
     window.location.hash = '';
-  } else if (target.name === 'artist') {
-    window.location.hash = '#/artist/' + encodeURIComponent(target.artist);
-  } else if (target.name === 'album') {
-    window.location.hash = '#/album/' + target.id;
-  } else if (target.name === 'untagged') {
-    if (target.dir != null) {
-      window.location.hash = '#/untagged/' + encodeURIComponent(target.dir);
-    } else {
-      window.location.hash = '#/untagged';
-    }
+    return;
   }
+  window.location.hash = hrefFor(target);
 }
