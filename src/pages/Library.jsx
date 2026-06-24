@@ -3,6 +3,7 @@ import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover, CoverStack } from '../ui/Cover.jsx';
 import UntaggedGroup from '../ui/UntaggedGroup.jsx';
+import RouteLink from '../ui/RouteLink.jsx';
 import { navigate } from '../useHashRoute.js';
 import {
   mapApi,
@@ -223,7 +224,7 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
   );
 }
 
-function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
+function LibraryWall({ artists, filter, folders }) {
   const items = useMemo(() => {
     const out = [];
     for (const a of artists) {
@@ -239,26 +240,24 @@ function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
       {filter !== 'ident' ? <UntaggedGroup folders={folders} wall /> : null}
       <div className="lib-wall">
         {items.map(({ artist, album }) => (
-          <button
-            key={album.id}
-            className="wall-card"
-            onClick={() => onAlbum(artist, album)}
-          >
-            <Cover album={album} size={170} rounded={6} showTitle={false} />
-            <div className="wall-card-info">
-              <div className="wall-card-title">{album.title}</div>
-              <div className="wall-card-meta">
-                <span
-                  className="wall-card-artist"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onArtist(artist);
-                  }}
-                >
-                  {artist.name}
-                </span>
-                <span className="wall-card-year">{album.year}</span>
+          <div key={album.id} className="wall-card">
+            <RouteLink
+              className="wall-card-link"
+              target={{ name: 'album', id: album.id }}
+            >
+              <Cover album={album} size={170} rounded={6} showTitle={false} />
+              <div className="wall-card-info">
+                <div className="wall-card-title">{album.title}</div>
               </div>
+            </RouteLink>
+            <div className="wall-card-meta">
+              <RouteLink
+                className="wall-card-artist"
+                target={{ name: 'artist', artist: artist.name }}
+              >
+                {artist.name}
+              </RouteLink>
+              <span className="wall-card-year">{album.year}</span>
             </div>
             {isIdentified(album) ? (
               <span className="wall-card-check wall-card-check-ok">
@@ -271,7 +270,7 @@ function LibraryWall({ artists, filter, onArtist, onAlbum, folders }) {
             ) : (
               <span className="wall-card-badge">needs review</span>
             )}
-          </button>
+          </div>
         ))}
       </div>
     </div>

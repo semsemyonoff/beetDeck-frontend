@@ -814,6 +814,25 @@ h4 {
     0 8px 24px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.04);
 }
+.wall-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.wall-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.wall-card-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
 .wall-card-info {
   display: flex;
   flex-direction: column;
@@ -841,9 +860,16 @@ h4 {
   cursor: pointer;
   text-decoration: none;
   color: inherit;
+  position: relative;
+  z-index: 1;
 }
 .wall-card-artist:hover {
   color: var(--accent);
+}
+.wall-card-artist:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
 }
 .wall-card-year {
   font-family: var(--f-mono);
@@ -858,6 +884,7 @@ h4 {
   border-radius: 999px;
   background: var(--warn);
   color: #1a1a1a;
+  pointer-events: none;
 }
 .wall-card-check {
   position: absolute;
@@ -870,6 +897,7 @@ h4 {
   justify-content: center;
   border-radius: 999px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 .wall-card-check-ok {
   background: var(--ok);
