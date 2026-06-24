@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { Cover } from '../ui/Cover.jsx';
-import { navigate } from '../useHashRoute.js';
 import RouteLink from '../ui/RouteLink.jsx';
 import { mapAlbum, isIdentified } from '../lib/albums.js';
 
@@ -129,10 +128,10 @@ export default function Artist({ name, dataVersion = 0 }) {
 
       <div className="artist-grid">
         {visible.map((al) => (
-          <button
+          <RouteLink
             key={al.id}
             className="album-card"
-            onClick={() => navigate({ name: 'album', id: al.id })}
+            target={{ name: 'album', id: al.id }}
           >
             <Cover album={al} size={220} rounded={6} showTitle={false} />
             <div className="album-card-info">
@@ -154,7 +153,7 @@ export default function Artist({ name, dataVersion = 0 }) {
                 ) : null}
               </div>
             </div>
-          </button>
+          </RouteLink>
         ))}
       </div>
     </div>

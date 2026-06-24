@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import Artist from './Artist.jsx';
 
 const origLocation = Object.getOwnPropertyDescriptor(window, 'location');
@@ -60,5 +66,42 @@ describe('Artist — breadcrumb navigation', () => {
     const link = screen.getByRole('link', { name: /library/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '#/');
+  });
+});
+
+describe('Artist — album cards', () => {
+  beforeEach(() => {
+    stubLocation();
+    vi.stubGlobal('fetch', makeFetch());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  it('renders each album card as a link with href="#/album/<id>"', async () => {
+    await act(async () => {
+      render(<Artist name="Test Artist" />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    const link = screen.getByRole('link', { name: /Dummy Album/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '#/album/1');
+  });
+
+  it('plain left-click on an album card navigates to the album', async () => {
+    await act(async () => {
+      render(<Artist name="Test Artist" />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    const link = screen.getByRole('link', { name: /Dummy Album/i });
+    fireEvent.click(link, { button: 0 });
+    expect(window.location.hash).toBe('#/album/1');
   });
 });
