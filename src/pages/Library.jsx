@@ -140,7 +140,7 @@ function LibraryIndex({ artists, filter, folders }) {
               const totalAll = artist.albums.length;
               const totalShown =
                 filter === 'all' ? totalAll : visibleAlbums.length;
-              const albumsId = `row-albums-${artist.name.replace(/[^\w-]/g, '_')}`;
+              const albumsId = `row-albums-${encodeURIComponent(artist.name)}`;
               return (
                 <div
                   key={artist.name}

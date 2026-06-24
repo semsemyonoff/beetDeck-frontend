@@ -135,6 +135,20 @@ describe('LibraryWall — stretched-link wall cards', () => {
     expect(window.location.hash).toBe('#/album/1');
   });
 
+  it('Cmd+click on album link does not navigate (browser opens new tab)', async () => {
+    await renderInWallLayout();
+    const albumLink = screen.getByText('Dummy').closest('a');
+    fireEvent.click(albumLink, { button: 0, metaKey: true });
+    expect(window.location.hash).toBe('');
+  });
+
+  it('Cmd+click on artist link does not navigate (browser opens new tab)', async () => {
+    await renderInWallLayout();
+    const artistLink = screen.getByText('Portishead').closest('a');
+    fireEvent.click(artistLink, { button: 0, metaKey: true });
+    expect(window.location.hash).toBe('');
+  });
+
   it('needs-review badge renders for unidentified album', async () => {
     await renderInWallLayout();
     const badge = document.querySelector('.wall-card-badge');
@@ -229,6 +243,13 @@ describe('LibraryIndex — list view', () => {
     const chipLink = screen.getByRole('link', { name: /dummy/i });
     fireEvent.click(chipLink);
     expect(window.location.hash).toBe('#/album/1');
+  });
+
+  it('Cmd+click on artist link does not navigate (browser opens new tab)', async () => {
+    await renderInIndexLayout();
+    const link = screen.getAllByRole('link', { name: 'Portishead' })[0];
+    fireEvent.click(link, { button: 0, metaKey: true });
+    expect(window.location.hash).toBe('');
   });
 
   it('aria-controls points to the albums container id', async () => {

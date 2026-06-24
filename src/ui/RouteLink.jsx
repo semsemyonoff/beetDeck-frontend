@@ -15,7 +15,7 @@ export default function RouteLink({
   };
 
   return (
-    <a className={className} href={href} {...rest} onClick={handleClick}>
+    <a {...rest} className={className} href={href} onClick={handleClick}>
       {children}
     </a>
   );

@@ -86,6 +86,14 @@ describe('Topbar brand link', () => {
     fireEvent.click(brand);
     expect(window.location.hash).toBe('');
   });
+
+  it('Cmd+click on brand does not navigate (browser opens new tab)', () => {
+    renderTopbar();
+    window.location.hash = '#/album/1';
+    const brand = screen.getByRole('link', { name: /beetDeck/i });
+    fireEvent.click(brand, { button: 0, metaKey: true });
+    expect(window.location.hash).toBe('#/album/1');
+  });
 });
 
 describe('Topbar search hotkey', () => {
@@ -210,6 +218,13 @@ describe('Topbar search results', () => {
     const link = screen.getByRole('link', { name: 'Radiohead' });
     fireEvent.click(link);
     expect(screen.queryByText('Artists')).not.toBeInTheDocument();
+  });
+
+  it('Cmd+click on artist result leaves the dropdown open (new tab on source tab)', async () => {
+    await showResults({ artists: ['Radiohead'], albums: [], tracks: [] });
+    const link = screen.getByRole('link', { name: 'Radiohead' });
+    fireEvent.click(link, { button: 0, metaKey: true });
+    expect(screen.getByText('Artists')).toBeInTheDocument();
   });
 
   it('modified mousedown outside search does not close the dropdown', async () => {

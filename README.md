@@ -64,7 +64,7 @@ npm run format:check # Prettier (check only)
 - `src/main.jsx` — React entry, imports `styles.css`.
 - `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
 - `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `scan`, `tagEditor`, `platform`, `useModalDismiss`.
-- `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, IdentifyModal, useTagRows, FolderTree, TagTable, BulkBar, UntaggedGroup, ItemsIdentifyModal, TagEditorModal).
+- `src/ui/` — shared widgets (RouteLink, Topbar, Icon, Segmented, Cover, IdentifyModal, useTagRows, FolderTree, TagTable, BulkBar, UntaggedGroup, ItemsIdentifyModal, TagEditorModal).
 - `src/pages/` — Library, Artist, Album, Untagged.
 - `src/styles.css` — dark default (`:root`), light override (`:root[data-theme="light"]`); accent `#ec4868` shared.
 

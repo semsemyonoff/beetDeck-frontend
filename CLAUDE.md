@@ -31,11 +31,11 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
 └── src/
     ├── main.jsx            # React entry; mounts <App>, imports styles.css
     ├── App.jsx             # Top-level shell: topbar, search, rescan polling, route switch
-    ├── useHashRoute.js     # useHashRoute() hook; re-exports navigate() from lib/route.js
+    ├── useHashRoute.js     # useHashRoute() hook; useRouteLink/isModifiedClick; re-exports navigate() from lib/route.js
     ├── styles.css          # All styling: dark default (:root), light override (:root[data-theme="light"])
     ├── assets/             # Static assets (logo.png)
     ├── lib/                # Pure helpers (no React imports) — each has a co-located *.test.js
-    │   ├── route.js        # parse(hash) / navigate(target)
+    │   ├── route.js        # parse(hash) / navigate(target) / hrefFor(target)
     │   ├── albums.js       # mapAlbum / isIdentified(album) / needsReview(album)
     │   ├── library.js      # mapApi / totals / sortArtists / filterArtists / filterAlbums / letterGroups
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
@@ -45,6 +45,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
+    │   ├── RouteLink.jsx       # <a href> wrapper over useRouteLink; plain left-click = SPA nav, modified/middle/right = browser
     │   ├── Topbar.jsx
     │   ├── Icon.jsx
     │   ├── Segmented.jsx
