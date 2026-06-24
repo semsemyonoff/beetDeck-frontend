@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { Cover } from './Cover.jsx';
-import { navigate, isModifiedClick } from '../useHashRoute.js';
+import { isModifiedClick } from '../useHashRoute.js';
 import { searchShortcut } from '../lib/platform.js';
 import logoUrl from '../assets/logo.png';
 import RouteLink from './RouteLink.jsx';
@@ -49,9 +49,12 @@ export default function Topbar({ onScanStart, version }) {
 
   // Close the dropdown on a click outside the search box (no backdrop element,
   // so the input stays clickable while the dropdown is open).
+  // Modified presses (Cmd/Ctrl/middle) are ignored so Cmd+click on a result
+  // or the brand opens a new tab without clearing the dropdown on the source tab.
   useEffect(() => {
     if (!results) return undefined;
     const onDocClick = (e) => {
+      if (isModifiedClick(e)) return;
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setResults(null);
       }
@@ -98,11 +101,6 @@ export default function Topbar({ onScanStart, version }) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setQuery('');
     setResults(null);
-  };
-
-  const goTo = (target) => {
-    closeSearch();
-    navigate(target);
   };
 
   const onQueryChange = (e) => {
@@ -187,15 +185,18 @@ export default function Topbar({ onScanStart, version }) {
               <div className="search-section">
                 <div className="search-section-label">Artists</div>
                 {results.artists.map((name) => (
-                  <button
+                  <RouteLink
                     key={name}
+                    target={{ name: 'artist', artist: name }}
                     className="search-item"
-                    onClick={() => goTo({ name: 'artist', artist: name })}
+                    onClick={(e) => {
+                      if (!isModifiedClick(e)) closeSearch();
+                    }}
                   >
                     <span className="search-item-text">
                       <span className="search-item-title">{name}</span>
                     </span>
-                  </button>
+                  </RouteLink>
                 ))}
               </div>
             )}
@@ -203,17 +204,20 @@ export default function Topbar({ onScanStart, version }) {
               <div className="search-section">
                 <div className="search-section-label">Albums</div>
                 {results.albums.map((a) => (
-                  <button
+                  <RouteLink
                     key={a.id}
+                    target={{ name: 'album', id: a.id }}
                     className="search-item"
-                    onClick={() => goTo({ name: 'album', id: a.id })}
+                    onClick={(e) => {
+                      if (!isModifiedClick(e)) closeSearch();
+                    }}
                   >
                     <Cover album={a} size={40} rounded={4} showTitle={false} />
                     <span className="search-item-text">
                       <span className="search-item-title">{a.album}</span>
                       <span className="search-item-sub">{a.albumartist}</span>
                     </span>
-                  </button>
+                  </RouteLink>
                 ))}
               </div>
             )}
@@ -221,10 +225,13 @@ export default function Topbar({ onScanStart, version }) {
               <div className="search-section">
                 <div className="search-section-label">Tracks</div>
                 {results.tracks.map((t) => (
-                  <button
+                  <RouteLink
                     key={t.id}
+                    target={{ name: 'album', id: t.album_id }}
                     className="search-item"
-                    onClick={() => goTo({ name: 'album', id: t.album_id })}
+                    onClick={(e) => {
+                      if (!isModifiedClick(e)) closeSearch();
+                    }}
                   >
                     <Cover
                       album={{
@@ -242,7 +249,7 @@ export default function Topbar({ onScanStart, version }) {
                         {t.album} · {t.albumartist}
                       </span>
                     </span>
-                  </button>
+                  </RouteLink>
                 ))}
               </div>
             )}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import Topbar from './Topbar.jsx';
 import { searchShortcut } from '../lib/platform.js';
 
@@ -137,5 +137,95 @@ describe('Topbar search hotkey', () => {
 
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(input.value).toBe('');
+  });
+});
+
+describe('Topbar search results', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    stubMatchMedia(false);
+    stubLocation();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    restoreLocation();
+  });
+
+  async function showResults(results) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => results,
+      })
+    );
+    renderTopbar();
+    const input = screen.getByPlaceholderText(/Search artists/i);
+    fireEvent.change(input, { target: { value: 'radio' } });
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+    await act(async () => {});
+  }
+
+  it('renders artist result as anchor with correct href', async () => {
+    await showResults({ artists: ['Radiohead'], albums: [], tracks: [] });
+    const link = screen.getByRole('link', { name: 'Radiohead' });
+    expect(link).toHaveAttribute('href', '#/artist/Radiohead');
+  });
+
+  it('renders album result as anchor with correct href', async () => {
+    await showResults({
+      artists: [],
+      albums: [{ id: 5, album: 'OK Computer', albumartist: 'Radiohead' }],
+      tracks: [],
+    });
+    const link = screen.getByRole('link', { name: /OK Computer/i });
+    expect(link).toHaveAttribute('href', '#/album/5');
+  });
+
+  it('renders track result as anchor with href pointing to its album', async () => {
+    await showResults({
+      artists: [],
+      albums: [],
+      tracks: [
+        {
+          id: 3,
+          title: 'Creep',
+          album: 'Pablo Honey',
+          albumartist: 'Radiohead',
+          album_id: 7,
+          has_cover: false,
+        },
+      ],
+    });
+    const link = screen.getByRole('link', { name: /Creep/i });
+    expect(link).toHaveAttribute('href', '#/album/7');
+  });
+
+  it('plain click on artist result closes the search dropdown', async () => {
+    await showResults({ artists: ['Radiohead'], albums: [], tracks: [] });
+    const link = screen.getByRole('link', { name: 'Radiohead' });
+    fireEvent.click(link);
+    expect(screen.queryByText('Artists')).not.toBeInTheDocument();
+  });
+
+  it('modified mousedown outside search does not close the dropdown', async () => {
+    await showResults({ artists: ['Radiohead'], albums: [], tracks: [] });
+    expect(screen.getByRole('link', { name: 'Radiohead' })).toBeInTheDocument();
+    const brand = screen.getByRole('link', { name: /beetDeck/i });
+    fireEvent.mouseDown(brand, { metaKey: true, button: 0 });
+    expect(screen.getByRole('link', { name: 'Radiohead' })).toBeInTheDocument();
+  });
+
+  it('plain mousedown outside search closes the dropdown', async () => {
+    await showResults({ artists: ['Radiohead'], albums: [], tracks: [] });
+    const brand = screen.getByRole('link', { name: /beetDeck/i });
+    fireEvent.mouseDown(brand, { button: 0 });
+    expect(
+      screen.queryByRole('link', { name: 'Radiohead' })
+    ).not.toBeInTheDocument();
   });
 });
