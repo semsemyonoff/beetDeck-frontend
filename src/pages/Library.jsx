@@ -4,7 +4,6 @@ import Segmented from '../ui/Segmented.jsx';
 import { Cover, CoverStack } from '../ui/Cover.jsx';
 import UntaggedGroup from '../ui/UntaggedGroup.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
-import { navigate } from '../useHashRoute.js';
 import {
   mapApi,
   totals,
@@ -103,7 +102,7 @@ function LibraryHeader({
   );
 }
 
-function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
+function LibraryIndex({ artists, filter, folders }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const toggle = (name) => {
     setExpanded((prev) => {
@@ -141,32 +140,35 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
               const totalAll = artist.albums.length;
               const totalShown =
                 filter === 'all' ? totalAll : visibleAlbums.length;
+              const albumsId = `row-albums-${artist.name.replace(/[^\w-]/g, '_')}`;
               return (
                 <div
                   key={artist.name}
                   className={'lib-row' + (open ? ' lib-row-open' : '')}
                 >
-                  <button
-                    className="lib-row-head"
-                    onClick={() => toggle(artist.name)}
-                  >
-                    <span
-                      className={
-                        'lib-chevron' + (open ? ' lib-chevron-open' : '')
-                      }
+                  <div className="lib-row-head">
+                    <button
+                      className="lib-row-toggle"
+                      onClick={() => toggle(artist.name)}
+                      aria-label={`Toggle albums for ${artist.name}`}
+                      aria-expanded={open}
+                      aria-controls={albumsId}
                     >
-                      <Icon name="chevron" size={12} />
-                    </span>
-                    <CoverStack albums={artist.albums} size={32} />
-                    <span
+                      <span
+                        className={
+                          'lib-chevron' + (open ? ' lib-chevron-open' : '')
+                        }
+                      >
+                        <Icon name="chevron" size={12} />
+                      </span>
+                      <CoverStack albums={artist.albums} size={32} />
+                    </button>
+                    <RouteLink
                       className="lib-row-name"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onArtist(artist);
-                      }}
+                      target={{ name: 'artist', artist: artist.name }}
                     >
                       {artist.name}
-                    </span>
+                    </RouteLink>
                     <span className="lib-row-meta">
                       {identCount < totalAll ? (
                         <span className="warn small">
@@ -176,14 +178,14 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
                       ) : null}
                       <span className="lib-row-count">{totalShown}</span>
                     </span>
-                  </button>
+                  </div>
                   {open ? (
-                    <div className="lib-row-albums">
+                    <div className="lib-row-albums" id={albumsId}>
                       {visibleAlbums.map((al) => (
-                        <button
+                        <RouteLink
                           key={al.id}
                           className="lib-album-chip"
-                          onClick={() => onAlbum(artist, al)}
+                          target={{ name: 'album', id: al.id }}
                         >
                           <Cover
                             album={al}
@@ -210,7 +212,7 @@ function LibraryIndex({ artists, filter, onArtist, onAlbum, folders }) {
                             </div>
                             <div className="lib-album-chip-meta">{al.year}</div>
                           </div>
-                        </button>
+                        </RouteLink>
                       ))}
                     </div>
                   ) : null}
@@ -324,10 +326,6 @@ export default function Library({ dataVersion = 0 }) {
 
   const stats = useMemo(() => totals(artists), [artists]);
 
-  const onArtist = (artist) =>
-    navigate({ name: 'artist', artist: artist.name });
-  const onAlbum = (_artist, album) => navigate({ name: 'album', id: album.id });
-
   if (error) {
     return (
       <div className="page page-library">
@@ -369,22 +367,10 @@ export default function Library({ dataVersion = 0 }) {
       />
       <div className="lib-body">
         {layout === 'index' && (
-          <LibraryIndex
-            artists={artists}
-            filter={filter}
-            onArtist={onArtist}
-            onAlbum={onAlbum}
-            folders={folders}
-          />
+          <LibraryIndex artists={artists} filter={filter} folders={folders} />
         )}
         {layout === 'wall' && (
-          <LibraryWall
-            artists={artists}
-            filter={filter}
-            onArtist={onArtist}
-            onAlbum={onAlbum}
-            folders={folders}
-          />
+          <LibraryWall artists={artists} filter={filter} folders={folders} />
         )}
       </div>
     </div>

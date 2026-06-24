@@ -615,17 +615,20 @@ h4 {
 }
 
 .lib-row-head {
-  display: grid;
-  grid-template-columns: 16px 50px 1fr auto;
+  display: flex;
   align-items: center;
   gap: var(--s-3);
-  width: 100%;
   padding: var(--row-pad-y) var(--s-4);
-  text-align: left;
   transition: background 120ms;
 }
 .lib-row-head:hover {
   background: var(--surface-1);
+}
+.lib-row-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
 }
 .lib-chevron {
   display: inline-flex;
@@ -639,6 +642,7 @@ h4 {
   transform: rotate(90deg);
 }
 .lib-row-name {
+  flex: 1;
   font-weight: 500;
   color: var(--text);
   font-size: 14px;
