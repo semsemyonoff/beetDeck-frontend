@@ -3097,6 +3097,128 @@ h4 {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ *  Album Lyrics Modal
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-lyrics {
+  max-width: 860px;
+}
+.alm-head {
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+.alm-head-left {
+  flex: 1;
+  min-width: 0;
+}
+.alm-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+.alm-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+.alm-progress-bar {
+  flex: 1;
+  max-width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.alm-progress-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 999px;
+  transition: width 200ms ease;
+}
+.alm-ready-count {
+  font-variant-numeric: tabular-nums;
+}
+.alm-body {
+  display: flex;
+  flex-direction: column;
+}
+.alm-row {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.alm-row:last-child {
+  border-bottom: none;
+}
+.alm-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.alm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.alm-track-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alm-track-artist {
+  flex-shrink: 0;
+}
+.alm-row-status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+.alm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.alm-badge-ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.alm-badge-muted {
+  color: var(--text-faint);
+  background: var(--surface-2);
+}
+.alm-badge-err {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+.alm-row-pending .alm-track-title,
+.alm-row-pending .alm-track-artist,
+.alm-row-applying .alm-track-title,
+.alm-row-applying .alm-track-artist,
+.alm-row-skipped .alm-track-title,
+.alm-row-skipped .alm-track-artist,
+.alm-row-not-found .alm-track-title,
+.alm-row-not-found .alm-track-artist {
+  opacity: 0.55;
+}
+.alm-compare {
+  margin-top: var(--s-2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  *  Tag editor modal
  * ───────────────────────────────────────────────────────────────────────────── */
 
