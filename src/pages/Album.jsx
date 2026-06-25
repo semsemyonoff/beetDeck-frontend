@@ -4,6 +4,7 @@ import { Cover } from '../ui/Cover.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import TagEditorModal from '../ui/TagEditorModal.jsx';
+import AlbumLyricsModal from '../ui/AlbumLyricsModal.jsx';
 import {
   fmtMins,
   fmtTotal,
@@ -15,6 +16,7 @@ import { buildLyricsPreview } from '../lib/diff.js';
 import { isIdentified } from '../lib/albums.js';
 import { isSynced, parseLyricLines } from '../lib/lyrics.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
+import { runLyricsFetchQueue } from '../lib/lyricsFetchQueue.js';
 
 // Render LRC lines as a [timestamp | text] grid; blank lines show a ♪ glyph.
 function LyricLines({ text, limit }) {
@@ -85,6 +87,11 @@ export default function Album({ id, dataVersion = 0 }) {
   const [trackBusy, setTrackBusy] = useState({});
   const [trackError, setTrackError] = useState({});
   const [heroCoverError, setHeroCoverError] = useState(false);
+  const [almOpen, setAlmOpen] = useState(false);
+  const [almRows, setAlmRows] = useState([]);
+  const [almProgress, setAlmProgress] = useState({ done: 0, total: 0 });
+  const [almRunning, setAlmRunning] = useState(false);
+  const almAbortRef = useRef(null);
   const uploadRef = useRef(null);
   const flashTimerRef = useRef(null);
 
@@ -370,47 +377,128 @@ export default function Album({ id, dataVersion = 0 }) {
     }
   };
 
-  const handleLyricsFetchAll = async () => {
-    setBusy('lyrics-fetch');
+  const handleLyricsFetchAll = () => {
+    if (almOpen || almRunning) return;
+    const ctrl = new AbortController();
+    almAbortRef.current = ctrl;
+    const initialRows = tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      track: t.track,
+      disc: t.disc,
+      state: 'pending',
+      newLyrics: null,
+      newSynced: null,
+      newBackend: null,
+      currentLyrics: null,
+      currentSource: null,
+    }));
+    setAlmRows(initialRows);
+    setAlmProgress({ done: 0, total: tracks.length });
+    setAlmRunning(true);
+    setAlmOpen(true);
+    runLyricsFetchQueue({
+      albumId: data.id,
+      itemIds: tracks.map((t) => t.id),
+      signal: ctrl.signal,
+      onProgress: (done, total) => setAlmProgress({ done, total }),
+      onTrackResult: (result) => {
+        setAlmRows((prev) =>
+          prev.map((r) => {
+            if (r.id !== result.itemId) return r;
+            if (result.status === 'error') return { ...r, state: 'error' };
+            if (result.found) {
+              return {
+                ...r,
+                state: 'found',
+                newLyrics: result.newLyrics,
+                newSynced: result.newSynced,
+                newBackend: result.newBackend,
+                currentLyrics: result.currentLyrics,
+                currentSource: result.currentSource,
+              };
+            }
+            return {
+              ...r,
+              state: result.currentLyrics ? 'skipped' : 'not-found',
+              currentLyrics: result.currentLyrics,
+              currentSource: result.currentSource,
+            };
+          })
+        );
+      },
+    }).finally(() => setAlmRunning(false));
+  };
+
+  const handleAlmApplyOne = async (itemId) => {
+    setAlmRows((prev) =>
+      prev.map((r) =>
+        r.id === itemId && r.state === 'found' ? { ...r, state: 'applying' } : r
+      )
+    );
+    const { ok } = await postJson(
+      `/api/album/${data.id}/track/${itemId}/lyrics/confirm`
+    );
+    if (ok) {
+      setAlmRows((prev) =>
+        prev.map((r) =>
+          r.id === itemId && r.state === 'applying'
+            ? { ...r, state: 'applied' }
+            : r
+        )
+      );
+      await refreshTrackLyrics({ id: itemId });
+    } else {
+      setAlmRows((prev) =>
+        prev.map((r) =>
+          r.id === itemId && r.state === 'applying'
+            ? { ...r, state: 'found' }
+            : r
+        )
+      );
+    }
+  };
+
+  const handleAlmApplyAll = async (itemIds) => {
+    const toApply = new Set(itemIds);
+    setAlmRows((prev) =>
+      prev.map((r) =>
+        toApply.has(r.id) && r.state === 'found'
+          ? { ...r, state: 'applying' }
+          : r
+      )
+    );
     const { ok, data: d } = await postJson(
-      `/api/album/${data.id}/lyrics/fetch`
-    );
-    if (!ok) {
-      setBusy(null);
-      showFlash('err', d?.error || 'Bulk lyrics fetch failed.');
-      return;
-    }
-    const allTracks = d?.tracks || [];
-    const found = allTracks.filter((t) => t.found && !t.current_lyrics);
-    if (!found.length) {
-      setBusy(null);
-      const anyFound = allTracks.some((t) => t.found);
-      showFlash(
-        'err',
-        anyFound
-          ? 'All tracks already have lyrics.'
-          : 'No lyrics found for any track.'
-      );
-      return;
-    }
-    const item_ids = found.map((t) => t.item_id);
-    const { ok: ok2, data: d2 } = await postJson(
       `/api/album/${data.id}/lyrics/confirm`,
-      { item_ids }
+      { item_ids: itemIds }
     );
-    setBusy(null);
-    if (ok2) {
-      const failed = (d2?.failed || []).length;
-      showFlash(
-        failed ? 'err' : 'ok',
-        `Wrote lyrics for ${d2?.written || 0} track(s)${failed ? `, ${failed} failed` : ''}.`
+    if (ok) {
+      const writtenIds = new Set(d?.written_item_ids || []);
+      const failedIds = new Set(d?.failed || []);
+      setAlmRows((prev) =>
+        prev.map((r) => {
+          if (!toApply.has(r.id) || r.state !== 'applying') return r;
+          if (writtenIds.has(r.id)) return { ...r, state: 'applied' };
+          if (failedIds.has(r.id)) return { ...r, state: 'error' };
+          return { ...r, state: 'found' };
+        })
       );
-      // Refresh lyrics cache for affected items.
-      setLyricsCache({});
       reload();
     } else {
-      showFlash('err', d2?.error || 'Lyrics confirm failed.');
+      setAlmRows((prev) =>
+        prev.map((r) =>
+          toApply.has(r.id) && r.state === 'applying'
+            ? { ...r, state: 'found' }
+            : r
+        )
+      );
     }
+  };
+
+  const closeAlmModal = () => {
+    almAbortRef.current?.abort();
+    setAlmOpen(false);
   };
 
   const setTrackBusyForId = (id, val) =>
@@ -522,6 +610,8 @@ export default function Album({ id, dataVersion = 0 }) {
       setTrackErrorForId(item.id, d?.error || 'Embed .lrc failed.');
     }
   };
+
+  const almApplying = almRows.some((r) => r.state === 'applying');
 
   return (
     <div className="page page-album">
@@ -766,15 +856,10 @@ export default function Album({ id, dataVersion = 0 }) {
             <ActionGroup label="Lyrics">
               <button
                 className="btn btn-action"
-                disabled={busy === 'lyrics-fetch'}
+                disabled={almOpen || almRunning || almApplying}
                 onClick={handleLyricsFetchAll}
               >
-                {busy === 'lyrics-fetch' ? (
-                  <BtnSpinner />
-                ) : (
-                  <Icon name="download" size={12} />
-                )}{' '}
-                Fetch all
+                <Icon name="download" size={12} /> Fetch all
               </button>
             </ActionGroup>
           </div>
@@ -1286,6 +1371,17 @@ export default function Album({ id, dataVersion = 0 }) {
             }
             reload();
           }}
+        />
+      )}
+
+      {almOpen && (
+        <AlbumLyricsModal
+          tracks={almRows}
+          progress={almProgress}
+          applying={almApplying}
+          onApplyAll={handleAlmApplyAll}
+          onApplyOne={handleAlmApplyOne}
+          onClose={closeAlmModal}
         />
       )}
     </div>
