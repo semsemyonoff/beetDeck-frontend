@@ -59,7 +59,9 @@ export async function runLyricsFetchQueue({
       done++;
       onProgress(done, total);
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      // Same teardown guard as the success path: a request that fails (for any
+      // reason, not just AbortError) after the run was aborted must not report.
+      if (signal?.aborted || err.name === 'AbortError') return;
       reportError(itemId);
     }
   }

@@ -295,6 +295,39 @@ describe('runLyricsFetchQueue', () => {
     expect(onTrackResult).not.toHaveBeenCalled();
   });
 
+  it('a fetch that rejects (non-abort) after abort does not report an error', async () => {
+    const controller = new AbortController();
+    const defs = Array.from({ length: 4 }, () => deferred());
+    let callIdx = 0;
+    fetchMock.mockImplementation(() => defs[callIdx++].promise);
+
+    const onProgress = vi.fn();
+    const onTrackResult = vi.fn();
+
+    const queuePromise = runLyricsFetchQueue({
+      albumId: 1,
+      itemIds: [1, 2, 3, 4],
+      signal: controller.signal,
+      onProgress,
+      onTrackResult,
+      concurrency: 2,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Abort, then let an in-flight request reject with a *non-abort* error
+    // (e.g. a network TypeError racing the abort). It must not report an error
+    // row onto state the caller already tore down.
+    controller.abort();
+    defs[0].reject(new TypeError('Network error'));
+    defs[1].reject(new TypeError('Network error'));
+
+    await queuePromise;
+
+    expect(onProgress).not.toHaveBeenCalled();
+    expect(onTrackResult).not.toHaveBeenCalled();
+  });
+
   it('an errored fetch frees its pool slot so queued tracks still run', async () => {
     const defs = Array.from({ length: 3 }, () => deferred());
     let callIdx = 0;
