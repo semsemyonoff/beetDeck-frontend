@@ -133,6 +133,12 @@ export default function Icon({ name, size = 14 }) {
           />
         </svg>
       );
+    case 'bpm':
+      return (
+        <svg viewBox="0 0 24 24" style={s}>
+          <path d="M2 12h3l2-7 3 14 2-8 3 5 2-4h5" {...common} />
+        </svg>
+      );
     case 'tag':
       return (
         <svg viewBox="0 0 24 24" style={s}>
