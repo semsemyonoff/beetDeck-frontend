@@ -590,6 +590,10 @@ export default function Album({ id, dataVersion = 0 }) {
   };
 
   const handleTrackBpm = async (item) => {
+    // BPM compute writes the file/DB; never let a per-track compute overlap an
+    // album-wide run (or its still-settling in-flight requests) on the same
+    // track — concurrent writes to one file can corrupt tags.
+    if (bpmOpen || bpmRunning) return;
     setTrackBusyForId(item.id, 'bpm');
     const { ok, data: d } = await postJson(
       `/api/album/${data.id}/track/${item.id}/bpm/compute`
@@ -657,7 +661,12 @@ export default function Album({ id, dataVersion = 0 }) {
         }
       },
     }).finally(() => {
-      if (bpmRunRef.current === runToken) setBpmRunning(false);
+      // Always release the run lock once the queue settles, even if the modal
+      // was closed mid-run (closeBpmModal nulls bpmRunRef). Guarding this on the
+      // run token would leave bpmRunning stuck `true` after a close, permanently
+      // disabling "Compute all". The per-callback token guards above still drop
+      // stale row/cache updates; only the lock release must be unconditional.
+      setBpmRunning(false);
     });
   };
 
@@ -1167,7 +1176,9 @@ export default function Album({ id, dataVersion = 0 }) {
                               ? 'No BPM'
                               : 'BPM'
                         }
-                        disabled={trackBusy[t.id] === 'bpm'}
+                        disabled={
+                          trackBusy[t.id] === 'bpm' || bpmOpen || bpmRunning
+                        }
                         onClick={() => handleTrackBpm(t)}
                       >
                         {trackBusy[t.id] === 'bpm' ? (

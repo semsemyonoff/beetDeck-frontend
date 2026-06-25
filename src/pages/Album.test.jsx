@@ -2095,6 +2095,42 @@ describe('Album — BPM buttons and AlbumBpmModal (Task 7)', () => {
     expect(screen.queryByText(/compute all bpm/i)).not.toBeInTheDocument();
   });
 
+  it('Compute all re-enables after closing the modal mid-run once the queue settles', async () => {
+    // Regression: closing the modal nulls the run token; the queue settle must
+    // still release the run lock, otherwise "Compute all" stays disabled forever.
+    let resolveQueue;
+    vi.mocked(runBpmComputeQueue).mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolveQueue = res;
+        })
+    );
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    // Close the modal while requests are still in flight.
+    const backdrop = document.querySelector('.modal-backdrop');
+    await act(async () => {
+      fireEvent.click(backdrop);
+    });
+    expect(screen.queryByText(/compute all bpm/i)).not.toBeInTheDocument();
+
+    // Lock is still held until the queue promise settles (overlapping-run guard).
+    expect(screen.getByRole('button', { name: /compute all/i })).toBeDisabled();
+
+    // Once the in-flight requests settle, the lock releases and a new run is allowed.
+    await act(async () => {
+      resolveQueue();
+      await Promise.resolve();
+    });
+    expect(
+      screen.getByRole('button', { name: /compute all/i })
+    ).not.toBeDisabled();
+  });
+
   it('closing BPM modal aborts the queue signal', async () => {
     let capturedSignal;
     vi.mocked(runBpmComputeQueue).mockImplementation((opts) => {
