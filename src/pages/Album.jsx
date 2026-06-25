@@ -51,11 +51,19 @@ function ActionGroup({ label, children }) {
 }
 
 async function postJson(url, body) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // Network/transport failure: report as a non-ok result instead of
+    // rejecting, so callers can recover (e.g. revert an `applying` row to
+    // `found`, clear `busy`) rather than getting stuck on an unhandled throw.
+    return { ok: false, status: 0, data: null };
+  }
   let data = null;
   try {
     data = await resp.json();
@@ -94,8 +102,23 @@ export default function Album({ id, dataVersion = 0 }) {
   const almAbortRef = useRef(null);
   const uploadRef = useRef(null);
   const flashTimerRef = useRef(null);
+  // Per-track monotonic sequence for refreshTrackLyrics: a write seeds the cache
+  // synchronously (in call order) then fires an async GET. Two writes to the same
+  // track can have their GETs resolve out of order; the older GET would clobber
+  // the newer write's authoritative state. Each refresh bumps the track's seq and
+  // only applies its GET payload if it is still the latest.
+  const lyricsRefreshSeqRef = useRef({});
 
-  useEffect(() => () => window.clearTimeout(flashTimerRef.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(flashTimerRef.current);
+      // Unmounting (e.g. navigating away) must abort any in-flight fetch queue;
+      // otherwise its concurrent requests keep running and populate backend
+      // preview state. Closing the modal aborts too (closeAlmModal).
+      almAbortRef.current?.abort();
+    },
+    []
+  );
 
   const inlineModalClose =
     genrePreview !== null
@@ -456,7 +479,7 @@ export default function Album({ id, dataVersion = 0 }) {
         r.id === itemId && r.state === 'found' ? { ...r, state: 'applying' } : r
       )
     );
-    const { ok } = await postJson(
+    const { ok, data: d } = await postJson(
       `/api/album/${data.id}/track/${itemId}/lyrics/confirm`
     );
     if (ok) {
@@ -467,7 +490,12 @@ export default function Album({ id, dataVersion = 0 }) {
             : r
         )
       );
-      await refreshTrackLyrics({ id: itemId });
+      // Seed the sidecar state from the response, not optimistically: the
+      // backend swallows a failed .lrc removal, so trust has_lrc it reports.
+      await refreshTrackLyrics(
+        { id: itemId },
+        { has_lyrics: true, has_lrc: !!d?.has_lrc }
+      );
     } else {
       setAlmRows((prev) =>
         prev.map((r) =>
@@ -495,6 +523,7 @@ export default function Album({ id, dataVersion = 0 }) {
     if (ok) {
       const writtenIds = new Set(d?.written_item_ids || []);
       const failedIds = new Set(d?.failed || []);
+      const retainedLrcIds = new Set(d?.retained_lrc_item_ids || []);
       setAlmRows((prev) =>
         prev.map((r) => {
           if (!toApply.has(r.id) || r.state !== 'applying') return r;
@@ -510,7 +539,12 @@ export default function Album({ id, dataVersion = 0 }) {
       // precedence over reloaded `data.tracks[].has_lyrics` anyway, so a
       // stale cached entry would keep a written track grey.
       await Promise.all(
-        [...writtenIds].map((id) => refreshTrackLyrics({ id }))
+        [...writtenIds].map((id) =>
+          refreshTrackLyrics(
+            { id },
+            { has_lyrics: true, has_lrc: retainedLrcIds.has(id) }
+          )
+        )
       );
     } else {
       setAlmRows((prev) =>
@@ -534,13 +568,34 @@ export default function Album({ id, dataVersion = 0 }) {
   const setTrackErrorForId = (id, msg) =>
     setTrackError((prev) => ({ ...prev, [id]: msg || null }));
 
-  const refreshTrackLyrics = async (item) => {
+  const refreshTrackLyrics = async (item, seed) => {
+    // Called only after a confirmed write. lyricsCache takes precedence over
+    // data.tracks[].has_lyrics, so the indicator is driven entirely by the cache
+    // here. `seed` carries what the just-succeeded write guarantees — presence
+    // (has_lyrics) and the sidecar state (has_lrc). Seed it optimistically (the
+    // write already happened) so a failed GET refresh still reflects it instead
+    // of leaving a stale entry: a stale {has_lyrics:false} would grey a written
+    // track, and a stale {has_lrc:true} would feed the next save's sidecar check
+    // and keep a deleted track green. The authoritative GET below overwrites with
+    // the full lyrics/source payload when it succeeds.
+    const seq = (lyricsRefreshSeqRef.current[item.id] || 0) + 1;
+    lyricsRefreshSeqRef.current[item.id] = seq;
+    if (seed) {
+      setLyricsCache((prev) => ({
+        ...prev,
+        [item.id]: { ...prev[item.id], ...seed },
+      }));
+    }
     try {
       const r = await fetch(`/api/album/${data.id}/track/${item.id}/lyrics`);
-      const payload = r.ok ? await r.json() : { has_lyrics: false };
+      if (!r.ok) return;
+      const payload = await r.json();
+      // A newer write started after us: its seed (and forthcoming GET) is now the
+      // authoritative state — drop this older response instead of clobbering it.
+      if (lyricsRefreshSeqRef.current[item.id] !== seq) return;
       setLyricsCache((prev) => ({ ...prev, [item.id]: payload }));
     } catch {
-      setLyricsCache((prev) => ({ ...prev, [item.id]: { has_lyrics: false } }));
+      // network error: keep the seeded/existing cache entry
     }
   };
 
@@ -573,7 +628,18 @@ export default function Album({ id, dataVersion = 0 }) {
     if (ok) {
       cancelLyricsEdit(item);
       showFlash('ok', 'Lyrics saved.');
-      await refreshTrackLyrics(item);
+      // Seed presence/sidecar from the authoritative post-save response rather
+      // than guessing. has_lrc (file existence) is NOT a proxy for readable
+      // lyrics: an empty save preserves the .lrc, but that only keeps the track
+      // green when the sidecar is readable and non-empty — an empty/unreadable
+      // one yields has_lrc:true yet has_lyrics:false. The save endpoint computes
+      // the real has_lyrics/has_lrc, so seed those; if this refresh GET fails,
+      // the seed still reflects the truth instead of a stale entry.
+      const seed =
+        typeof d?.has_lyrics === 'boolean'
+          ? { has_lyrics: d.has_lyrics, has_lrc: !!d.has_lrc }
+          : undefined;
+      await refreshTrackLyrics(item, seed);
     } else {
       setTrackErrorForId(item.id, d?.error || 'Failed to save lyrics.');
     }
@@ -617,7 +683,12 @@ export default function Album({ id, dataVersion = 0 }) {
     if (ok) {
       cancelLyricsFetchPreview(item);
       showFlash('ok', 'Lyrics saved.');
-      await refreshTrackLyrics(item);
+      // Online confirm embeds lyrics and removes any .lrc sidecar; seed has_lrc
+      // from the response since the backend swallows a failed removal.
+      await refreshTrackLyrics(item, {
+        has_lyrics: true,
+        has_lrc: !!d?.has_lrc,
+      });
     } else {
       setTrackErrorForId(item.id, d?.error || 'Lyrics confirm failed.');
     }
@@ -632,7 +703,8 @@ export default function Album({ id, dataVersion = 0 }) {
     setTrackBusyForId(item.id, null);
     if (ok) {
       showFlash('ok', 'Lyrics embedded from .lrc.');
-      await refreshTrackLyrics(item);
+      // Embed writes the .lrc into the tags and deletes the sidecar file.
+      await refreshTrackLyrics(item, { has_lyrics: true, has_lrc: false });
     } else {
       setTrackErrorForId(item.id, d?.error || 'Embed .lrc failed.');
     }
