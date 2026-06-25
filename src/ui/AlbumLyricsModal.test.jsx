@@ -150,6 +150,57 @@ describe('AlbumLyricsModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('found row labels the two compare panes Current / New', () => {
+    const tracks = [
+      makeTrack(1, 'found', { newLyrics: 'b', currentLyrics: 'a' }),
+    ];
+    renderModal({ tracks });
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('New')).toBeInTheDocument();
+  });
+
+  it('found row highlights changed lines (git-style diff classes)', () => {
+    const tracks = [
+      makeTrack(1, 'found', {
+        currentLyrics: 'a\nold\nc',
+        newLyrics: 'a\nnew\nc',
+      }),
+    ];
+    const { container } = renderModal({ tracks });
+    expect(container.querySelector('.diff-line-removed')).toHaveTextContent(
+      'old'
+    );
+    expect(container.querySelector('.diff-line-added')).toHaveTextContent(
+      'new'
+    );
+  });
+
+  it('"Apply all" shows a spinner instead of the check while applying', () => {
+    const tracks = [
+      makeTrack(1, 'applying'),
+      makeTrack(2, 'found', { newLyrics: 'b', currentLyrics: '' }),
+    ];
+    renderModal({ tracks, applying: true });
+    const applyAllBtn = screen.getByRole('button', { name: /apply all/i });
+    expect(applyAllBtn.querySelector('.btn-spinner')).toBeInTheDocument();
+  });
+
+  it('pending row shows a per-track fetching spinner', () => {
+    const tracks = [makeTrack(1, 'pending')];
+    const { container } = renderModal({ tracks });
+    const row = container.querySelector('.alm-row-pending');
+    expect(row.querySelector('.btn-spinner')).toBeInTheDocument();
+    expect(row).toHaveTextContent(/fetching/i);
+  });
+
+  it('"Apply all" shows a spinner and is disabled while fetching', () => {
+    const tracks = [makeTrack(1, 'pending'), makeTrack(2, 'pending')];
+    renderModal({ tracks, fetching: true, progress: { done: 0, total: 2 } });
+    const applyAllBtn = screen.getByRole('button', { name: /apply all/i });
+    expect(applyAllBtn.querySelector('.btn-spinner')).toBeInTheDocument();
+    expect(applyAllBtn).toBeDisabled();
+  });
+
   it('found row with empty current lyrics shows "(empty)" in compare pane', () => {
     const tracks = [
       makeTrack(1, 'found', { newLyrics: 'some lyrics', currentLyrics: '' }),

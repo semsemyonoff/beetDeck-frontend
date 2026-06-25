@@ -3228,6 +3228,72 @@ h4 {
 }
 .alm-compare {
   margin-top: var(--s-2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+}
+.lyrics-compare-col {
+  min-width: 0;
+}
+.lyrics-compare-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.lyrics-compare-tag {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.lyrics-compare-tag-same {
+  color: var(--text-faint);
+  background: var(--surface-2);
+}
+
+/* Lyric lines inside the compare panes use the album-page two-column layout
+ * (faint LRC timecode + text), with a narrower timecode column to fit the
+ * split modal width. */
+.lyrics-compare-pane .lyric-line {
+  grid-template-columns: 78px 1fr;
+  gap: var(--s-3);
+}
+.lyrics-compare-pane .lyric-ts {
+  white-space: nowrap;
+}
+
+/* git-style line highlighting inside the lyrics compare panes — full-bleed
+ * background tint pulled out to the pane edges via negative margins. */
+.diff-line {
+  padding: 0 var(--s-3);
+  margin: 0 calc(-1 * var(--s-3));
+}
+.diff-line-added {
+  background: color-mix(in oklab, var(--ok) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--ok);
+}
+.diff-line-removed {
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+/* Phones: the tiny 4px/220px progress bar reads as cramped under the wrapped
+ * header — drop it lower and let it span the full width with a taller track. */
+@media (max-width: 600px) {
+  .alm-progress {
+    margin-top: var(--s-4);
+  }
+  .alm-progress-bar {
+    max-width: none;
+    height: 7px;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

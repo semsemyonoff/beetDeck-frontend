@@ -1,6 +1,35 @@
 import Icon from './Icon.jsx';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
-import { buildLyricsPreview } from '../lib/diff.js';
+import { buildLyricsLineDiff } from '../lib/diff.js';
+
+function DiffPane({ lines, emptyLabel }) {
+  if (!lines.length) {
+    return (
+      <div className="lyrics-pre lyrics-compare-pane">
+        <span className="muted">{emptyLabel}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="lyrics-pre lyrics-compare-pane">
+      {lines.map((ln, idx) => {
+        const blank = !ln.text.trim();
+        return (
+          <div
+            key={idx}
+            className={
+              `lyric-line diff-line diff-line-${ln.type}` +
+              (blank ? ' lyric-line-blank' : '')
+            }
+          >
+            <span className="lyric-ts mono">{ln.ts ? `[${ln.ts}]` : ''}</span>
+            <span className="lyric-text">{blank ? '♪' : ln.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function AlmRow({ row, applying, onApplyOne }) {
   const {
@@ -17,8 +46,8 @@ function AlmRow({ row, applying, onApplyOne }) {
   const discPrefix = disc > 1 ? `${disc}-` : '';
   const trackLabel =
     discPrefix + (trackNum != null ? String(trackNum).padStart(2, '0') : '—');
-  const preview =
-    state === 'found' ? buildLyricsPreview(currentLyrics, newLyrics) : null;
+  const diff =
+    state === 'found' ? buildLyricsLineDiff(currentLyrics, newLyrics) : null;
 
   return (
     <div className={`alm-row alm-row-${state}`}>
@@ -29,6 +58,12 @@ function AlmRow({ row, applying, onApplyOne }) {
           <span className="alm-track-artist muted small">{artist}</span>
         )}
         <div className="alm-row-status">
+          {state === 'pending' && (
+            <>
+              <span className="btn-spinner" />
+              <span className="muted small">Fetching…</span>
+            </>
+          )}
           {state === 'found' && (
             <button
               className="btn btn-sm btn-primary"
@@ -60,12 +95,25 @@ function AlmRow({ row, applying, onApplyOne }) {
           )}
         </div>
       </div>
-      {state === 'found' && preview && (
-        <div className="lyrics-compare alm-compare">
-          <pre className="lyrics-pre lyrics-compare-pane">
-            {preview.old || '(empty)'}
-          </pre>
-          <pre className="lyrics-pre lyrics-compare-pane">{preview.new}</pre>
+      {state === 'found' && diff && (
+        <div className="alm-compare">
+          <div className="lyrics-compare-col">
+            <div className="muted small lyrics-compare-label">Current</div>
+            <DiffPane lines={diff.old} emptyLabel="(empty)" />
+          </div>
+          <div className="lyrics-compare-col">
+            <div className="muted small lyrics-compare-label">
+              New
+              {diff.hasChange ? (
+                <span className="lyrics-compare-tag">changed</span>
+              ) : (
+                <span className="lyrics-compare-tag lyrics-compare-tag-same">
+                  identical
+                </span>
+              )}
+            </div>
+            <DiffPane lines={diff.new} emptyLabel="(empty)" />
+          </div>
         </div>
       )}
     </div>
@@ -75,6 +123,7 @@ function AlmRow({ row, applying, onApplyOne }) {
 export default function AlbumLyricsModal({
   tracks,
   progress,
+  fetching,
   applying,
   onApplyAll,
   onApplyOne,
@@ -122,10 +171,15 @@ export default function AlbumLyricsModal({
             )}
             <button
               className="btn btn-primary btn-sm"
-              disabled={applying || readyCount === 0}
+              disabled={fetching || applying || readyCount === 0}
               onClick={handleApplyAll}
             >
-              <Icon name="check" size={11} /> Apply all
+              {fetching || applying ? (
+                <span className="btn-spinner" />
+              ) : (
+                <Icon name="check" size={11} />
+              )}{' '}
+              Apply all
             </button>
             <button className="btn-icon" onClick={onClose}>
               <Icon name="x" size={14} />

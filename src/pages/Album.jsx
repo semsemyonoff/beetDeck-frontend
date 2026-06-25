@@ -1482,6 +1482,7 @@ export default function Album({ id, dataVersion = 0 }) {
         <AlbumLyricsModal
           tracks={almRows}
           progress={almProgress}
+          fetching={almRunning}
           applying={almApplying}
           onApplyAll={handleAlmApplyAll}
           onApplyOne={handleAlmApplyOne}
