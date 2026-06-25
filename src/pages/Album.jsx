@@ -262,6 +262,12 @@ export default function Album({ id, dataVersion = 0 }) {
         ? 'all'
         : 'partial';
 
+  // Any per-track BPM compute currently in flight. A per-track compute is a
+  // file/DB write, so an album-wide run must not start while one is running —
+  // it would re-issue a compute for that same track and risk concurrent tag
+  // writes. (handleTrackBpm already blocks the reverse direction via bpmRunning.)
+  const bpmTrackBusy = Object.values(trackBusy).some((v) => v === 'bpm');
+
   const genres = data.genre
     ? data.genre
         .split(',')
@@ -610,7 +616,9 @@ export default function Album({ id, dataVersion = 0 }) {
   };
 
   const handleBpmAll = () => {
-    if (bpmOpen || bpmRunning) return;
+    // Block while the album modal/run is active OR a per-track compute is still
+    // in flight — both would mean overlapping writes to the same file(s).
+    if (bpmOpen || bpmRunning || bpmTrackBusy) return;
     const ctrl = new AbortController();
     bpmAbortRef.current = ctrl;
     const runToken = {};
@@ -1073,7 +1081,7 @@ export default function Album({ id, dataVersion = 0 }) {
                   (bpmAgg === 'partial' ? ' lyrics-agg-partial' : '') +
                   (bpmAgg === 'all' ? ' lyrics-agg-all' : '')
                 }
-                disabled={bpmOpen || bpmRunning}
+                disabled={bpmOpen || bpmRunning || bpmTrackBusy}
                 onClick={handleBpmAll}
               >
                 <Icon name="bpm" size={12} /> Compute all

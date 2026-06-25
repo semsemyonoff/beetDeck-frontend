@@ -2027,6 +2027,86 @@ describe('Album — BPM buttons and AlbumBpmModal (Task 7)', () => {
     expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(false);
   });
 
+  it('Compute all is disabled and inert while a per-track BPM compute is in flight', async () => {
+    // Regression: a per-track compute is a file/DB write. An album-wide run must
+    // not start while one is running — it would re-issue a compute for that same
+    // track and risk concurrent tag writes.
+    let resolveCompute;
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, tracks }),
+          });
+        }
+        if (url.includes('/bpm/compute')) {
+          // Keep the per-track write pending so the busy state persists.
+          return new Promise((res) => {
+            resolveCompute = () =>
+              res({
+                ok: true,
+                json: () => Promise.resolve({ status: 'ok', bpm: 120 }),
+              });
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    // Start a per-track BPM compute (track 1's BPM mini-button is index 1).
+    const btns = document.querySelectorAll('.track-mini-btn');
+    await act(async () => {
+      fireEvent.click(btns[1]);
+    });
+
+    // While that write is in flight, "Compute all" is disabled and clicking it
+    // does not start the album queue.
+    const computeAll = screen.getByRole('button', { name: /compute all/i });
+    expect(computeAll).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(computeAll);
+    });
+    expect(vi.mocked(runBpmComputeQueue)).not.toHaveBeenCalled();
+
+    // Once the per-track compute settles, "Compute all" is enabled again.
+    await act(async () => {
+      resolveCompute();
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /compute all/i })
+      ).not.toBeDisabled()
+    );
+  });
+
   it('per-track BPM error shows a flash message', async () => {
     const tracks = [
       {
