@@ -14,6 +14,12 @@ vi.mock('../lib/lyricsFetchQueue.js', () => ({
 }));
 import { runLyricsFetchQueue } from '../lib/lyricsFetchQueue.js';
 
+vi.mock('../lib/bpmComputeQueue.js', () => ({
+  CONCURRENCY: 2,
+  runBpmComputeQueue: vi.fn(),
+}));
+import { runBpmComputeQueue } from '../lib/bpmComputeQueue.js';
+
 const origLocation = Object.getOwnPropertyDescriptor(window, 'location');
 
 function stubLocation() {
@@ -80,6 +86,8 @@ describe('Album — breadcrumb navigation', () => {
   beforeEach(() => {
     stubLocation();
     vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockResolvedValue();
     vi.stubGlobal('fetch', makeFetch());
   });
 
@@ -121,6 +129,8 @@ describe('Album — Fetch all / AlbumLyricsModal', () => {
   beforeEach(() => {
     stubLocation();
     vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockResolvedValue();
   });
 
   afterEach(() => {
@@ -763,6 +773,8 @@ describe('Album — lyrics color indication (Task 6)', () => {
   beforeEach(() => {
     stubLocation();
     vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockResolvedValue();
   });
 
   afterEach(() => {
@@ -1609,10 +1621,10 @@ describe('Album — lyrics color indication (Task 6)', () => {
           btn.classList.contains('track-mini-btn-empty')
       ).toBe(false);
     }
-    // Each track row has 3 mini-btns (lyrics, tags, edit); lyrics is index 0 per row
-    // btns[0] = track-1 lyrics btn (has_lyrics:true), btns[3] = track-2 lyrics btn (has_lyrics:false)
+    // Each track row has 4 mini-btns (lyrics, bpm, tags, edit); lyrics is index 0 per row
+    // btns[0] = track-1 lyrics btn (has_lyrics:true), btns[4] = track-2 lyrics btn (has_lyrics:false)
     expect(btns[0].classList.contains('track-mini-btn-has')).toBe(true);
-    expect(btns[3].classList.contains('track-mini-btn-empty')).toBe(true);
+    expect(btns[4].classList.contains('track-mini-btn-empty')).toBe(true);
   });
 
   it('album Fetch-all button is neutral (no extra class) when 0 tracks have lyrics', async () => {
@@ -1706,5 +1718,401 @@ describe('Album — lyrics color indication (Task 6)', () => {
     );
     expect(fetchAllBtn.classList.contains('lyrics-agg-all')).toBe(true);
     expect(fetchAllBtn.classList.contains('lyrics-agg-partial')).toBe(false);
+  });
+});
+
+describe('Album — BPM buttons and AlbumBpmModal (Task 7)', () => {
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runLyricsFetchQueue).mockResolvedValue();
+    vi.mocked(runBpmComputeQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockResolvedValue();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  async function renderWithTracks(tracks) {
+    const data = { ...ALBUM_DATA, tracks };
+    vi.stubGlobal('fetch', makeFetch(data));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+  }
+
+  it('BPM button shows track-mini-btn-has when has_bpm:true', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: true,
+      },
+    ];
+    await renderWithTracks(tracks);
+    // buttons: [0]=lyrics, [1]=bpm, [2]=tags, [3]=edit
+    const btns = document.querySelectorAll('.track-mini-btn');
+    expect(btns[1].classList.contains('track-mini-btn-has')).toBe(true);
+    expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(false);
+  });
+
+  it('BPM button shows track-mini-btn-empty when has_bpm:false', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btns = document.querySelectorAll('.track-mini-btn');
+    expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(true);
+    expect(btns[1].classList.contains('track-mini-btn-has')).toBe(false);
+  });
+
+  it('bpmAgg neutral: no agg class on Compute all when no tracks have BPM', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btn = screen.getByRole('button', { name: /compute all/i });
+    expect(btn.classList.contains('lyrics-agg-partial')).toBe(false);
+    expect(btn.classList.contains('lyrics-agg-all')).toBe(false);
+  });
+
+  it('bpmAgg partial: lyrics-agg-partial on Compute all when some tracks have BPM', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: true,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btn = screen.getByRole('button', { name: /compute all/i });
+    expect(btn.classList.contains('lyrics-agg-partial')).toBe(true);
+    expect(btn.classList.contains('lyrics-agg-all')).toBe(false);
+  });
+
+  it('bpmAgg all: lyrics-agg-all on Compute all when all tracks have BPM', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: true,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_bpm: true,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btn = screen.getByRole('button', { name: /compute all/i });
+    expect(btn.classList.contains('lyrics-agg-all')).toBe(true);
+    expect(btn.classList.contains('lyrics-agg-partial')).toBe(false);
+  });
+
+  it('clicking Compute all opens AlbumBpmModal', async () => {
+    vi.mocked(runBpmComputeQueue).mockImplementation(
+      () => new Promise(() => {}) // never resolves (queue still running)
+    );
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    expect(screen.getByText(/compute all bpm/i)).toBeInTheDocument();
+  });
+
+  it('Compute all button is disabled while the queue is running', async () => {
+    vi.mocked(runBpmComputeQueue).mockImplementation(
+      () => new Promise(() => {})
+    );
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    expect(screen.getByRole('button', { name: /compute all/i })).toBeDisabled();
+  });
+
+  it('re-clicking Compute all while running does not call the queue again', async () => {
+    vi.mocked(runBpmComputeQueue).mockImplementation(
+      () => new Promise(() => {})
+    );
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    expect(vi.mocked(runBpmComputeQueue)).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    expect(vi.mocked(runBpmComputeQueue)).toHaveBeenCalledOnce();
+  });
+
+  it('onTrackStart transitions the row from pending to computing', async () => {
+    let capturedOpts;
+    vi.mocked(runBpmComputeQueue).mockImplementation((opts) => {
+      capturedOpts = opts;
+      return new Promise(() => {});
+    });
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    // Initially pending
+    expect(screen.getAllByText(/pending/i).length).toBeGreaterThan(0);
+
+    // onTrackStart fires for track 1
+    await act(async () => {
+      capturedOpts.onTrackStart(1);
+    });
+
+    // Track 1 row should now be computing
+    expect(screen.getByText(/computing/i)).toBeInTheDocument();
+  });
+
+  it('onTrackResult success: row becomes done and bpmAgg updates', async () => {
+    let capturedOpts;
+    vi.mocked(runBpmComputeQueue).mockImplementation((opts) => {
+      capturedOpts = opts;
+      return Promise.resolve();
+    });
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    await act(async () => {
+      capturedOpts.onTrackResult(1, { bpm: 120 });
+      capturedOpts.onTrackResult(2, { bpm: 140 });
+    });
+
+    // Both rows should show done state with BPM
+    expect(screen.getByText(/120 bpm/i)).toBeInTheDocument();
+    expect(screen.getByText(/140 bpm/i)).toBeInTheDocument();
+  });
+
+  it('onTrackResult error: row becomes error state', async () => {
+    let capturedOpts;
+    vi.mocked(runBpmComputeQueue).mockImplementation((opts) => {
+      capturedOpts = opts;
+      return Promise.resolve();
+    });
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    await act(async () => {
+      capturedOpts.onTrackResult(1, { error: true });
+    });
+
+    expect(screen.getByText(/error/i)).toBeInTheDocument();
+  });
+
+  it('bpmCache updates after per-track BPM compute and button turns green', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, tracks }),
+          });
+        }
+        if (url.includes('/bpm/compute')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: 'ok', bpm: 120 }),
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    // BPM button (index 1) starts empty
+    let btns = document.querySelectorAll('.track-mini-btn');
+    expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(btns[1]);
+    });
+
+    await waitFor(() => {
+      btns = document.querySelectorAll('.track-mini-btn');
+      expect(btns[1].classList.contains('track-mini-btn-has')).toBe(true);
+    });
+    expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(false);
+  });
+
+  it('per-track BPM error shows a flash message', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+      },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, tracks }),
+          });
+        }
+        if (url.includes('/bpm/compute')) {
+          return Promise.resolve({
+            ok: false,
+            json: () => Promise.resolve({ error: 'BPM computation failed' }),
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    const btns = document.querySelectorAll('.track-mini-btn');
+    await act(async () => {
+      fireEvent.click(btns[1]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/bpm computation failed/i)).toBeInTheDocument();
+    });
+  });
+
+  it('closing BPM modal via backdrop hides it', async () => {
+    vi.mocked(runBpmComputeQueue).mockImplementation(
+      () => new Promise(() => {})
+    );
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    expect(screen.getByText(/compute all bpm/i)).toBeInTheDocument();
+
+    // The Close button is disabled while computing; click the backdrop instead.
+    const backdrop = document.querySelector('.modal-backdrop');
+    await act(async () => {
+      fireEvent.click(backdrop);
+    });
+
+    expect(screen.queryByText(/compute all bpm/i)).not.toBeInTheDocument();
+  });
+
+  it('closing BPM modal aborts the queue signal', async () => {
+    let capturedSignal;
+    vi.mocked(runBpmComputeQueue).mockImplementation((opts) => {
+      capturedSignal = opts.signal;
+      return new Promise(() => {});
+    });
+    await renderWithTracks(TRACKS);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /compute all/i }));
+    });
+
+    // Close via backdrop since the Close button is disabled while computing.
+    const backdrop = document.querySelector('.modal-backdrop');
+    await act(async () => {
+      fireEvent.click(backdrop);
+    });
+
+    expect(capturedSignal.aborted).toBe(true);
   });
 });

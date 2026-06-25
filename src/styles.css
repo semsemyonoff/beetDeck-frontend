@@ -3297,6 +3297,123 @@ h4 {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ *  Album BPM modal (abm-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-bpm {
+  max-width: 640px;
+}
+.abm-head {
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+.abm-head-left {
+  flex: 1;
+  min-width: 0;
+}
+.abm-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+.abm-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+.abm-progress-bar {
+  flex: 1;
+  max-width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.abm-progress-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 999px;
+  transition: width 200ms ease;
+}
+.abm-body {
+  display: flex;
+  flex-direction: column;
+}
+.abm-row {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.abm-row:last-child {
+  border-bottom: none;
+}
+.abm-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.abm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.abm-track-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.abm-track-artist {
+  flex-shrink: 0;
+}
+.abm-row-status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+.abm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.abm-badge-ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.abm-badge-err {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+.abm-row-pending .abm-track-title,
+.abm-row-pending .abm-track-artist,
+.abm-row-computing .abm-track-title,
+.abm-row-computing .abm-track-artist {
+  opacity: 0.55;
+}
+@media (max-width: 600px) {
+  .abm-progress {
+    margin-top: var(--s-4);
+  }
+  .abm-progress-bar {
+    max-width: none;
+    height: 7px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  *  Tag editor modal
  * ───────────────────────────────────────────────────────────────────────────── */
 
