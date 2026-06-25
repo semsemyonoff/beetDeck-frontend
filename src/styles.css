@@ -1371,6 +1371,18 @@ h4 {
 .track-mini-btn-empty {
   color: var(--text-faint);
 }
+.track-mini-btn-has {
+  color: var(--ok);
+}
+
+.lyrics-agg-partial {
+  color: var(--ok);
+}
+.lyrics-agg-all {
+  color: var(--ok);
+  background: var(--ok-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ok) 50%, transparent);
+}
 
 .album-track-lyrics {
   padding: 0 var(--s-4) var(--s-4) calc(56px + var(--s-3) + var(--s-4));
@@ -3094,6 +3106,194 @@ h4 {
   opacity: 0.45;
   cursor: not-allowed;
   filter: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Album Lyrics Modal
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-lyrics {
+  max-width: 860px;
+}
+.alm-head {
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+.alm-head-left {
+  flex: 1;
+  min-width: 0;
+}
+.alm-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+.alm-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+.alm-progress-bar {
+  flex: 1;
+  max-width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.alm-progress-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 999px;
+  transition: width 200ms ease;
+}
+.alm-ready-count {
+  font-variant-numeric: tabular-nums;
+}
+.alm-body {
+  display: flex;
+  flex-direction: column;
+}
+.alm-row {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.alm-row:last-child {
+  border-bottom: none;
+}
+.alm-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.alm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.alm-track-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alm-track-artist {
+  flex-shrink: 0;
+}
+.alm-row-status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+.alm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.alm-badge-ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.alm-badge-muted {
+  color: var(--text-faint);
+  background: var(--surface-2);
+}
+.alm-badge-err {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+.alm-row-pending .alm-track-title,
+.alm-row-pending .alm-track-artist,
+.alm-row-applying .alm-track-title,
+.alm-row-applying .alm-track-artist,
+.alm-row-skipped .alm-track-title,
+.alm-row-skipped .alm-track-artist,
+.alm-row-not-found .alm-track-title,
+.alm-row-not-found .alm-track-artist {
+  opacity: 0.55;
+}
+.alm-compare {
+  margin-top: var(--s-2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+}
+.lyrics-compare-col {
+  min-width: 0;
+}
+.lyrics-compare-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.lyrics-compare-tag {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.lyrics-compare-tag-same {
+  color: var(--text-faint);
+  background: var(--surface-2);
+}
+
+/* Lyric lines inside the compare panes use the album-page two-column layout
+ * (faint LRC timecode + text), with a narrower timecode column to fit the
+ * split modal width. */
+.lyrics-compare-pane .lyric-line {
+  grid-template-columns: 78px 1fr;
+  gap: var(--s-3);
+}
+.lyrics-compare-pane .lyric-ts {
+  white-space: nowrap;
+}
+
+/* git-style line highlighting inside the lyrics compare panes — full-bleed
+ * background tint pulled out to the pane edges via negative margins. */
+.diff-line {
+  padding: 0 var(--s-3);
+  margin: 0 calc(-1 * var(--s-3));
+}
+.diff-line-added {
+  background: color-mix(in oklab, var(--ok) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--ok);
+}
+.diff-line-removed {
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+/* Phones: the tiny 4px/220px progress bar reads as cramped under the wrapped
+ * header — drop it lower and let it span the full width with a taller track. */
+@media (max-width: 600px) {
+  .alm-progress {
+    margin-top: var(--s-4);
+  }
+  .alm-progress-bar {
+    max-width: none;
+    height: 7px;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

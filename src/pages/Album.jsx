@@ -4,6 +4,7 @@ import { Cover } from '../ui/Cover.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import TagEditorModal from '../ui/TagEditorModal.jsx';
+import AlbumLyricsModal from '../ui/AlbumLyricsModal.jsx';
 import {
   fmtMins,
   fmtTotal,
@@ -15,6 +16,7 @@ import { buildLyricsPreview } from '../lib/diff.js';
 import { isIdentified } from '../lib/albums.js';
 import { isSynced, parseLyricLines } from '../lib/lyrics.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
+import { runLyricsFetchQueue } from '../lib/lyricsFetchQueue.js';
 
 // Render LRC lines as a [timestamp | text] grid; blank lines show a ♪ glyph.
 function LyricLines({ text, limit }) {
@@ -49,11 +51,19 @@ function ActionGroup({ label, children }) {
 }
 
 async function postJson(url, body) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // Network/transport failure: report as a non-ok result instead of
+    // rejecting, so callers can recover (e.g. revert an `applying` row to
+    // `found`, clear `busy`) rather than getting stuck on an unhandled throw.
+    return { ok: false, status: 0, data: null };
+  }
   let data = null;
   try {
     data = await resp.json();
@@ -85,10 +95,30 @@ export default function Album({ id, dataVersion = 0 }) {
   const [trackBusy, setTrackBusy] = useState({});
   const [trackError, setTrackError] = useState({});
   const [heroCoverError, setHeroCoverError] = useState(false);
+  const [almOpen, setAlmOpen] = useState(false);
+  const [almRows, setAlmRows] = useState([]);
+  const [almProgress, setAlmProgress] = useState({ done: 0, total: 0 });
+  const [almRunning, setAlmRunning] = useState(false);
+  const almAbortRef = useRef(null);
   const uploadRef = useRef(null);
   const flashTimerRef = useRef(null);
+  // Per-track monotonic sequence for refreshTrackLyrics: a write seeds the cache
+  // synchronously (in call order) then fires an async GET. Two writes to the same
+  // track can have their GETs resolve out of order; the older GET would clobber
+  // the newer write's authoritative state. Each refresh bumps the track's seq and
+  // only applies its GET payload if it is still the latest.
+  const lyricsRefreshSeqRef = useRef({});
 
-  useEffect(() => () => window.clearTimeout(flashTimerRef.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(flashTimerRef.current);
+      // Unmounting (e.g. navigating away) must abort any in-flight fetch queue;
+      // otherwise its concurrent requests keep running and populate backend
+      // preview state. Closing the modal aborts too (closeAlmModal).
+      almAbortRef.current?.abort();
+    },
+    []
+  );
 
   const inlineModalClose =
     genrePreview !== null
@@ -186,6 +216,25 @@ export default function Album({ id, dataVersion = 0 }) {
   };
   const artistName = data.albumartist || '';
   const tracks = data.tracks || [];
+
+  // Per-track derived has_lyrics: lyricsCache (post-write/lazy) > initial data.tracks[].has_lyrics
+  const trackHasLyrics = {};
+  for (const t of tracks) {
+    const cached = lyricsCache[t.id];
+    trackHasLyrics[t.id] =
+      cached != null ? cached.has_lyrics : (t.has_lyrics ?? null);
+  }
+  const lyricsCount = tracks.reduce(
+    (n, t) => n + (trackHasLyrics[t.id] === true ? 1 : 0),
+    0
+  );
+  const lyricsAgg =
+    tracks.length === 0 || lyricsCount === 0
+      ? 'neutral'
+      : lyricsCount === tracks.length
+        ? 'all'
+        : 'partial';
+
   const genres = data.genre
     ? data.genre
         .split(',')
@@ -370,47 +419,147 @@ export default function Album({ id, dataVersion = 0 }) {
     }
   };
 
-  const handleLyricsFetchAll = async () => {
-    setBusy('lyrics-fetch');
+  const handleLyricsFetchAll = () => {
+    if (almOpen || almRunning) return;
+    const ctrl = new AbortController();
+    almAbortRef.current = ctrl;
+    const initialRows = tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      track: t.track,
+      disc: t.disc,
+      state: 'pending',
+      newLyrics: null,
+      newSynced: null,
+      newBackend: null,
+      currentLyrics: null,
+      currentSource: null,
+    }));
+    setAlmRows(initialRows);
+    setAlmProgress({ done: 0, total: tracks.length });
+    setAlmRunning(true);
+    setAlmOpen(true);
+    runLyricsFetchQueue({
+      albumId: data.id,
+      itemIds: tracks.map((t) => t.id),
+      signal: ctrl.signal,
+      onProgress: (done, total) => setAlmProgress({ done, total }),
+      onTrackResult: (result) => {
+        setAlmRows((prev) =>
+          prev.map((r) => {
+            if (r.id !== result.itemId) return r;
+            if (result.status === 'error') return { ...r, state: 'error' };
+            if (result.found) {
+              return {
+                ...r,
+                state: 'found',
+                newLyrics: result.newLyrics,
+                newSynced: result.newSynced,
+                newBackend: result.newBackend,
+                currentLyrics: result.currentLyrics,
+                currentSource: result.currentSource,
+              };
+            }
+            return {
+              ...r,
+              state: result.currentLyrics ? 'skipped' : 'not-found',
+              currentLyrics: result.currentLyrics,
+              currentSource: result.currentSource,
+            };
+          })
+        );
+      },
+    }).finally(() => setAlmRunning(false));
+  };
+
+  const handleAlmApplyOne = async (itemId) => {
+    setAlmRows((prev) =>
+      prev.map((r) =>
+        r.id === itemId && r.state === 'found' ? { ...r, state: 'applying' } : r
+      )
+    );
     const { ok, data: d } = await postJson(
-      `/api/album/${data.id}/lyrics/fetch`
+      `/api/album/${data.id}/track/${itemId}/lyrics/confirm`
     );
-    if (!ok) {
-      setBusy(null);
-      showFlash('err', d?.error || 'Bulk lyrics fetch failed.');
-      return;
-    }
-    const allTracks = d?.tracks || [];
-    const found = allTracks.filter((t) => t.found && !t.current_lyrics);
-    if (!found.length) {
-      setBusy(null);
-      const anyFound = allTracks.some((t) => t.found);
-      showFlash(
-        'err',
-        anyFound
-          ? 'All tracks already have lyrics.'
-          : 'No lyrics found for any track.'
+    if (ok) {
+      setAlmRows((prev) =>
+        prev.map((r) =>
+          r.id === itemId && r.state === 'applying'
+            ? { ...r, state: 'applied' }
+            : r
+        )
       );
-      return;
-    }
-    const item_ids = found.map((t) => t.item_id);
-    const { ok: ok2, data: d2 } = await postJson(
-      `/api/album/${data.id}/lyrics/confirm`,
-      { item_ids }
-    );
-    setBusy(null);
-    if (ok2) {
-      const failed = (d2?.failed || []).length;
-      showFlash(
-        failed ? 'err' : 'ok',
-        `Wrote lyrics for ${d2?.written || 0} track(s)${failed ? `, ${failed} failed` : ''}.`
+      // Seed the sidecar state from the response, not optimistically: the
+      // backend swallows a failed .lrc removal, so trust has_lrc it reports.
+      await refreshTrackLyrics(
+        { id: itemId },
+        { has_lyrics: true, has_lrc: !!d?.has_lrc }
       );
-      // Refresh lyrics cache for affected items.
-      setLyricsCache({});
-      reload();
     } else {
-      showFlash('err', d2?.error || 'Lyrics confirm failed.');
+      setAlmRows((prev) =>
+        prev.map((r) =>
+          r.id === itemId && r.state === 'applying'
+            ? { ...r, state: 'found' }
+            : r
+        )
+      );
     }
+  };
+
+  const handleAlmApplyAll = async (itemIds) => {
+    const toApply = new Set(itemIds);
+    setAlmRows((prev) =>
+      prev.map((r) =>
+        toApply.has(r.id) && r.state === 'found'
+          ? { ...r, state: 'applying' }
+          : r
+      )
+    );
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/lyrics/confirm`,
+      { item_ids: itemIds }
+    );
+    if (ok) {
+      const writtenIds = new Set(d?.written_item_ids || []);
+      const failedIds = new Set(d?.failed || []);
+      const retainedLrcIds = new Set(d?.retained_lrc_item_ids || []);
+      setAlmRows((prev) =>
+        prev.map((r) => {
+          if (!toApply.has(r.id) || r.state !== 'applying') return r;
+          if (writtenIds.has(r.id)) return { ...r, state: 'applied' };
+          if (failedIds.has(r.id)) return { ...r, state: 'error' };
+          return { ...r, state: 'found' };
+        })
+      );
+      // Refresh lyrics presence for the tracks actually written, from the
+      // authoritative source. We refresh per-written-id (mirroring the
+      // single-apply path) rather than reload() the album: reload() blanks
+      // `data` and tears down the open modal, and `lyricsCache` takes
+      // precedence over reloaded `data.tracks[].has_lyrics` anyway, so a
+      // stale cached entry would keep a written track grey.
+      await Promise.all(
+        [...writtenIds].map((id) =>
+          refreshTrackLyrics(
+            { id },
+            { has_lyrics: true, has_lrc: retainedLrcIds.has(id) }
+          )
+        )
+      );
+    } else {
+      setAlmRows((prev) =>
+        prev.map((r) =>
+          toApply.has(r.id) && r.state === 'applying'
+            ? { ...r, state: 'found' }
+            : r
+        )
+      );
+    }
+  };
+
+  const closeAlmModal = () => {
+    almAbortRef.current?.abort();
+    setAlmOpen(false);
   };
 
   const setTrackBusyForId = (id, val) =>
@@ -419,13 +568,34 @@ export default function Album({ id, dataVersion = 0 }) {
   const setTrackErrorForId = (id, msg) =>
     setTrackError((prev) => ({ ...prev, [id]: msg || null }));
 
-  const refreshTrackLyrics = async (item) => {
+  const refreshTrackLyrics = async (item, seed) => {
+    // Called only after a confirmed write. lyricsCache takes precedence over
+    // data.tracks[].has_lyrics, so the indicator is driven entirely by the cache
+    // here. `seed` carries what the just-succeeded write guarantees — presence
+    // (has_lyrics) and the sidecar state (has_lrc). Seed it optimistically (the
+    // write already happened) so a failed GET refresh still reflects it instead
+    // of leaving a stale entry: a stale {has_lyrics:false} would grey a written
+    // track, and a stale {has_lrc:true} would feed the next save's sidecar check
+    // and keep a deleted track green. The authoritative GET below overwrites with
+    // the full lyrics/source payload when it succeeds.
+    const seq = (lyricsRefreshSeqRef.current[item.id] || 0) + 1;
+    lyricsRefreshSeqRef.current[item.id] = seq;
+    if (seed) {
+      setLyricsCache((prev) => ({
+        ...prev,
+        [item.id]: { ...prev[item.id], ...seed },
+      }));
+    }
     try {
       const r = await fetch(`/api/album/${data.id}/track/${item.id}/lyrics`);
-      const payload = r.ok ? await r.json() : { has_lyrics: false };
+      if (!r.ok) return;
+      const payload = await r.json();
+      // A newer write started after us: its seed (and forthcoming GET) is now the
+      // authoritative state — drop this older response instead of clobbering it.
+      if (lyricsRefreshSeqRef.current[item.id] !== seq) return;
       setLyricsCache((prev) => ({ ...prev, [item.id]: payload }));
     } catch {
-      setLyricsCache((prev) => ({ ...prev, [item.id]: { has_lyrics: false } }));
+      // network error: keep the seeded/existing cache entry
     }
   };
 
@@ -458,7 +628,18 @@ export default function Album({ id, dataVersion = 0 }) {
     if (ok) {
       cancelLyricsEdit(item);
       showFlash('ok', 'Lyrics saved.');
-      await refreshTrackLyrics(item);
+      // Seed presence/sidecar from the authoritative post-save response rather
+      // than guessing. has_lrc (file existence) is NOT a proxy for readable
+      // lyrics: an empty save preserves the .lrc, but that only keeps the track
+      // green when the sidecar is readable and non-empty — an empty/unreadable
+      // one yields has_lrc:true yet has_lyrics:false. The save endpoint computes
+      // the real has_lyrics/has_lrc, so seed those; if this refresh GET fails,
+      // the seed still reflects the truth instead of a stale entry.
+      const seed =
+        typeof d?.has_lyrics === 'boolean'
+          ? { has_lyrics: d.has_lyrics, has_lrc: !!d.has_lrc }
+          : undefined;
+      await refreshTrackLyrics(item, seed);
     } else {
       setTrackErrorForId(item.id, d?.error || 'Failed to save lyrics.');
     }
@@ -502,7 +683,12 @@ export default function Album({ id, dataVersion = 0 }) {
     if (ok) {
       cancelLyricsFetchPreview(item);
       showFlash('ok', 'Lyrics saved.');
-      await refreshTrackLyrics(item);
+      // Online confirm embeds lyrics and removes any .lrc sidecar; seed has_lrc
+      // from the response since the backend swallows a failed removal.
+      await refreshTrackLyrics(item, {
+        has_lyrics: true,
+        has_lrc: !!d?.has_lrc,
+      });
     } else {
       setTrackErrorForId(item.id, d?.error || 'Lyrics confirm failed.');
     }
@@ -517,11 +703,14 @@ export default function Album({ id, dataVersion = 0 }) {
     setTrackBusyForId(item.id, null);
     if (ok) {
       showFlash('ok', 'Lyrics embedded from .lrc.');
-      await refreshTrackLyrics(item);
+      // Embed writes the .lrc into the tags and deletes the sidecar file.
+      await refreshTrackLyrics(item, { has_lyrics: true, has_lrc: false });
     } else {
       setTrackErrorForId(item.id, d?.error || 'Embed .lrc failed.');
     }
   };
+
+  const almApplying = almRows.some((r) => r.state === 'applying');
 
   return (
     <div className="page page-album">
@@ -765,16 +954,15 @@ export default function Album({ id, dataVersion = 0 }) {
             </ActionGroup>
             <ActionGroup label="Lyrics">
               <button
-                className="btn btn-action"
-                disabled={busy === 'lyrics-fetch'}
+                className={
+                  'btn btn-action' +
+                  (lyricsAgg === 'partial' ? ' lyrics-agg-partial' : '') +
+                  (lyricsAgg === 'all' ? ' lyrics-agg-all' : '')
+                }
+                disabled={almOpen || almRunning || almApplying}
                 onClick={handleLyricsFetchAll}
               >
-                {busy === 'lyrics-fetch' ? (
-                  <BtnSpinner />
-                ) : (
-                  <Icon name="download" size={12} />
-                )}{' '}
-                Fetch all
+                <Icon name="download" size={12} /> Fetch all
               </button>
             </ActionGroup>
           </div>
@@ -806,7 +994,7 @@ export default function Album({ id, dataVersion = 0 }) {
               const rowKey = `${t.disc || 1}:${t.id}`;
               const isOpen = expandedKey === rowKey;
               const lyrPayload = lyricsCache[t.id];
-              const hasLyrics = lyrPayload ? lyrPayload.has_lyrics : null;
+              const hasLyrics = trackHasLyrics[t.id];
               const trackNum = t.track || i + 1;
               return (
                 <div
@@ -826,6 +1014,7 @@ export default function Album({ id, dataVersion = 0 }) {
                       <button
                         className={
                           'track-mini-btn' +
+                          (hasLyrics === true ? ' track-mini-btn-has' : '') +
                           (hasLyrics === false ? ' track-mini-btn-empty' : '')
                         }
                         title={hasLyrics === false ? 'No lyrics' : 'Lyrics'}
@@ -1286,6 +1475,18 @@ export default function Album({ id, dataVersion = 0 }) {
             }
             reload();
           }}
+        />
+      )}
+
+      {almOpen && (
+        <AlbumLyricsModal
+          tracks={almRows}
+          progress={almProgress}
+          fetching={almRunning}
+          applying={almApplying}
+          onApplyAll={handleAlmApplyAll}
+          onApplyOne={handleAlmApplyOne}
+          onClose={closeAlmModal}
         />
       )}
     </div>
