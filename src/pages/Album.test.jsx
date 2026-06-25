@@ -542,6 +542,65 @@ describe('Album — Fetch all / AlbumLyricsModal', () => {
     );
   });
 
+  it('individual Apply failure reverts the row from applying back to found', async () => {
+    let capturedOpts;
+    vi.mocked(runLyricsFetchQueue).mockImplementation((opts) => {
+      capturedOpts = opts;
+      return Promise.resolve();
+    });
+
+    await renderAndLoad();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(ALBUM_WITH_TRACKS),
+          });
+        }
+        if (url.includes('/track/1/lyrics/confirm')) {
+          return Promise.resolve({
+            ok: false,
+            json: () => Promise.resolve({ error: 'write failed' }),
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /fetch all/i }));
+    });
+
+    await act(async () => {
+      capturedOpts.onTrackResult({
+        itemId: 1,
+        found: true,
+        newLyrics: 'lyrics',
+        newSynced: false,
+        newBackend: 'genius',
+        currentLyrics: '',
+        currentSource: null,
+      });
+    });
+
+    const applyBtn = screen.getAllByRole('button', { name: /^apply$/i })[0];
+    await act(async () => {
+      fireEvent.click(applyBtn);
+    });
+
+    // The failed write must not mark the row applied; it returns to `found`
+    // (its Apply button reappears) so the user can retry.
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole('button', { name: /^apply$/i }).length
+      ).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText(/applied/i)).not.toBeInTheDocument();
+  });
+
   it('Apply button is disabled while any row is in applying state (double-click prevention)', async () => {
     let capturedOpts;
     let resolveConfirm;

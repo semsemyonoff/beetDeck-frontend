@@ -12,6 +12,21 @@ export async function runLyricsFetchQueue({
   let done = 0;
   const remaining = [...itemIds];
 
+  function reportError(itemId) {
+    onTrackResult({
+      itemId,
+      status: 'error',
+      found: false,
+      newLyrics: null,
+      newSynced: null,
+      newBackend: null,
+      currentLyrics: null,
+      currentSource: null,
+    });
+    done++;
+    onProgress(done, total);
+  }
+
   async function fetchOne(itemId) {
     try {
       const resp = await fetch(
@@ -24,44 +39,28 @@ export async function runLyricsFetchQueue({
       } catch {
         // ignore JSON parse error
       }
+      // A response that lands after the run was aborted (e.g. the modal was
+      // closed mid-flight) must not report — it would mutate state the caller
+      // has already torn down.
+      if (signal?.aborted) return;
       if (!resp.ok) {
-        onTrackResult({
-          itemId,
-          status: 'error',
-          found: false,
-          newLyrics: null,
-          newSynced: null,
-          newBackend: null,
-          currentLyrics: null,
-          currentSource: null,
-        });
-      } else {
-        onTrackResult({
-          itemId,
-          found: data?.found ?? false,
-          newLyrics: data?.new_lyrics ?? null,
-          newSynced: data?.new_synced ?? null,
-          newBackend: data?.new_backend ?? null,
-          currentLyrics: data?.current_lyrics ?? null,
-          currentSource: data?.current_source ?? null,
-        });
+        reportError(itemId);
+        return;
       }
+      onTrackResult({
+        itemId,
+        found: data?.found ?? false,
+        newLyrics: data?.new_lyrics ?? null,
+        newSynced: data?.new_synced ?? null,
+        newBackend: data?.new_backend ?? null,
+        currentLyrics: data?.current_lyrics ?? null,
+        currentSource: data?.current_source ?? null,
+      });
       done++;
       onProgress(done, total);
     } catch (err) {
       if (err.name === 'AbortError') return;
-      onTrackResult({
-        itemId,
-        status: 'error',
-        found: false,
-        newLyrics: null,
-        newSynced: null,
-        newBackend: null,
-        currentLyrics: null,
-        currentSource: null,
-      });
-      done++;
-      onProgress(done, total);
+      reportError(itemId);
     }
   }
 

@@ -503,7 +503,15 @@ export default function Album({ id, dataVersion = 0 }) {
           return { ...r, state: 'found' };
         })
       );
-      reload();
+      // Refresh lyrics presence for the tracks actually written, from the
+      // authoritative source. We refresh per-written-id (mirroring the
+      // single-apply path) rather than reload() the album: reload() blanks
+      // `data` and tears down the open modal, and `lyricsCache` takes
+      // precedence over reloaded `data.tracks[].has_lyrics` anyway, so a
+      // stale cached entry would keep a written track grey.
+      await Promise.all(
+        [...writtenIds].map((id) => refreshTrackLyrics({ id }))
+      );
     } else {
       setAlmRows((prev) =>
         prev.map((r) =>

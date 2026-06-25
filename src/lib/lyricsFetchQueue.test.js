@@ -261,6 +261,73 @@ describe('runLyricsFetchQueue', () => {
     expect(onTrackResult).not.toHaveBeenCalled();
   });
 
+  it('a fetch that resolves after abort does not report results or progress', async () => {
+    const controller = new AbortController();
+    const defs = Array.from({ length: 4 }, () => deferred());
+    let callIdx = 0;
+    fetchMock.mockImplementation(() => defs[callIdx++].promise);
+
+    const onProgress = vi.fn();
+    const onTrackResult = vi.fn();
+
+    const queuePromise = runLyricsFetchQueue({
+      albumId: 1,
+      itemIds: [1, 2, 3, 4],
+      signal: controller.signal,
+      onProgress,
+      onTrackResult,
+      concurrency: 2,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Abort, then let the in-flight requests *resolve successfully* (a real
+    // response landing just after the user closed the modal). The queue must
+    // not call onTrackResult/onProgress for them.
+    controller.abort();
+    defs[0].resolve(mockResp({ found: true, new_lyrics: 'late' }));
+    defs[1].resolve(mockResp({ found: false }));
+
+    await queuePromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onProgress).not.toHaveBeenCalled();
+    expect(onTrackResult).not.toHaveBeenCalled();
+  });
+
+  it('an errored fetch frees its pool slot so queued tracks still run', async () => {
+    const defs = Array.from({ length: 3 }, () => deferred());
+    let callIdx = 0;
+    fetchMock.mockImplementation(() => defs[callIdx++].promise);
+
+    const results = [];
+    const queuePromise = runLyricsFetchQueue({
+      albumId: 1,
+      itemIds: [1, 2, 3],
+      onProgress: vi.fn(),
+      onTrackResult: (r) => results.push(r),
+      concurrency: 2,
+    });
+
+    // Only 2 in flight; track 3 is queued.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Track 1 fails with a non-abort error — its slot must free up for track 3.
+    defs[0].reject(new TypeError('Network error'));
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    defs[1].resolve(mockResp({ found: true, new_lyrics: 'a' }));
+    defs[2].resolve(mockResp({ found: false }));
+    await queuePromise;
+
+    expect(results).toHaveLength(3);
+    expect(results.find((r) => r.itemId === 1)).toMatchObject({
+      status: 'error',
+    });
+    expect(results.find((r) => r.itemId === 3)).toBeDefined();
+  });
+
   it('aborting before first tick starts no requests', async () => {
     const controller = new AbortController();
     controller.abort();
