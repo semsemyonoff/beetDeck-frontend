@@ -44,6 +44,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
     │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
     │   ├── lyricsFetchQueue.js  # runLyricsFetchQueue — client pool (max 6) of single-track fetch requests; AbortSignal cancel; progress + per-track callbacks
+    │   ├── bpmComputeQueue.js  # runBpmComputeQueue — client pool (max 2, CPU-bound) for single-track BPM compute; onTrackStart fires before each fetch; AbortSignal only stops dequeuing (in-flight writes always settle)
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── RouteLink.jsx       # <a href> wrapper over useRouteLink; plain left-click = SPA nav, modified/middle/right = browser
@@ -59,7 +60,8 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── UntaggedGroup.jsx   # Pinned amber banner in Library (UntaggedGroup + UntaggedFolderRow)
     │   ├── ItemsIdentifyModal.jsx  # Item-identify flow (identify → poll → apply → confirm → navigate)
     │   ├── TagEditorModal.jsx  # Album tag editor modal (opened from Album page *Edit tags* action)
-    │   └── AlbumLyricsModal.jsx  # Album lyrics fetch-preview-confirm modal (props-driven; state machine: pending/found/applying/applied/skipped/not-found/error)
+    │   ├── AlbumLyricsModal.jsx  # Album lyrics fetch-preview-confirm modal (props-driven; state machine: pending/found/applying/applied/skipped/not-found/error)
+    │   └── AlbumBpmModal.jsx    # Album BPM progress modal (no apply step — writes immediately); per-track rows pending→computing→done/error; driven by runBpmComputeQueue
     └── pages/              # Route views
         ├── Library.jsx     # Index + Wall layouts
         ├── Artist.jsx
@@ -130,6 +132,13 @@ Patterns used against the API:
   (individual track) or `POST /api/album/<id>/lyrics/confirm` with `item_ids` ("Apply all"; response
   includes `written_item_ids` — only those tracks are marked applied). Confirm requests are NOT
   aborted when the modal closes (writes to disk are not idempotent).
+- `AlbumBpmModal` + `bpmComputeQueue` drive the album "BPM all" flow:
+  `runBpmComputeQueue` fans out up to 2 concurrent `POST /api/album/<id>/track/<id>/bpm/compute`
+  calls (CPU-bound; ~9s/track via librosa). The `AbortSignal` only stops dequeuing new tracks —
+  in-flight writes are never aborted because the server keeps computing/writing regardless, and
+  aborting mid-write is not idempotent. The queue promise resolves only after all in-flight requests
+  settle, letting the page keep the album run locked and prevent a second overlapping run.
+  `has_bpm` on each track in `GET /api/album/<id>` allows the UI to color buttons on first paint.
 
 ## Build & Dev
 
