@@ -193,6 +193,25 @@ export default function Album({ id, dataVersion = 0 }) {
   };
   const artistName = data.albumartist || '';
   const tracks = data.tracks || [];
+
+  // Per-track derived has_lyrics: lyricsCache (post-write/lazy) > initial data.tracks[].has_lyrics
+  const trackHasLyrics = {};
+  for (const t of tracks) {
+    const cached = lyricsCache[t.id];
+    trackHasLyrics[t.id] =
+      cached != null ? cached.has_lyrics : (t.has_lyrics ?? null);
+  }
+  const lyricsCount = tracks.reduce(
+    (n, t) => n + (trackHasLyrics[t.id] === true ? 1 : 0),
+    0
+  );
+  const lyricsAgg =
+    tracks.length === 0 || lyricsCount === 0
+      ? 'neutral'
+      : lyricsCount === tracks.length
+        ? 'all'
+        : 'partial';
+
   const genres = data.genre
     ? data.genre
         .split(',')
@@ -855,7 +874,11 @@ export default function Album({ id, dataVersion = 0 }) {
             </ActionGroup>
             <ActionGroup label="Lyrics">
               <button
-                className="btn btn-action"
+                className={
+                  'btn btn-action' +
+                  (lyricsAgg === 'partial' ? ' lyrics-agg-partial' : '') +
+                  (lyricsAgg === 'all' ? ' lyrics-agg-all' : '')
+                }
                 disabled={almOpen || almRunning || almApplying}
                 onClick={handleLyricsFetchAll}
               >
@@ -891,7 +914,7 @@ export default function Album({ id, dataVersion = 0 }) {
               const rowKey = `${t.disc || 1}:${t.id}`;
               const isOpen = expandedKey === rowKey;
               const lyrPayload = lyricsCache[t.id];
-              const hasLyrics = lyrPayload ? lyrPayload.has_lyrics : null;
+              const hasLyrics = trackHasLyrics[t.id];
               const trackNum = t.track || i + 1;
               return (
                 <div
@@ -911,6 +934,7 @@ export default function Album({ id, dataVersion = 0 }) {
                       <button
                         className={
                           'track-mini-btn' +
+                          (hasLyrics === true ? ' track-mini-btn-has' : '') +
                           (hasLyrics === false ? ' track-mini-btn-empty' : '')
                         }
                         title={hasLyrics === false ? 'No lyrics' : 'Lyrics'}

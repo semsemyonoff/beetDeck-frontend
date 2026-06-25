@@ -628,3 +628,259 @@ describe('Album — Fetch all / AlbumLyricsModal', () => {
     expect(capturedSignal.aborted).toBe(true);
   });
 });
+
+describe('Album — lyrics color indication (Task 6)', () => {
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  async function renderWithTracks(tracks) {
+    const data = { ...ALBUM_DATA, tracks };
+    vi.stubGlobal('fetch', makeFetch(data));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+  }
+
+  it('track with has_lyrics:true shows track-mini-btn-has immediately on load (no lazy)', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: true,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btn = document.querySelector('.track-mini-btn');
+    expect(btn.classList.contains('track-mini-btn-has')).toBe(true);
+    expect(btn.classList.contains('track-mini-btn-empty')).toBe(false);
+  });
+
+  it('track with has_lyrics:false shows track-mini-btn-empty immediately on load', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btn = document.querySelector('.track-mini-btn');
+    expect(btn.classList.contains('track-mini-btn-empty')).toBe(true);
+    expect(btn.classList.contains('track-mini-btn-has')).toBe(false);
+  });
+
+  it('lyricsCache overrides initial has_lyrics (source precedence)', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: false,
+      },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, tracks }),
+          });
+        }
+        if (
+          url.includes('/track/1/lyrics') &&
+          !url.includes('confirm') &&
+          !url.includes('fetch')
+        ) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                has_lyrics: true,
+                lyrics: 'words',
+                source: 'genius',
+              }),
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    // Initially false from data
+    let btn = document.querySelector('.track-mini-btn');
+    expect(btn.classList.contains('track-mini-btn-empty')).toBe(true);
+
+    // Expand the track row to trigger lazy load of lyricsCache
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    await waitFor(() => {
+      btn = document.querySelector('.track-mini-btn');
+      expect(btn.classList.contains('track-mini-btn-has')).toBe(true);
+    });
+    expect(btn.classList.contains('track-mini-btn-empty')).toBe(false);
+  });
+
+  it('track-mini-btn-has and track-mini-btn-empty are mutually exclusive', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'Has',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: true,
+      },
+      {
+        id: 2,
+        title: 'Empty',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btns = document.querySelectorAll('.track-mini-btn');
+    // Each button has exactly one or neither of the modifier classes, never both
+    for (const btn of btns) {
+      expect(
+        btn.classList.contains('track-mini-btn-has') &&
+          btn.classList.contains('track-mini-btn-empty')
+      ).toBe(false);
+    }
+    // Each track row has 3 mini-btns (lyrics, tags, edit); lyrics is index 0 per row
+    // btns[0] = track-1 lyrics btn (has_lyrics:true), btns[3] = track-2 lyrics btn (has_lyrics:false)
+    expect(btns[0].classList.contains('track-mini-btn-has')).toBe(true);
+    expect(btns[3].classList.contains('track-mini-btn-empty')).toBe(true);
+  });
+
+  it('album Fetch-all button is neutral (no extra class) when 0 tracks have lyrics', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: false,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const fetchAllBtn = document.querySelector(
+      '.action-group:last-of-type button'
+    );
+    expect(fetchAllBtn.classList.contains('lyrics-agg-partial')).toBe(false);
+    expect(fetchAllBtn.classList.contains('lyrics-agg-all')).toBe(false);
+  });
+
+  it('album Fetch-all button has lyrics-agg-partial when some (but not all) tracks have lyrics', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: true,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: false,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const fetchAllBtn = document.querySelector(
+      '.action-group:last-of-type button'
+    );
+    expect(fetchAllBtn.classList.contains('lyrics-agg-partial')).toBe(true);
+    expect(fetchAllBtn.classList.contains('lyrics-agg-all')).toBe(false);
+  });
+
+  it('album Fetch-all button has lyrics-agg-all when all tracks have lyrics', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: true,
+      },
+      {
+        id: 2,
+        title: 'T2',
+        artist: 'A',
+        track: 2,
+        disc: 1,
+        length: '3:00',
+        has_lrc: false,
+        has_lyrics: true,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const fetchAllBtn = document.querySelector(
+      '.action-group:last-of-type button'
+    );
+    expect(fetchAllBtn.classList.contains('lyrics-agg-all')).toBe(true);
+    expect(fetchAllBtn.classList.contains('lyrics-agg-partial')).toBe(false);
+  });
+});
