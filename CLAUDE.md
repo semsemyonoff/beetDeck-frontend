@@ -43,6 +43,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
     │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
+    │   ├── lyricsFetchQueue.js  # runLyricsFetchQueue — client pool (max 6) of single-track fetch requests; AbortSignal cancel; progress + per-track callbacks
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── RouteLink.jsx       # <a href> wrapper over useRouteLink; plain left-click = SPA nav, modified/middle/right = browser
@@ -57,7 +58,8 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── BulkBar.jsx         # Bulk-apply bar for album-level fields → "Apply to N"
     │   ├── UntaggedGroup.jsx   # Pinned amber banner in Library (UntaggedGroup + UntaggedFolderRow)
     │   ├── ItemsIdentifyModal.jsx  # Item-identify flow (identify → poll → apply → confirm → navigate)
-    │   └── TagEditorModal.jsx  # Album tag editor modal (opened from Album page *Edit tags* action)
+    │   ├── TagEditorModal.jsx  # Album tag editor modal (opened from Album page *Edit tags* action)
+    │   └── AlbumLyricsModal.jsx  # Album lyrics fetch-preview-confirm modal (props-driven; state machine: pending/found/applying/applied/skipped/not-found/error)
     └── pages/              # Route views
         ├── Library.jsx     # Index + Wall layouts
         ├── Artist.jsx
@@ -122,6 +124,12 @@ Patterns used against the API:
 - `IdentifyModal.jsx` drives the identify flow (`identify` → poll `status` → `apply` → `confirm`).
 - `TagEditorModal.jsx` and the untagged folder editor post to `POST /api/items/metadata-batch` for album-level + per-track tag writes in one request.
 - `ItemsIdentifyModal.jsx` drives the items identify flow (same polling cycle as `IdentifyModal`).
+- `AlbumLyricsModal` + `lyricsFetchQueue` drive the album "Fetch all" lyrics flow:
+  `runLyricsFetchQueue` fans out up to 6 concurrent `POST /api/album/<id>/track/<id>/lyrics/fetch`
+  calls (with an `AbortSignal`); the modal writes via `POST /api/album/<id>/track/<id>/lyrics/confirm`
+  (individual track) or `POST /api/album/<id>/lyrics/confirm` with `item_ids` ("Apply all"; response
+  includes `written_item_ids` — only those tracks are marked applied). Confirm requests are NOT
+  aborted when the modal closes (writes to disk are not idempotent).
 
 ## Build & Dev
 
