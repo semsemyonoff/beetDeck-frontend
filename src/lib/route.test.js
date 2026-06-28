@@ -37,6 +37,14 @@ describe('parse', () => {
     expect(parse('#/artist')).toEqual({ name: 'library' });
   });
 
+  it('returns scan route', () => {
+    expect(parse('#/scan')).toEqual({ name: 'scan' });
+  });
+
+  it('returns scan route with trailing slash ignored', () => {
+    expect(parse('scan')).toEqual({ name: 'scan' });
+  });
+
   it('decodes percent-encoded artist name', () => {
     expect(parse('#/artist/foo%20bar')).toEqual({
       name: 'artist',
@@ -137,6 +145,15 @@ describe('hrefFor', () => {
 
   it('parse(hrefFor(t)) round-trips untagged with dir', () => {
     const t = { name: 'untagged', dir: '/Music/Loose Bits' };
+    expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  it('returns #/scan for scan target', () => {
+    expect(hrefFor({ name: 'scan' })).toBe('#/scan');
+  });
+
+  it('parse(hrefFor(t)) round-trips scan', () => {
+    const t = { name: 'scan' };
     expect(parse(hrefFor(t))).toEqual(t);
   });
 
