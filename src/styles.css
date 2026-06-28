@@ -2296,12 +2296,6 @@ h4 {
     display: none;
   }
 
-  /* — ScanLog — */
-  .scan-head { gap: var(--s-4); }
-  .scan-summary { max-width: none; }
-  .scan-log-line { grid-template-columns: 62px 1fr; }
-  .scan-log-lvl { display: none; }
-
   /* — Artist — */
   .artist-hero-covers {
     width: 150px;
@@ -2634,6 +2628,15 @@ h4 {
 .scan-log-summary { background: var(--surface-1); margin-top: 4px; }
 .scan-log-summary .scan-log-lvl { color: var(--accent); }
 .scan-log-summary .scan-log-msg { color: var(--text); font-weight: 600; }
+
+/* ScanLog mobile overrides — kept after the base scan styles so equal-specificity
+   rules win by source order at ≤600px (media queries don't add specificity). */
+@media (max-width: 600px) {
+  .scan-head { gap: var(--s-4); }
+  .scan-summary { max-width: none; }
+  .scan-log-line { grid-template-columns: 62px 1fr; }
+  .scan-log-lvl { display: none; }
+}
 
 /* search dropdown — anchored directly under the search input */
 .search-results {
