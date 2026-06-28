@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
   screen,
+  within,
   waitFor,
   act,
   fireEvent,
@@ -2275,5 +2276,189 @@ describe('Album — BPM buttons and AlbumBpmModal (Task 7)', () => {
     });
 
     expect(capturedSignal.aborted).toBe(true);
+  });
+});
+
+describe('Album — TagsModal Edit button / ItemTagsEditor (Task 6 entry point A)', () => {
+  const TAGS_RESPONSE = { title: 'Track 1', artist: 'Test Artist', track: 1 };
+  const FIELDS_RESPONSE = [
+    { name: 'title', type: 'str', editable: true, album_level: false },
+    { name: 'artist', type: 'str', editable: true, album_level: false },
+    { name: 'track', type: 'int', editable: true, album_level: false },
+  ];
+
+  function makeFullFetch(extraHandlers = {}) {
+    return vi.fn().mockImplementation((url) => {
+      if (url === '/api/album/42') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(ALBUM_WITH_TRACKS),
+        });
+      }
+      if (url.includes('/track/') && url.endsWith('/tags')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(TAGS_RESPONSE),
+        });
+      }
+      if (url === '/api/items/fields') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(FIELDS_RESPONSE),
+        });
+      }
+      for (const [pattern, handler] of Object.entries(extraHandlers)) {
+        if (url.includes(pattern)) return handler(url);
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+    });
+  }
+
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runLyricsFetchQueue).mockResolvedValue();
+    vi.mocked(runBpmComputeQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockResolvedValue();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  async function renderAndLoad() {
+    vi.stubGlobal('fetch', makeFullFetch());
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+  }
+
+  async function openTagsModal() {
+    // tags mini-button is index 2 per track row
+    const btns = document.querySelectorAll('.track-mini-btn');
+    await act(async () => {
+      fireEvent.click(btns[2]);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+  }
+
+  function getModal() {
+    return document.querySelector('.modal');
+  }
+
+  it('TagsModal renders an Edit button when tags are loaded', async () => {
+    await renderAndLoad();
+    await openTagsModal();
+    expect(
+      within(getModal()).getByRole('button', { name: /^edit$/i })
+    ).toBeInTheDocument();
+  });
+
+  it('clicking Edit in TagsModal opens ItemTagsEditor', async () => {
+    await renderAndLoad();
+    await openTagsModal();
+
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /^edit$/i })
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(/edit all tags/i)).toBeInTheDocument()
+    );
+  });
+
+  it('cancelling ItemTagsEditor restores TagsModal', async () => {
+    await renderAndLoad();
+    await openTagsModal();
+
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /^edit$/i })
+      );
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/edit all tags/i)).toBeInTheDocument()
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /cancel/i })
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText(/edit all tags/i)).not.toBeInTheDocument()
+    );
+    // TagsModal reappears
+    expect(
+      within(getModal()).getByRole('button', { name: /close/i })
+    ).toBeInTheDocument();
+  });
+
+  it('saving in ItemTagsEditor re-fetches tags and shows TagsModal', async () => {
+    let patchCalled = false;
+    vi.stubGlobal(
+      'fetch',
+      makeFullFetch({
+        '/items/1/tags': () => {
+          patchCalled = true;
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: 'ok', warnings: [] }),
+          });
+        },
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    await openTagsModal();
+
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /^edit$/i })
+      );
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/edit all tags/i)).toBeInTheDocument()
+    );
+
+    await waitFor(() =>
+      expect(document.querySelectorAll('.ite-input').length).toBeGreaterThan(0)
+    );
+    const inputs = document.querySelectorAll('.ite-input');
+    await act(async () => {
+      fireEvent.change(inputs[0], { target: { value: 'New Title' } });
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /^save$/i })
+      );
+    });
+
+    await waitFor(() => expect(patchCalled).toBe(true));
+
+    // ItemTagsEditor closes and TagsModal re-opens
+    await waitFor(() =>
+      expect(screen.queryByText(/edit all tags/i)).not.toBeInTheDocument()
+    );
+    await waitFor(() =>
+      expect(
+        within(getModal()).getByRole('button', { name: /close/i })
+      ).toBeInTheDocument()
+    );
   });
 });
