@@ -5,6 +5,8 @@ import {
   isIndeterminate,
   buildScanViewModel,
   classifyLogLevel,
+  applyLogChunk,
+  parseLogLines,
 } from './scan.js';
 
 describe('buildScanSummary', () => {
@@ -202,6 +204,108 @@ describe('buildScanViewModel', () => {
     });
     expect(vm.added).toBe(0);
     expect(vm.removed).toBe(0);
+  });
+});
+
+describe('applyLogChunk', () => {
+  it('appends text from chunk to rawText', () => {
+    const state = { rawText: 'hello\n', offset: 6 };
+    const chunk = { text: 'world\n', offset: 12 };
+    expect(applyLogChunk(state, chunk)).toEqual({
+      rawText: 'hello\nworld\n',
+      offset: 12,
+    });
+  });
+
+  it('uses new offset from chunk', () => {
+    const state = { rawText: '', offset: 0 };
+    const chunk = { text: 'line\n', offset: 5 };
+    expect(applyLogChunk(state, chunk).offset).toBe(5);
+  });
+
+  it('keeps old offset when chunk offset is not a number', () => {
+    const state = { rawText: 'a', offset: 10 };
+    const chunk = { text: 'b', offset: null };
+    expect(applyLogChunk(state, chunk).offset).toBe(10);
+  });
+
+  it('handles empty chunk text (no new data)', () => {
+    const state = { rawText: 'existing', offset: 8 };
+    const chunk = { text: '', offset: 8 };
+    expect(applyLogChunk(state, chunk)).toEqual({
+      rawText: 'existing',
+      offset: 8,
+    });
+  });
+
+  it('handles null/undefined chunk gracefully', () => {
+    const state = { rawText: 'x', offset: 1 };
+    expect(applyLogChunk(state, null)).toEqual({ rawText: 'x', offset: 1 });
+    expect(applyLogChunk(state, undefined)).toEqual({
+      rawText: 'x',
+      offset: 1,
+    });
+  });
+
+  it('accumulates across multiple sequential calls', () => {
+    let state = { rawText: '', offset: 0 };
+    state = applyLogChunk(state, { text: 'first\n', offset: 6 });
+    state = applyLogChunk(state, { text: 'second\n', offset: 13 });
+    state = applyLogChunk(state, { text: '', offset: 13 });
+    expect(state).toEqual({ rawText: 'first\nsecond\n', offset: 13 });
+  });
+});
+
+describe('parseLogLines', () => {
+  it('returns empty array for empty/null input', () => {
+    expect(parseLogLines('')).toEqual([]);
+    expect(parseLogLines(null)).toEqual([]);
+    expect(parseLogLines(undefined)).toEqual([]);
+  });
+
+  it('splits text into lines and assigns level + line number', () => {
+    const result = parseLogLines(
+      'Looking up: /music/A\ndeleting duplicate /x\n'
+    );
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({
+      text: 'Looking up: /music/A',
+      level: 'info',
+      n: 1,
+    });
+    expect(result[1]).toEqual({
+      text: 'deleting duplicate /x',
+      level: 'removed',
+      n: 2,
+    });
+  });
+
+  it('filters out blank lines', () => {
+    const result = parseLogLines('line1\n\nline3\n');
+    expect(result).toHaveLength(2);
+    expect(result[0].n).toBe(1);
+    expect(result[1].n).toBe(2);
+  });
+
+  it('classifies added/removed/warn/skip/summary lines correctly', () => {
+    const raw = [
+      'Replacing item 1: /x.flac',
+      'deleting duplicate /old.mp3',
+      'No files imported from /empty',
+      'importer.session: skip /x',
+      'Skipped 3 paths.',
+    ].join('\n');
+    const lines = parseLogLines(raw);
+    expect(lines[0].level).toBe('added');
+    expect(lines[1].level).toBe('removed');
+    expect(lines[2].level).toBe('warn');
+    expect(lines[3].level).toBe('skip');
+    expect(lines[4].level).toBe('summary');
+  });
+
+  it('assigns sequential line numbers starting at 1', () => {
+    const result = parseLogLines('a\nb\nc\n');
+    expect(result.map((l) => l.n)).toEqual([1, 2, 3]);
   });
 });
 

@@ -28,6 +28,9 @@ export function parse(hash) {
     }
     return { name: 'untagged' };
   }
+  if (head === 'scan') {
+    return { name: 'scan' };
+  }
   return { name: 'library' };
 }
 
@@ -41,6 +44,7 @@ export function hrefFor(target) {
       return '#/untagged/' + encodeURIComponent(target.dir);
     return '#/untagged';
   }
+  if (target.name === 'scan') return '#/scan';
   return '#/';
 }
 

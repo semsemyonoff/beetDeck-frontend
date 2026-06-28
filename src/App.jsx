@@ -5,6 +5,7 @@ import Library from './pages/Library.jsx';
 import Artist from './pages/Artist.jsx';
 import Album from './pages/Album.jsx';
 import Untagged from './pages/Untagged.jsx';
+import ScanLog from './pages/ScanLog.jsx';
 import { useHashRoute } from './useHashRoute.js';
 import { buildScanViewModel } from './lib/scan.js';
 
@@ -108,6 +109,7 @@ export default function App() {
             dataVersion={dataVersion}
           />
         )}
+        {route.name === 'scan' && <ScanLog scan={scanViewModel} />}
       </main>
     </div>
   );

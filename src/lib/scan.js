@@ -48,6 +48,28 @@ export function buildScanViewModel(d) {
   };
 }
 
+// Accumulate a chunk from GET /api/rescan/log into running log state.
+// Returns new { rawText, offset }.
+export function applyLogChunk({ rawText, offset }, chunk) {
+  return {
+    rawText: rawText + (chunk?.text || ''),
+    offset: typeof chunk?.offset === 'number' ? chunk.offset : offset,
+  };
+}
+
+// Split accumulated raw log text into display lines with classified levels.
+export function parseLogLines(rawText) {
+  if (!rawText) return [];
+  return rawText
+    .split('\n')
+    .filter(Boolean)
+    .map((text, i) => ({
+      text,
+      level: classifyLogLevel(text),
+      n: i + 1,
+    }));
+}
+
 // Classify a raw beets verbose log line into a UI level.
 // Mirrors the backend parse_beets_line() patterns (beets 2.12.0).
 // Levels: info | added | removed | warn | skip | summary
