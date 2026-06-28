@@ -42,6 +42,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
     │   ├── scan.js         # buildScanSummary, buildScanViewModel (status→banner VM), scanProgressPct, isIndeterminate, applyLogChunk/parseLogLines (log tail), classifyLogLevel (mirrors backend parse_beets_line levels; pinned to beets 2.12.0 — change both together)
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
+│   ├── itemTags.js     # mergeRows / delta / addableFields — pure helpers for ItemTagsEditor (per-track free tag editor)
     │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
     │   ├── lyricsFetchQueue.js  # runLyricsFetchQueue — client pool (max 6) of single-track fetch requests; AbortSignal cancel; progress + per-track callbacks
     │   ├── bpmComputeQueue.js  # runBpmComputeQueue — client pool (max 2, CPU-bound) for single-track BPM compute; onTrackStart fires before each fetch; AbortSignal only stops dequeuing (in-flight writes always settle)
@@ -61,6 +62,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── UntaggedGroup.jsx   # Pinned amber banner in Library (UntaggedGroup + UntaggedFolderRow)
     │   ├── ItemsIdentifyModal.jsx  # Item-identify flow (identify → poll → apply → confirm → navigate)
     │   ├── TagEditorModal.jsx  # Album tag editor modal (opened from Album page *Edit tags* action)
+│   ├── ItemTagsEditor.jsx  # Per-track free tag editor modal: all editable beets fields; opened from TagsModal (Album.jsx) + TagTable «все» button; loads GET /api/items/fields + GET /api/album/<id>/track/<id>/tags; saves via PATCH /api/items/<id>/tags
     │   ├── AlbumLyricsModal.jsx  # Album lyrics fetch-preview-confirm modal (props-driven; state machine: pending/found/applying/applied/skipped/not-found/error)
     │   └── AlbumBpmModal.jsx    # Album BPM progress modal (no apply step — writes immediately); per-track rows pending→computing→done/error; driven by runBpmComputeQueue
     └── pages/              # Route views
@@ -133,6 +135,7 @@ Patterns used against the API:
   offset-polls `GET /api/rescan/log` (`{text, offset}`) and stops once the run finishes.
 - `IdentifyModal.jsx` drives the identify flow (`identify` → poll `status` → `apply` → `confirm`).
 - `TagEditorModal.jsx` and the untagged folder editor post to `POST /api/items/metadata-batch` for album-level + per-track tag writes in one request.
+- `ItemTagsEditor.jsx` loads `GET /api/items/fields` (beets field catalog) and `GET /api/album/<id>/track/<id>/tags` in parallel on open, merges via `lib/itemTags.js mergeRows()`, and saves with `PATCH /api/items/<id>/tags` (delta only). Opened from `TagsModal` in `Album.jsx` (Edit button) and from `TagTable` (per-row «все» button, only when `TagEditorModal` passes the `onOpenAllTags` prop).
 - `ItemsIdentifyModal.jsx` drives the items identify flow (same polling cycle as `IdentifyModal`).
 - `AlbumLyricsModal` + `lyricsFetchQueue` drive the album "Fetch all" lyrics flow:
   `runLyricsFetchQueue` fans out up to 6 concurrent `POST /api/album/<id>/track/<id>/lyrics/fetch`
