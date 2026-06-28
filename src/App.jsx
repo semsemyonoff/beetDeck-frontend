@@ -44,9 +44,24 @@ export default function App() {
     }, 1500);
   }, []);
 
-  const handleScanStart = ({ ok, data }) => {
+  const handleScanStart = ({ ok, data, mode }) => {
+    // Show an optimistic "running" banner the instant the button is clicked,
+    // before the first /status poll returns (which is up to one interval away).
+    // total is unknown until that first poll, so the bar starts indeterminate.
+    const startingVm = {
+      state: 'running',
+      phase: mode === 'full' ? 'importing' : 'updating',
+      mode: mode === 'full' ? 'full' : 'quick',
+      processed: 0,
+      total: null,
+      currentItem: null,
+      runId: null,
+      added: 0,
+      removed: 0,
+    };
     if (!ok) {
       if (data?.status === 'running' || data?.phase === 'importing') {
+        setScanViewModel(startingVm);
         startScanPolling();
       } else {
         setScanViewModel({
@@ -63,6 +78,7 @@ export default function App() {
       }
       return;
     }
+    setScanViewModel(startingVm);
     startScanPolling();
   };
 

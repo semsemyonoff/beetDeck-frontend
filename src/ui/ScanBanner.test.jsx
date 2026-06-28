@@ -41,6 +41,28 @@ describe('ScanBanner — view-model selection', () => {
     ).toBeTruthy();
   });
 
+  it('renders indeterminate bar for a just-started full scan (total unknown)', () => {
+    // Optimistic banner shown on click, before the first status poll: mode is
+    // 'full' but total is still null, so the bar must not go determinate yet.
+    const vm = {
+      state: 'running',
+      phase: 'importing',
+      mode: 'full',
+      processed: 0,
+      total: null,
+      currentItem: null,
+      runId: null,
+      added: 0,
+      removed: 0,
+    };
+    render(<ScanBanner scan={vm} onClose={vi.fn()} />);
+    expect(screen.getByText(/Processing/)).toBeInTheDocument();
+    expect(document.querySelector('.scan-progress-indet')).toBeTruthy();
+    expect(
+      document.querySelector('.scan-progress:not(.scan-progress-indet)')
+    ).toBeNull();
+  });
+
   it('renders indeterminate bar and "processed N done" for running-quick scan', () => {
     const vm = makeVm('importing', { total: null, processed: 5 });
     render(<ScanBanner scan={vm} onClose={vi.fn()} />);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import App from './App.jsx';
 
 // Build a fetch stub that dispatches by URL substring. Returns a sensible
@@ -67,6 +67,33 @@ describe('App — scan recovery on mount', () => {
 
     expect(await screen.findByText(/Scan complete/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/rescan/status');
+  });
+
+  it('shows the running banner immediately on scan click, before the first status poll', async () => {
+    // /api/rescan/status returns idle (no recovery, and the polling fallback is
+    // 1500ms away), so the banner can only come from the optimistic VM set on click.
+    const fetchMock = stubFetch([
+      [
+        '/api/rescan/status',
+        { body: { status: 'idle', phase: 'idle', processed: 0, total: null } },
+      ],
+      ['/api/rescan', { body: { status: 'running', phase: 'importing' } }],
+      ['/api/version', { body: { beetdeck: '0.2.0', beets: '2.12.0' } }],
+      ['/api/library', { status: 503 }],
+    ]);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+    // Wait for the mount-time status fetch to settle so we know recovery left no banner.
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/rescan/status')
+    );
+    expect(screen.queryByText(/Processing/)).toBeNull();
+
+    fireEvent.click(screen.getByTitle('Full Scan'));
+
+    // Indeterminate "Processing…" banner appears without any further status poll.
+    expect(await screen.findByText(/Processing/)).toBeInTheDocument();
   });
 
   it('shows no banner when the persisted status is idle', async () => {

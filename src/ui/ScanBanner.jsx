@@ -8,7 +8,9 @@ export default function ScanBanner({ scan, onClose }) {
     scan;
   const pct = total ? Math.round((processed / total) * 100) : 0;
   const running = state === 'running';
-  const determinate = running && mode === 'full';
+  // total is null until the first status poll lands (and always for quick
+  // scans), so a just-started full scan stays indeterminate until then.
+  const determinate = running && mode === 'full' && total != null;
 
   const toneClass =
     state === 'done'
