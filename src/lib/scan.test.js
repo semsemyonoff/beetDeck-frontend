@@ -7,6 +7,7 @@ import {
   classifyLogLevel,
   applyLogChunk,
   parseLogLines,
+  formatRunDate,
 } from './scan.js';
 
 describe('buildScanSummary', () => {
@@ -270,11 +271,36 @@ describe('parseLogLines', () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({
       text: 'Looking up: /music/A',
+      date: null,
+      time: null,
       level: 'info',
       n: 1,
     });
     expect(result[1]).toEqual({
       text: 'deleting duplicate /x',
+      date: null,
+      time: null,
+      level: 'removed',
+      n: 2,
+    });
+  });
+
+  it('parses the "[date time] " prefix and classifies the stripped message', () => {
+    const result = parseLogLines(
+      '[2026-06-28 14:30:52] Replacing item 1: /x.flac\n' +
+        '[2026-06-28 14:30:53] deleting duplicate /old.mp3\n'
+    );
+    expect(result[0]).toEqual({
+      text: 'Replacing item 1: /x.flac',
+      date: '2026-06-28',
+      time: '14:30:52',
+      level: 'added',
+      n: 1,
+    });
+    expect(result[1]).toEqual({
+      text: 'deleting duplicate /old.mp3',
+      date: '2026-06-28',
+      time: '14:30:53',
       level: 'removed',
       n: 2,
     });
@@ -395,5 +421,18 @@ describe('classifyLogLevel', () => {
       'warn'
     );
     expect(classifyLogLevel('\x1b[32m  deleted\x1b[0m')).toBe('removed');
+  });
+});
+
+describe('formatRunDate', () => {
+  it('formats the date portion of a run_id as YYYY-MM-DD', () => {
+    expect(formatRunDate('20260628-143052-123456')).toBe('2026-06-28');
+  });
+
+  it('returns "" for missing or malformed run_id', () => {
+    expect(formatRunDate(null)).toBe('');
+    expect(formatRunDate(undefined)).toBe('');
+    expect(formatRunDate('')).toBe('');
+    expect(formatRunDate('not-a-run-id')).toBe('');
   });
 });

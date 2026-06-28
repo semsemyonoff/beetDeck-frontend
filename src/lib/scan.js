@@ -57,17 +57,43 @@ export function applyLogChunk({ rawText, offset }, chunk) {
   };
 }
 
+// Matches the backend's per-line log framing: "[YYYY-MM-DD HH:MM:SS] <msg>".
+// Kept in sync with _LOG_TS_FMT in services/backend/src/beetdeck/routes/scan.py.
+// Capture groups: 1=date (YYYY-MM-DD), 2=time (HH:MM:SS), 3=message.
+const LOG_TS_RE = /^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] ([\s\S]*)$/;
+
 // Split accumulated raw log text into display lines with classified levels.
+// Each line may carry a "[date time] " prefix written by the backend; it is
+// parsed out into { date, time } and stripped before classification. Lines from
+// older (un-prefixed) runs fall back to date=time=null with the full text kept.
 export function parseLogLines(rawText) {
   if (!rawText) return [];
   return rawText
     .split('\n')
     .filter(Boolean)
-    .map((text, i) => ({
-      text,
-      level: classifyLogLevel(text),
-      n: i + 1,
-    }));
+    .map((line, i) => {
+      const m = LOG_TS_RE.exec(line);
+      const date = m ? m[1] : null;
+      const time = m ? m[2] : null;
+      const text = m ? m[3] : line;
+      return {
+        text,
+        date,
+        time,
+        level: classifyLogLevel(text),
+        n: i + 1,
+      };
+    });
+}
+
+// Derive the scan's calendar date (YYYY-MM-DD) from a run_id, which the backend
+// builds from the scan start time as "YYYYMMDD-HHMMSS-ffffff". Returns '' when
+// the run_id is missing or malformed. Avoids locale/timezone ambiguity by
+// reformatting the already-local digits rather than constructing a Date.
+export function formatRunDate(runId) {
+  if (!runId) return '';
+  const m = /^(\d{4})(\d{2})(\d{2})-/.exec(runId);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
 }
 
 // Classify a raw beets verbose log line into a UI level.

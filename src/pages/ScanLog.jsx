@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import Segmented from '../ui/Segmented.jsx';
 import { navigate } from '../useHashRoute.js';
-import { applyLogChunk, parseLogLines } from '../lib/scan.js';
+import { applyLogChunk, parseLogLines, formatRunDate } from '../lib/scan.js';
 
 function ScanProgressSummary({ scan }) {
   if (!scan) return null;
@@ -118,6 +118,7 @@ export default function ScanLog({ scan }) {
   }, [runId]);
 
   const running = scan?.state === 'running';
+  const runDate = formatRunDate(scan?.runId);
 
   useEffect(() => {
     if (running && logRef.current) {
@@ -150,6 +151,9 @@ export default function ScanLog({ scan }) {
         <div className="scan-head-text">
           <div className="scan-head-eyebrow">
             <Icon name="scan" size={12} /> Importer · beets
+            {runDate && (
+              <span className="scan-head-date mono">· {runDate}</span>
+            )}
           </div>
           <h1 className="page-title">Scan log</h1>
         </div>
@@ -182,8 +186,11 @@ export default function ScanLog({ scan }) {
       <div className="scan-log" ref={logRef}>
         {filtered.map((l, i) => (
           <div key={i} className={'scan-log-line scan-log-' + l.level}>
-            <span className="scan-log-ts mono">
-              {String(l.n).padStart(3, '0')}
+            <span
+              className="scan-log-ts mono"
+              title={l.date && l.time ? `${l.date} ${l.time}` : undefined}
+            >
+              {l.time || String(l.n).padStart(3, '0')}
             </span>
             <span className="scan-log-lvl mono">{l.level}</span>
             <span className="scan-log-msg mono">{l.text}</span>
