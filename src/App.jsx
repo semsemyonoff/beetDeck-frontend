@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import Topbar from './ui/Topbar.jsx';
+import ScanBanner from './ui/ScanBanner.jsx';
 import Library from './pages/Library.jsx';
 import Artist from './pages/Artist.jsx';
 import Album from './pages/Album.jsx';
 import Untagged from './pages/Untagged.jsx';
 import { useHashRoute } from './useHashRoute.js';
-import { buildScanSummary } from './lib/scan.js';
+import { buildScanViewModel } from './lib/scan.js';
 
 export default function App() {
   const route = useHashRoute();
-  const [scanStatus, setScanStatus] = useState(null); // null | 'running' | 'done' | 'error'
-  const [scanSummary, setScanSummary] = useState(null); // { added, removed } | null
+  const [scanViewModel, setScanViewModel] = useState(null);
   const [dataVersion, setDataVersion] = useState(0); // bumped when a scan changes the library
   const [version, setVersion] = useState(null); // { beetdeck, beets } | null
   const scanPollRef = useRef(null);
@@ -22,47 +22,56 @@ export default function App() {
         const resp = await fetch('/api/rescan/status');
         if (!resp.ok) return;
         const d = await resp.json();
-        if (d.status === 'done' || d.status === 'idle') {
+        const vm = buildScanViewModel(d);
+        setScanViewModel(vm);
+        if (d.phase === 'done') {
           clearInterval(scanPollRef.current);
-          if (d.returncode !== undefined && d.returncode !== 0) {
-            setScanStatus('error');
-            setScanSummary(null);
-          } else {
-            const summary = buildScanSummary(d);
-            setScanStatus('done');
-            setScanSummary(summary);
-            // Refresh the current page's data in place when the scan actually
-            // changed the library, so new/removed albums show without a reload.
-            if (summary && summary.added + summary.removed > 0) {
-              setDataVersion((v) => v + 1);
-            }
+          // Refresh the current page's data in place when the scan actually
+          // changed the library, so new/removed albums show without a reload.
+          if (vm && vm.added + vm.removed > 0) {
+            setDataVersion((v) => v + 1);
           }
-          setTimeout(() => {
-            setScanStatus(null);
-            setScanSummary(null);
-          }, 3000);
+        } else if (d.phase === 'error') {
+          clearInterval(scanPollRef.current);
+        } else if (!vm) {
+          // idle or unrecognised — nothing to show
+          clearInterval(scanPollRef.current);
         }
       } catch {
         clearInterval(scanPollRef.current);
-        setScanStatus('error');
-        setTimeout(() => setScanStatus(null), 3000);
       }
     }, 1500);
   };
 
   const handleScanStart = ({ ok, data }) => {
     if (!ok) {
-      if (data?.status === 'running') {
-        setScanStatus('running');
+      if (data?.status === 'running' || data?.phase === 'importing') {
         startScanPolling();
       } else {
-        setScanStatus('error');
-        setTimeout(() => setScanStatus(null), 3000);
+        setScanViewModel({
+          state: 'error',
+          phase: 'error',
+          mode: 'quick',
+          processed: 0,
+          total: null,
+          currentItem: null,
+          runId: null,
+          added: 0,
+          removed: 0,
+        });
       }
       return;
     }
-    setScanStatus('running');
     startScanPolling();
+  };
+
+  const handleDismiss = async () => {
+    try {
+      await fetch('/api/rescan/dismiss', { method: 'POST' });
+    } catch {
+      // best effort
+    }
+    setScanViewModel(null);
   };
 
   useEffect(() => () => clearInterval(scanPollRef.current), []);
@@ -79,20 +88,7 @@ export default function App() {
   return (
     <div className="app">
       <Topbar onScanStart={handleScanStart} version={version} />
-      {scanStatus && (
-        <div className={`scan-banner scan-banner--${scanStatus}`}>
-          {scanStatus === 'running' && 'Scanning library…'}
-          {scanStatus === 'done' && (
-            <>
-              Scan complete
-              {scanSummary != null
-                ? ` · +${scanSummary.added} / −${scanSummary.removed} tracks`
-                : ''}
-            </>
-          )}
-          {scanStatus === 'error' && 'Scan failed'}
-        </div>
-      )}
+      <ScanBanner scan={scanViewModel} onClose={handleDismiss} />
       <main className="app-main">
         {route.name === 'library' && <Library dataVersion={dataVersion} />}
         {route.name === 'artist' && (

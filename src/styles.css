@@ -2477,25 +2477,79 @@ h4 {
 
 /* scan banner */
 .scan-banner {
-  position: sticky;
-  top: 48px;
-  z-index: 90;
-  padding: 6px 16px;
-  font-size: 12.5px;
-  font-weight: 500;
-  text-align: center;
+  position: sticky; top: var(--topbar-h); z-index: 45;
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: var(--s-3);
+  padding: 9px clamp(var(--s-5), 4vw, 56px);
+  background: color-mix(in oklab, var(--bg) 78%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--border-soft);
 }
-.scan-banner--running {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface-1));
-  color: var(--accent);
+.scan-banner-done {
+  background: color-mix(in oklab, var(--ok) 9%, var(--bg));
+  border-bottom-color: color-mix(in oklab, var(--ok) 32%, var(--border-soft));
 }
-.scan-banner--done {
-  background: color-mix(in srgb, var(--ok) 15%, var(--surface-1));
-  color: var(--ok);
+.scan-banner-error {
+  background: color-mix(in oklab, var(--warn) 9%, var(--bg));
+  border-bottom-color: color-mix(in oklab, var(--warn) 36%, var(--border-soft));
 }
-.scan-banner--error {
-  background: color-mix(in srgb, var(--warn) 15%, var(--surface-1));
-  color: var(--warn);
+.scan-banner-glyph {
+  width: 26px; height: 26px; border-radius: var(--r-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent);
+}
+.scan-banner-done .scan-banner-glyph  { background: var(--ok-soft);   color: var(--ok); }
+.scan-banner-error .scan-banner-glyph { background: var(--warn-soft); color: var(--warn); }
+.scan-banner-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.scan-banner-textrow { display: flex; align-items: baseline; gap: var(--s-3); min-width: 0; }
+.scan-banner-label {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap;
+}
+.scan-banner-count { color: var(--text-dim); font-size: 11.5px; }
+.scan-banner-pct   { color: var(--accent);   font-size: 11.5px; }
+.scan-banner-item {
+  flex: 1; min-width: 0;
+  font-size: 11.5px; color: var(--text-mute);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.scan-banner-msg { font-size: 13px; color: var(--text); }
+.scan-banner-done .scan-banner-msg  { color: color-mix(in oklab, var(--ok) 90%, white); }
+.scan-banner-error .scan-banner-msg { color: color-mix(in oklab, var(--warn) 92%, white); }
+.scan-banner-msg .mono { color: inherit; }
+.scan-banner-actions { display: inline-flex; align-items: center; gap: var(--s-2); }
+.scan-details {
+  font-size: 12px; font-weight: 500; color: var(--accent);
+  padding: 4px 9px; border-radius: var(--r-xs);
+  text-decoration: none;
+}
+.scan-details:hover { background: var(--accent-soft); }
+.scan-banner-done .scan-details  { color: var(--ok); }
+.scan-banner-done .scan-details:hover  { background: var(--ok-soft); }
+.scan-banner-error .scan-details { color: var(--warn); }
+.scan-banner-error .scan-details:hover { background: var(--warn-soft); }
+.scan-banner-x {
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-xs); color: var(--text-mute);
+}
+.scan-banner-x:hover { background: var(--surface-2); color: var(--text); }
+.scan-progress {
+  position: relative; height: 4px; border-radius: 999px;
+  background: var(--surface-2); overflow: hidden;
+}
+.scan-progress-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 60%, var(--lime, #a3e635)));
+  border-radius: 999px; transition: width 400ms ease;
+}
+.scan-progress-indet .scan-progress-fill { width: 36%; animation: scan-indet 1.3s ease-in-out infinite; }
+@keyframes scan-indet { 0% { left: -38%; } 100% { left: 100%; } }
+.scan-spin {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
 }
 
 /* search dropdown — anchored directly under the search input */
