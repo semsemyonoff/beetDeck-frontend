@@ -3205,6 +3205,14 @@ h4 {
   justify-content: center;
   text-align: center;
 }
+.tte-row--with-all {
+  grid-template-columns: 34px 58px minmax(220px, 1.6fr) 1fr 1fr 78px 44px;
+}
+.tte-all-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  justify-self: center;
+}
 .tte-row:not(.tte-head):hover {
   background: var(--surface-1);
 }
