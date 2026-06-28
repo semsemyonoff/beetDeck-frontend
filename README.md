@@ -1,6 +1,6 @@
 # beetDeck frontend
 
-React 18 + Vite single-page app for [beetDeck](https://beets.io). It talks to the
+React 19 + Vite single-page app for [beetDeck](https://beets.io). It talks to the
 beetDeck backend purely over HTTP (`/api`, `/static`) — there is no shared code or
 filesystem with the backend.
 

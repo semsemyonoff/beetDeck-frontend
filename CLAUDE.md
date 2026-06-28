@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository is the **frontend** of beetDeck — a React 18 + Vite single-page
+This repository is the **frontend** of beetDeck — a React 19 + Vite single-page
 app for browsing and managing a [beets](https://beets.io) music library. It
 renders the library browser, artist/album pages, and the cover-art, genre,
 lyrics, and identification flows. It consumes the beetDeck backend purely over
@@ -10,8 +10,8 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
 
 ## Tech Stack
 
-- **Framework**: React 18 (function components + hooks only)
-- **Build tool**: Vite 5 with `@vitejs/plugin-react`
+- **Framework**: React 19 (function components + hooks only)
+- **Build tool**: Vite 8 with `@vitejs/plugin-react`
 - **Language**: plain JavaScript + JSX (no TypeScript)
 - **Routing**: hash-based, hand-rolled in `useHashRoute.js` (no router library)
 - **State**: `useState` / `useReducer` only (no state-management library)

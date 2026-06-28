@@ -18,7 +18,7 @@ export default [
         sourceType: 'module',
       },
     },
-    settings: { react: { version: '18.3' } },
+    settings: { react: { version: '19' } },
     plugins: {
       react,
       'react-hooks': reactHooks,
@@ -35,6 +35,12 @@ export default [
       ],
       // The SPA uses plain JS/JSX without PropTypes.
       'react/prop-types': 'off',
+      // react-hooks 7 added this opinionated rule. The SPA intentionally uses
+      // the reset-state-on-dependency-change and fetch-in-effect patterns
+      // (Cover.jsx, Artist.jsx, Untagged.jsx), which are valid here. Disabled
+      // for now; revisit if these effects are refactored. All other new
+      // react-hooks 7 rules remain enforced.
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   // Node.js config files (Vite config) need Node globals, not browser globals.
