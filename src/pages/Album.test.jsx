@@ -2461,4 +2461,57 @@ describe('Album — TagsModal Edit button / ItemTagsEditor (Task 6 entry point A
       ).toBeInTheDocument()
     );
   });
+
+  it('keeps the editor open and shows warnings on a partial-success save', async () => {
+    vi.stubGlobal(
+      'fetch',
+      makeFullFetch({
+        '/items/1/tags': () =>
+          Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                status: 'ok',
+                warnings: ['file write failed: /music/track1.mp3'],
+              }),
+          }),
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    await openTagsModal();
+
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /^edit$/i })
+      );
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/edit all tags/i)).toBeInTheDocument()
+    );
+
+    await waitFor(() =>
+      expect(document.querySelectorAll('.ite-input').length).toBeGreaterThan(0)
+    );
+    const inputs = document.querySelectorAll('.ite-input');
+    await act(async () => {
+      fireEvent.change(inputs[0], { target: { value: 'New Title' } });
+    });
+    await act(async () => {
+      fireEvent.click(
+        within(getModal()).getByRole('button', { name: /^save$/i })
+      );
+    });
+
+    // Editor stays mounted and the file-write warning is visible (not swallowed)
+    await waitFor(() =>
+      expect(screen.getByText(/file write failed/i)).toBeInTheDocument()
+    );
+    expect(screen.getByText(/edit all tags/i)).toBeInTheDocument();
+  });
 });

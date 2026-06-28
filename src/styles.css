@@ -3926,7 +3926,7 @@ h4 {
   background: var(--surface-1);
   border: 1px solid var(--border-soft);
   border-radius: var(--r-md);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   width: 260px;
   padding: var(--s-2);
   display: flex;

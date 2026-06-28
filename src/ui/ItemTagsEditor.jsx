@@ -77,7 +77,7 @@ export default function ItemTagsEditor({ albumId, item, onClose, onSaved }) {
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
       const ws = data.warnings || [];
-      if (onSaved) onSaved();
+      if (onSaved) onSaved({ warnings: ws });
       if (ws.length) {
         setWarnings(ws);
       } else {

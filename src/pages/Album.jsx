@@ -1615,7 +1615,11 @@ export default function Album({ id, dataVersion = 0 }) {
           albumId={data.id}
           item={itemTagsEditor.item}
           onClose={() => setItemTagsEditor(null)}
-          onSaved={() => {
+          onSaved={(res) => {
+            // On partial success (DB written but file write failed) the editor
+            // keeps itself open to surface the warnings — don't unmount it here
+            // or the warning is never seen.
+            if (res?.warnings?.length) return;
             const item = itemTagsEditor.item;
             setItemTagsEditor(null);
             openTagsModal(item);
