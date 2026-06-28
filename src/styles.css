@@ -1374,6 +1374,12 @@ h4 {
 .track-mini-btn-has {
   color: var(--ok);
 }
+/* Numeric BPM shown in place of the label: align digits, nudge weight up */
+.track-mini-btn .mini-label.mini-bpm {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
 
 .lyrics-agg-partial {
   color: var(--ok);

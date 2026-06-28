@@ -245,11 +245,13 @@ export default function Album({ id, dataVersion = 0 }) {
         ? 'all'
         : 'partial';
 
-  // Per-track derived has_bpm: bpmCache (post-compute) > initial data.tracks[].has_bpm
+  // Per-track derived has_bpm / bpm: bpmCache (post-compute) > initial data.tracks[]
   const trackHasBpm = {};
+  const trackBpm = {};
   for (const t of tracks) {
     const cached = bpmCache[t.id];
     trackHasBpm[t.id] = cached != null ? cached.has_bpm : (t.has_bpm ?? null);
+    trackBpm[t.id] = cached != null ? cached.bpm : (t.bpm ?? null);
   }
   const bpmCount = tracks.reduce(
     (n, t) => n + (trackHasBpm[t.id] === true ? 1 : 0),
@@ -1131,6 +1133,7 @@ export default function Album({ id, dataVersion = 0 }) {
               const lyrPayload = lyricsCache[t.id];
               const hasLyrics = trackHasLyrics[t.id];
               const hasBpm = trackHasBpm[t.id];
+              const bpmVal = trackBpm[t.id];
               const trackNum = t.track || i + 1;
               return (
                 <div
@@ -1171,18 +1174,22 @@ export default function Album({ id, dataVersion = 0 }) {
                           (hasBpm === false ? ' track-mini-btn-empty' : '')
                         }
                         title={
-                          hasBpm === true
-                            ? 'BPM tagged'
-                            : hasBpm === false
-                              ? 'No BPM'
-                              : 'BPM'
+                          bpmVal != null
+                            ? `${bpmVal} BPM`
+                            : hasBpm === true
+                              ? 'BPM tagged'
+                              : hasBpm === false
+                                ? 'No BPM'
+                                : 'BPM'
                         }
                         aria-label={
-                          hasBpm === true
-                            ? 'BPM tagged'
-                            : hasBpm === false
-                              ? 'No BPM'
-                              : 'BPM'
+                          bpmVal != null
+                            ? `${bpmVal} BPM`
+                            : hasBpm === true
+                              ? 'BPM tagged'
+                              : hasBpm === false
+                                ? 'No BPM'
+                                : 'BPM'
                         }
                         disabled={
                           trackBusy[t.id] === 'bpm' || bpmOpen || bpmRunning
@@ -1194,8 +1201,16 @@ export default function Album({ id, dataVersion = 0 }) {
                         ) : (
                           <Icon name="bpm" size={11} />
                         )}{' '}
-                        <span className="mini-label">
-                          {hasBpm === false ? 'no bpm' : 'bpm'}
+                        <span
+                          className={
+                            'mini-label' + (bpmVal != null ? ' mini-bpm' : '')
+                          }
+                        >
+                          {bpmVal != null
+                            ? bpmVal
+                            : hasBpm === false
+                              ? 'no bpm'
+                              : 'bpm'}
                         </span>
                       </button>
                       <button

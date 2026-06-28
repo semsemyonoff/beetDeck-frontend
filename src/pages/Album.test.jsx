@@ -1766,6 +1766,47 @@ describe('Album — BPM buttons and AlbumBpmModal (Task 7)', () => {
     expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(false);
   });
 
+  it('BPM button shows the numeric value as its label on first paint', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: true,
+        bpm: 128,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btns = document.querySelectorAll('.track-mini-btn');
+    const label = btns[1].querySelector('.mini-label');
+    expect(label.textContent).toBe('128');
+    expect(label.classList.contains('mini-bpm')).toBe(true);
+    expect(btns[1].getAttribute('title')).toBe('128 BPM');
+  });
+
+  it('BPM button falls back to "bpm"/"no bpm" label when no number is known', async () => {
+    const tracks = [
+      {
+        id: 1,
+        title: 'T1',
+        artist: 'A',
+        track: 1,
+        disc: 1,
+        length: '3:00',
+        has_bpm: false,
+        bpm: null,
+      },
+    ];
+    await renderWithTracks(tracks);
+    const btns = document.querySelectorAll('.track-mini-btn');
+    const label = btns[1].querySelector('.mini-label');
+    expect(label.textContent).toBe('no bpm');
+    expect(label.classList.contains('mini-bpm')).toBe(false);
+  });
+
   it('BPM button shows track-mini-btn-empty when has_bpm:false', async () => {
     const tracks = [
       {
@@ -2025,6 +2066,10 @@ describe('Album — BPM buttons and AlbumBpmModal (Task 7)', () => {
       expect(btns[1].classList.contains('track-mini-btn-has')).toBe(true);
     });
     expect(btns[1].classList.contains('track-mini-btn-empty')).toBe(false);
+    // The computed value (120) replaces the label once the cache updates.
+    const label = btns[1].querySelector('.mini-label');
+    expect(label.textContent).toBe('120');
+    expect(label.classList.contains('mini-bpm')).toBe(true);
   });
 
   it('Compute all is disabled and inert while a per-track BPM compute is in flight', async () => {
