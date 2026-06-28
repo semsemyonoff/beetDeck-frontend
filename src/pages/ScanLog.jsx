@@ -70,7 +70,15 @@ export default function ScanLog({ scan }) {
   const [logState, setLogState] = useState({ rawText: '', offset: 0 });
   const logRef = useRef(null);
   const offsetRef = useRef(0);
+  const finishedRef = useRef(false);
   const runId = scan?.runId ?? null;
+  const finished = scan?.state === 'done' || scan?.state === 'error';
+  // Mirror finished-state into a ref so the offset-polling effect (keyed on
+  // runId) can see the latest value without re-subscribing and resetting the
+  // offset. Updated in an effect — never written during render.
+  useEffect(() => {
+    finishedRef.current = finished;
+  }, [finished]);
 
   useEffect(() => {
     if (!runId) return;
@@ -97,7 +105,12 @@ export default function ScanLog({ scan }) {
     };
 
     fetchChunk();
-    const id = setInterval(fetchChunk, 1500);
+    // Poll while the run is live; once it has finished, do one final fetch to
+    // flush the tail of the log, then stop (no point polling a static file).
+    const id = setInterval(async () => {
+      await fetchChunk();
+      if (finishedRef.current) clearInterval(id);
+    }, 1500);
     return () => {
       stopped = true;
       clearInterval(id);

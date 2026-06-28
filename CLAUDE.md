@@ -40,7 +40,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   ├── library.js      # mapApi / totals / sortArtists / filterArtists / filterAlbums / letterGroups
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
-    │   ├── scan.js         # buildScanSummary (rescan-status diff → banner counts)
+    │   ├── scan.js         # buildScanSummary, buildScanViewModel (status→banner VM), scanProgressPct, isIndeterminate, applyLogChunk/parseLogLines (log tail), classifyLogLevel (mirrors backend parse_beets_line levels; pinned to beets 2.12.0 — change both together)
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
     │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
     │   ├── lyricsFetchQueue.js  # runLyricsFetchQueue — client pool (max 6) of single-track fetch requests; AbortSignal cancel; progress + per-track callbacks
@@ -48,6 +48,7 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
     │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
     ├── ui/                 # Shared widgets
     │   ├── RouteLink.jsx       # <a href> wrapper over useRouteLink; plain left-click = SPA nav, modified/middle/right = browser
+    │   ├── ScanBanner.jsx      # Sticky scan progress/result banner; determinate (full) vs indeterminate (quick) bar, current item, "Details" link, dismiss × (persists until dismissed — no auto-dismiss)
     │   ├── Topbar.jsx
     │   ├── Icon.jsx
     │   ├── Segmented.jsx
@@ -66,7 +67,8 @@ HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend
         ├── Library.jsx     # Index + Wall layouts
         ├── Artist.jsx
         ├── Album.jsx
-        └── Untagged.jsx
+        ├── Untagged.jsx
+        └── ScanLog.jsx     # Scan-log screen: offset-polls GET /api/rescan/log, level-colored lines, auto-scroll while live, stops polling once finished
 ```
 
 ## Routing
@@ -79,6 +81,7 @@ into a route object; `navigate(target)` writes the hash. Routes:
 - `#/album/<id>` — Album
 - `#/untagged` — Untagged folder index (pinned amber banner; folder list fallback)
 - `#/untagged/<dir>` — Per-folder tag editor (dir is `encodeURIComponent`'d; decoded once in `parse()`)
+- `#/scan` — Scan log for the current/last run (the banner's "Details" link)
 
 Anything unrecognized falls back to the Library route.
 
@@ -122,7 +125,12 @@ New fields on existing endpoints are treated as additive only.
 
 Patterns used against the API:
 
-- `App.jsx` polls `GET /api/rescan/status` on an interval while a rescan runs.
+- `App.jsx` polls `GET /api/rescan/status` on an interval while a rescan runs, and
+  fetches it once on mount to recover an in-flight or finished-but-undismissed scan
+  (the banner/log survive a reload). `ScanBanner` consumes the progress fields
+  (`phase`/`processed`/`total`/`current_item`/`run_id`); the × calls
+  `POST /api/rescan/dismiss` then hides the banner (no auto-dismiss). `ScanLog`
+  offset-polls `GET /api/rescan/log` (`{text, offset}`) and stops once the run finishes.
 - `IdentifyModal.jsx` drives the identify flow (`identify` → poll `status` → `apply` → `confirm`).
 - `TagEditorModal.jsx` and the untagged folder editor post to `POST /api/items/metadata-batch` for album-level + per-track tag writes in one request.
 - `ItemsIdentifyModal.jsx` drives the items identify flow (same polling cycle as `IdentifyModal`).

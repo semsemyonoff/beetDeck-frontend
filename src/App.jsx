@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Topbar from './ui/Topbar.jsx';
 import ScanBanner from './ui/ScanBanner.jsx';
 import Library from './pages/Library.jsx';
@@ -16,7 +16,7 @@ export default function App() {
   const [version, setVersion] = useState(null); // { beetdeck, beets } | null
   const scanPollRef = useRef(null);
 
-  const startScanPolling = () => {
+  const startScanPolling = useCallback(() => {
     if (scanPollRef.current) clearInterval(scanPollRef.current);
     scanPollRef.current = setInterval(async () => {
       try {
@@ -42,7 +42,7 @@ export default function App() {
         clearInterval(scanPollRef.current);
       }
     }, 1500);
-  };
+  }, []);
 
   const handleScanStart = ({ ok, data }) => {
     if (!ok) {
@@ -76,6 +76,28 @@ export default function App() {
   };
 
   useEffect(() => () => clearInterval(scanPollRef.current), []);
+
+  useEffect(() => {
+    // On load, recover an in-flight or finished-but-undismissed scan from the
+    // backend (which persists the result until dismissed) so the banner and the
+    // scan-log screen survive a page reload / direct navigation to #/scan.
+    let cancelled = false;
+    fetch('/api/rescan/status')
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((d) => {
+        if (cancelled || !d) return;
+        const vm = buildScanViewModel(d);
+        if (!vm) return;
+        setScanViewModel(vm);
+        if (d.phase === 'importing' || d.phase === 'updating') {
+          startScanPolling();
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [startScanPolling]);
 
   useEffect(() => {
     fetch('/api/version')
