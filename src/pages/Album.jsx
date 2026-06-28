@@ -5,6 +5,7 @@ import RouteLink from '../ui/RouteLink.jsx';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import TagEditorModal from '../ui/TagEditorModal.jsx';
 import AlbumLyricsModal from '../ui/AlbumLyricsModal.jsx';
+import AlbumBpmModal from '../ui/AlbumBpmModal.jsx';
 import {
   fmtMins,
   fmtTotal,
@@ -17,6 +18,7 @@ import { isIdentified } from '../lib/albums.js';
 import { isSynced, parseLyricLines } from '../lib/lyrics.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
 import { runLyricsFetchQueue } from '../lib/lyricsFetchQueue.js';
+import { runBpmComputeQueue } from '../lib/bpmComputeQueue.js';
 
 // Render LRC lines as a [timestamp | text] grid; blank lines show a ♪ glyph.
 function LyricLines({ text, limit }) {
@@ -100,6 +102,13 @@ export default function Album({ id, dataVersion = 0 }) {
   const [almProgress, setAlmProgress] = useState({ done: 0, total: 0 });
   const [almRunning, setAlmRunning] = useState(false);
   const almAbortRef = useRef(null);
+  const [bpmCache, setBpmCache] = useState({}); // item_id -> { has_bpm, bpm }
+  const [bpmOpen, setBpmOpen] = useState(false);
+  const [bpmRows, setBpmRows] = useState([]);
+  const [bpmProgress, setBpmProgress] = useState({ done: 0, total: 0 });
+  const [bpmRunning, setBpmRunning] = useState(false);
+  const bpmAbortRef = useRef(null);
+  const bpmRunRef = useRef(null); // stale-update guard: token per run
   const uploadRef = useRef(null);
   const flashTimerRef = useRef(null);
   // Per-track monotonic sequence for refreshTrackLyrics: a write seeds the cache
@@ -114,8 +123,9 @@ export default function Album({ id, dataVersion = 0 }) {
       window.clearTimeout(flashTimerRef.current);
       // Unmounting (e.g. navigating away) must abort any in-flight fetch queue;
       // otherwise its concurrent requests keep running and populate backend
-      // preview state. Closing the modal aborts too (closeAlmModal).
+      // preview state. Closing the modal aborts too (closeAlmModal/closeBpmModal).
       almAbortRef.current?.abort();
+      bpmAbortRef.current?.abort();
     },
     []
   );
@@ -234,6 +244,31 @@ export default function Album({ id, dataVersion = 0 }) {
       : lyricsCount === tracks.length
         ? 'all'
         : 'partial';
+
+  // Per-track derived has_bpm / bpm: bpmCache (post-compute) > initial data.tracks[]
+  const trackHasBpm = {};
+  const trackBpm = {};
+  for (const t of tracks) {
+    const cached = bpmCache[t.id];
+    trackHasBpm[t.id] = cached != null ? cached.has_bpm : (t.has_bpm ?? null);
+    trackBpm[t.id] = cached != null ? cached.bpm : (t.bpm ?? null);
+  }
+  const bpmCount = tracks.reduce(
+    (n, t) => n + (trackHasBpm[t.id] === true ? 1 : 0),
+    0
+  );
+  const bpmAgg =
+    tracks.length === 0 || bpmCount === 0
+      ? 'neutral'
+      : bpmCount === tracks.length
+        ? 'all'
+        : 'partial';
+
+  // Any per-track BPM compute currently in flight. A per-track compute is a
+  // file/DB write, so an album-wide run must not start while one is running —
+  // it would re-issue a compute for that same track and risk concurrent tag
+  // writes. (handleTrackBpm already blocks the reverse direction via bpmRunning.)
+  const bpmTrackBusy = Object.values(trackBusy).some((v) => v === 'bpm');
 
   const genres = data.genre
     ? data.genre
@@ -560,6 +595,95 @@ export default function Album({ id, dataVersion = 0 }) {
   const closeAlmModal = () => {
     almAbortRef.current?.abort();
     setAlmOpen(false);
+  };
+
+  const handleTrackBpm = async (item) => {
+    // BPM compute writes the file/DB; never let a per-track compute overlap an
+    // album-wide run (or its still-settling in-flight requests) on the same
+    // track — concurrent writes to one file can corrupt tags.
+    if (bpmOpen || bpmRunning) return;
+    setTrackBusyForId(item.id, 'bpm');
+    const { ok, data: d } = await postJson(
+      `/api/album/${data.id}/track/${item.id}/bpm/compute`
+    );
+    setTrackBusyForId(item.id, null);
+    if (ok) {
+      setBpmCache((prev) => ({
+        ...prev,
+        [item.id]: { has_bpm: d?.bpm != null, bpm: d?.bpm ?? null },
+      }));
+    } else {
+      showFlash('err', d?.error || 'BPM computation failed.');
+    }
+  };
+
+  const handleBpmAll = () => {
+    // Block while the album modal/run is active OR a per-track compute is still
+    // in flight — both would mean overlapping writes to the same file(s).
+    if (bpmOpen || bpmRunning || bpmTrackBusy) return;
+    const ctrl = new AbortController();
+    bpmAbortRef.current = ctrl;
+    const runToken = {};
+    bpmRunRef.current = runToken;
+    const initialRows = tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      track: t.track,
+      disc: t.disc,
+      state: 'pending',
+      bpm: null,
+    }));
+    setBpmRows(initialRows);
+    setBpmProgress({ done: 0, total: tracks.length });
+    setBpmRunning(true);
+    setBpmOpen(true);
+    runBpmComputeQueue({
+      albumId: data.id,
+      itemIds: tracks.map((t) => t.id),
+      signal: ctrl.signal,
+      onTrackStart: (id) => {
+        if (bpmRunRef.current !== runToken) return;
+        setBpmRows((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, state: 'computing' } : r))
+        );
+      },
+      onProgress: (done, total) => {
+        if (bpmRunRef.current !== runToken) return;
+        setBpmProgress({ done, total });
+      },
+      onTrackResult: (id, result) => {
+        if (bpmRunRef.current !== runToken) return;
+        if (result.error) {
+          setBpmRows((prev) =>
+            prev.map((r) => (r.id === id ? { ...r, state: 'error' } : r))
+          );
+        } else {
+          setBpmRows((prev) =>
+            prev.map((r) =>
+              r.id === id ? { ...r, state: 'done', bpm: result.bpm } : r
+            )
+          );
+          setBpmCache((prev) => ({
+            ...prev,
+            [id]: { has_bpm: result.bpm != null, bpm: result.bpm },
+          }));
+        }
+      },
+    }).finally(() => {
+      // Always release the run lock once the queue settles, even if the modal
+      // was closed mid-run (closeBpmModal nulls bpmRunRef). Guarding this on the
+      // run token would leave bpmRunning stuck `true` after a close, permanently
+      // disabling "Compute all". The per-callback token guards above still drop
+      // stale row/cache updates; only the lock release must be unconditional.
+      setBpmRunning(false);
+    });
+  };
+
+  const closeBpmModal = () => {
+    bpmRunRef.current = null;
+    bpmAbortRef.current?.abort();
+    setBpmOpen(false);
   };
 
   const setTrackBusyForId = (id, val) =>
@@ -952,6 +1076,19 @@ export default function Album({ id, dataVersion = 0 }) {
                 }}
               />
             </ActionGroup>
+            <ActionGroup label="BPM">
+              <button
+                className={
+                  'btn btn-action' +
+                  (bpmAgg === 'partial' ? ' lyrics-agg-partial' : '') +
+                  (bpmAgg === 'all' ? ' lyrics-agg-all' : '')
+                }
+                disabled={bpmOpen || bpmRunning || bpmTrackBusy}
+                onClick={handleBpmAll}
+              >
+                <Icon name="bpm" size={12} /> Compute all
+              </button>
+            </ActionGroup>
             <ActionGroup label="Lyrics">
               <button
                 className={
@@ -995,6 +1132,8 @@ export default function Album({ id, dataVersion = 0 }) {
               const isOpen = expandedKey === rowKey;
               const lyrPayload = lyricsCache[t.id];
               const hasLyrics = trackHasLyrics[t.id];
+              const hasBpm = trackHasBpm[t.id];
+              const bpmVal = trackBpm[t.id];
               const trackNum = t.track || i + 1;
               return (
                 <div
@@ -1026,6 +1165,52 @@ export default function Album({ id, dataVersion = 0 }) {
                         <Icon name="lyrics" size={11} />{' '}
                         <span className="mini-label">
                           {hasLyrics === false ? 'no lyrics' : 'lyrics'}
+                        </span>
+                      </button>
+                      <button
+                        className={
+                          'track-mini-btn' +
+                          (hasBpm === true ? ' track-mini-btn-has' : '') +
+                          (hasBpm === false ? ' track-mini-btn-empty' : '')
+                        }
+                        title={
+                          bpmVal != null
+                            ? `${bpmVal} BPM`
+                            : hasBpm === true
+                              ? 'BPM tagged'
+                              : hasBpm === false
+                                ? 'No BPM'
+                                : 'BPM'
+                        }
+                        aria-label={
+                          bpmVal != null
+                            ? `${bpmVal} BPM`
+                            : hasBpm === true
+                              ? 'BPM tagged'
+                              : hasBpm === false
+                                ? 'No BPM'
+                                : 'BPM'
+                        }
+                        disabled={
+                          trackBusy[t.id] === 'bpm' || bpmOpen || bpmRunning
+                        }
+                        onClick={() => handleTrackBpm(t)}
+                      >
+                        {trackBusy[t.id] === 'bpm' ? (
+                          <BtnSpinner />
+                        ) : (
+                          <Icon name="bpm" size={11} />
+                        )}{' '}
+                        <span
+                          className={
+                            'mini-label' + (bpmVal != null ? ' mini-bpm' : '')
+                          }
+                        >
+                          {bpmVal != null
+                            ? bpmVal
+                            : hasBpm === false
+                              ? 'no bpm'
+                              : 'bpm'}
                         </span>
                       </button>
                       <button
@@ -1487,6 +1672,15 @@ export default function Album({ id, dataVersion = 0 }) {
           onApplyAll={handleAlmApplyAll}
           onApplyOne={handleAlmApplyOne}
           onClose={closeAlmModal}
+        />
+      )}
+
+      {bpmOpen && (
+        <AlbumBpmModal
+          tracks={bpmRows}
+          progress={bpmProgress}
+          computing={bpmRunning}
+          onClose={closeBpmModal}
         />
       )}
     </div>
