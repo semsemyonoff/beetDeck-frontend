@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from '@testing-library/react';
 import TagEditorModal from './TagEditorModal.jsx';
 
 function ok(body) {
@@ -172,6 +178,49 @@ describe('TagEditorModal', () => {
     });
 
     expect(screen.getByText(/bad request/i)).toBeInTheDocument();
+  });
+
+  it('refreshes the album-grid row after a per-track free-tag save', async () => {
+    const TRACK_TAGS = { title: 'First Track', artist: 'Test Artist' };
+    const CATALOG = [
+      { name: 'title', type: 'str', editable: true, album_level: false },
+      { name: 'artist', type: 'str', editable: true, album_level: false },
+    ];
+    const fetchMock = vi.fn().mockImplementation((url, init) => {
+      if (init?.method === 'PATCH')
+        return Promise.resolve(ok({ status: 'ok', warnings: [] }));
+      if (String(url).includes('/items/fields'))
+        return Promise.resolve(ok(CATALOG));
+      if (String(url).includes('/tags')) return Promise.resolve(ok(TRACK_TAGS));
+      return Promise.resolve(ok({}));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <TagEditorModal album={ALBUM} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    // Open the per-track free-tag editor for the first track.
+    fireEvent.click(screen.getAllByRole('button', { name: 'все' })[0]);
+
+    // The editor loads the track's own tags → a second 'First Track' input.
+    await waitFor(() =>
+      expect(screen.getAllByDisplayValue('First Track')).toHaveLength(2)
+    );
+
+    // Edit the title inside the per-track editor (the later input) and save.
+    const titleInputs = screen.getAllByDisplayValue('First Track');
+    fireEvent.change(titleInputs[titleInputs.length - 1], {
+      target: { value: 'Refreshed Title' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    });
+
+    // Editor closed; the album-grid row now reflects the persisted value, so a
+    // later batch write will not overwrite it with the stale title.
+    expect(screen.getByDisplayValue('Refreshed Title')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('First Track')).not.toBeInTheDocument();
   });
 
   it('shows focus note when focusTrack is set', () => {

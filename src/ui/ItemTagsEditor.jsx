@@ -77,7 +77,10 @@ export default function ItemTagsEditor({ albumId, item, onClose, onSaved }) {
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
       const ws = data.warnings || [];
-      if (onSaved) onSaved({ warnings: ws });
+      // Hand the saved delta back so an opener (e.g. the album batch editor)
+      // can refresh its own stale view of this track instead of overwriting
+      // the just-saved values on a later batch write.
+      if (onSaved) onSaved({ warnings: ws, fields: d });
       if (ws.length) {
         setWarnings(ws);
       } else {

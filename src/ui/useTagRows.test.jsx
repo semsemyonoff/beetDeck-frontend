@@ -61,6 +61,14 @@ function Host({ initialRows }) {
       >
         set albumartist
       </button>
+      <button
+        data-testid="sync-row-1"
+        onClick={() =>
+          ed.syncRow(1, { title: 'SyncedTitle', album: 'SyncedAlbum' })
+        }
+      >
+        sync row 1
+      </button>
       <button data-testid="commit" onClick={() => ed.commit()}>
         commit
       </button>
@@ -203,6 +211,21 @@ describe('useTagRows', () => {
     expect(window.__lastPayload.items.map((i) => i.id)).toEqual([1, 2]);
     expect(screen.getByTestId('dirty-count').textContent).toBe('0');
     expect(screen.getByTestId('saved').textContent).toBe('true');
+  });
+
+  it('syncRow updates the matching row and baseline without marking it dirty', () => {
+    render(<Host initialRows={ROWS} />);
+    expect(screen.getByTestId('dirty-count').textContent).toBe('0');
+
+    fireEvent.click(screen.getByTestId('sync-row-1'));
+
+    // Row reflects the externally-persisted values…
+    expect(screen.getByTestId('row-0-title').textContent).toBe('SyncedTitle');
+    expect(screen.getByTestId('row-0-album').textContent).toBe('SyncedAlbum');
+    // …but is not considered dirty (baseline moved too), so a later batch
+    // write neither re-sends nor reverts these fields.
+    expect(screen.getByTestId('row-0-dirty-title').textContent).toBe('false');
+    expect(screen.getByTestId('dirty-count').textContent).toBe('0');
   });
 
   it('setField clears saved flag', async () => {

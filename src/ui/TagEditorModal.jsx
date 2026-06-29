@@ -52,6 +52,29 @@ export default function TagEditorModal({
     flashTimerRef.current = setTimeout(() => setFlash(null), 2400);
   };
 
+  // Map a per-track free-tag save back onto the album-grid row so the grid
+  // reflects the persisted values and a later batch write does not overwrite
+  // them with stale data. Grid columns use `genre`; beets uses `genres`.
+  const handlePerTrackSaved = (id, { warnings = [], fields = {} } = {}) => {
+    const patch = {};
+    for (const k of [
+      'track',
+      'title',
+      'artist',
+      'album',
+      'albumartist',
+      'year',
+    ]) {
+      if (k in fields) patch[k] = fields[k] == null ? '' : String(fields[k]);
+    }
+    if ('genres' in fields) {
+      patch.genre = fields.genres == null ? '' : String(fields.genres);
+    }
+    ed.syncRow(id, patch);
+    if (warnings.length) showFlash('warn', warnings.join('; '));
+    else showFlash('ok', 'Per-track tags saved');
+  };
+
   const handleWrite = async () => {
     setSaving(true);
     try {
@@ -176,7 +199,7 @@ export default function TagEditorModal({
           albumId={album.id}
           item={allTagsItem}
           onClose={() => setAllTagsItem(null)}
-          onSaved={() => showFlash('ok', 'Per-track tags saved')}
+          onSaved={(result) => handlePerTrackSaved(allTagsItem.id, result)}
         />
       )}
     </>
