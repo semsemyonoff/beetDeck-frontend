@@ -1622,10 +1622,10 @@ describe('Album — lyrics color indication (Task 6)', () => {
           btn.classList.contains('track-mini-btn-empty')
       ).toBe(false);
     }
-    // Each track row has 4 mini-btns (lyrics, bpm, tags, edit); lyrics is index 0 per row
-    // btns[0] = track-1 lyrics btn (has_lyrics:true), btns[4] = track-2 lyrics btn (has_lyrics:false)
+    // Each track row has 3 mini-btns (lyrics, bpm, tags); lyrics is index 0 per row
+    // btns[0] = track-1 lyrics btn (has_lyrics:true), btns[3] = track-2 lyrics btn (has_lyrics:false)
     expect(btns[0].classList.contains('track-mini-btn-has')).toBe(true);
-    expect(btns[4].classList.contains('track-mini-btn-empty')).toBe(true);
+    expect(btns[3].classList.contains('track-mini-btn-empty')).toBe(true);
   });
 
   it('album Fetch-all button is neutral (no extra class) when 0 tracks have lyrics', async () => {

@@ -1290,7 +1290,7 @@ h4 {
 .album-tracks-head,
 .album-track-main {
   display: grid;
-  grid-template-columns: 56px 1fr 200px 80px 180px;
+  grid-template-columns: 56px 1fr 200px 80px 232px;
   align-items: center;
   gap: var(--s-3);
   padding: 0 var(--s-4);
@@ -1353,6 +1353,7 @@ h4 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--text-dim);
@@ -3912,6 +3913,54 @@ h4 {
   align-items: center;
   justify-content: center;
   color: var(--warn);
+}
+.ite-warn {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+  border-radius: var(--r-xs);
+}
+.ite-warn:focus-visible {
+  outline: 2px solid var(--warn);
+  outline-offset: 2px;
+}
+/* Visible explanatory tooltip — opens to the left of the icon (which sits at
+   the right edge of the row) so it stays inside the scrollable modal body. */
+.ite-tip {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  width: 260px;
+  padding: 10px 12px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid color-mix(in oklab, var(--warn) 45%, var(--border-soft));
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-modal, 0 8px 24px rgba(0, 0, 0, 0.35));
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  text-align: left;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.ite-tip strong {
+  color: var(--warn);
+  font-weight: 600;
+}
+.ite-warn:hover .ite-tip,
+.ite-warn:focus .ite-tip,
+.ite-warn:focus-visible .ite-tip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 .ite-add {

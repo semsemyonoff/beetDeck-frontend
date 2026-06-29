@@ -149,8 +149,21 @@ export default function ItemTagsEditor({ albumId, item, onClose, onSaved }) {
                     )}
                     <span className="ite-row-icon">
                       {row.album_level && (
-                        <span title="Writing this field affects only this track and may split the album">
+                        <span
+                          className="ite-warn"
+                          tabIndex={0}
+                          role="img"
+                          aria-label="Album-level field warning"
+                        >
                           <Icon name="alert" size={12} />
+                          <span className="ite-tip" role="tooltip">
+                            <strong>Album-level tag.</strong> beets groups
+                            tracks into one album by these shared fields.
+                            Editing it for a single track desyncs it from the
+                            rest — beets may split this track off into a
+                            separate album in your library. Change it for the
+                            whole album unless you mean to break it apart.
+                          </span>
                         </span>
                       )}
                     </span>

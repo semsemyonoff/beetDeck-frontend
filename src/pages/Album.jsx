@@ -1217,21 +1217,12 @@ export default function Album({ id, dataVersion = 0 }) {
                       </button>
                       <button
                         className="track-mini-btn"
-                        title="Tags"
-                        aria-label="Tags"
+                        title="View tags"
+                        aria-label="View tags"
                         onClick={() => openTagsModal(t)}
                       >
                         <Icon name="tag" size={11} />{' '}
                         <span className="mini-label">tags</span>
-                      </button>
-                      <button
-                        className="track-mini-btn"
-                        title="Edit tags"
-                        aria-label="Edit tags"
-                        onClick={() => setTagEditorModal({ focusTrack: t.id })}
-                      >
-                        <Icon name="edit" size={11} />{' '}
-                        <span className="mini-label">edit</span>
                       </button>
                     </span>
                   </div>

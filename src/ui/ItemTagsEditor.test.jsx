@@ -117,9 +117,13 @@ describe('ItemTagsEditor', () => {
     await waitFor(() =>
       expect(screen.getByDisplayValue('Some Album')).toBeInTheDocument()
     );
-    // album row should have the warning tooltip
-    const warnSpan = document.querySelector('[title*="may split the album"]');
+    // album row should have the warning icon with a visible explanatory tooltip
+    const warnSpan = document.querySelector('.ite-warn');
     expect(warnSpan).toBeInTheDocument();
+    const tip = warnSpan.querySelector('.ite-tip');
+    expect(tip).toBeInTheDocument();
+    expect(tip).toHaveAttribute('role', 'tooltip');
+    expect(tip.textContent).toMatch(/split this track off/i);
   });
 
   it('Save button is disabled when no changes made', async () => {
