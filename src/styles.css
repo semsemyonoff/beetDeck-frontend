@@ -1145,7 +1145,7 @@ h4 {
 }
 .tag-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 160px 1fr;
   gap: var(--s-3);
   align-items: baseline;
 }
@@ -3859,7 +3859,7 @@ h4 {
 }
 .ite-row {
   display: grid;
-  grid-template-columns: 130px 1fr 20px;
+  grid-template-columns: 160px 1fr 20px;
   align-items: center;
   gap: var(--s-2);
   min-height: 32px;
