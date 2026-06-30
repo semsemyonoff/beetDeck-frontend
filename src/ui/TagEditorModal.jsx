@@ -5,6 +5,7 @@ import { useTagRows } from './useTagRows.js';
 import TagTable from './TagTable.jsx';
 import BulkBar from './BulkBar.jsx';
 import FolderTree from './FolderTree.jsx';
+import ItemTagsEditor from './ItemTagsEditor.jsx';
 import { basename, dirname } from '../lib/tagEditor.js';
 
 function synthFile(t) {
@@ -35,7 +36,8 @@ export default function TagEditorModal({
   onClose,
   onSaved,
 }) {
-  useModalDismiss(onClose);
+  const [allTagsItem, setAllTagsItem] = useState(null);
+  useModalDismiss(allTagsItem ? null : onClose);
   const tracks = album.tracks || [];
   const ed = useTagRows(tracks.map((t) => seedRow(t, album)));
   const [saving, setSaving] = useState(false);
@@ -48,6 +50,29 @@ export default function TagEditorModal({
     setFlash({ kind, text });
     clearTimeout(flashTimerRef.current);
     flashTimerRef.current = setTimeout(() => setFlash(null), 2400);
+  };
+
+  // Map a per-track free-tag save back onto the album-grid row so the grid
+  // reflects the persisted values and a later batch write does not overwrite
+  // them with stale data. Grid columns use `genre`; beets uses `genres`.
+  const handlePerTrackSaved = (id, { warnings = [], fields = {} } = {}) => {
+    const patch = {};
+    for (const k of [
+      'track',
+      'title',
+      'artist',
+      'album',
+      'albumartist',
+      'year',
+    ]) {
+      if (k in fields) patch[k] = fields[k] == null ? '' : String(fields[k]);
+    }
+    if ('genres' in fields) {
+      patch.genre = fields.genres == null ? '' : String(fields.genres);
+    }
+    ed.syncRow(id, patch);
+    if (warnings.length) showFlash('warn', warnings.join('; '));
+    else showFlash('ok', 'Per-track tags saved');
   };
 
   const handleWrite = async () => {
@@ -96,68 +121,87 @@ export default function TagEditorModal({
       : null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal-tagedit" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div>
-            <div className="modal-eyebrow">
-              <Icon name="tag" size={12} /> Edit tags
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          className="modal modal-tagedit"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-head">
+            <div>
+              <div className="modal-eyebrow">
+                <Icon name="tag" size={12} /> Edit tags
+              </div>
+              <h3 className="modal-title">
+                {album.album || 'Unknown Album'}
+                {album.albumartist ? (
+                  <span className="muted"> — {album.albumartist}</span>
+                ) : null}
+              </h3>
             </div>
-            <h3 className="modal-title">
-              {album.album || 'Unknown Album'}
-              {album.albumartist ? (
-                <span className="muted"> — {album.albumartist}</span>
-              ) : null}
-            </h3>
+            <button className="btn-icon" onClick={onClose}>
+              <Icon name="x" size={14} />
+            </button>
           </div>
-          <button className="btn-icon" onClick={onClose}>
-            <Icon name="x" size={14} />
-          </button>
-        </div>
 
-        <div className="modal-body">
-          {flash && (
-            <div className={`flash flash-${flash.kind}`}>{flash.text}</div>
-          )}
-          {focusTitle && (
-            <div className="muted small tagedit-focus-note">
-              Opened from: {focusTitle}
-            </div>
-          )}
-          <FolderTree
-            root={folderRoot}
-            folder={folderName}
-            files={folderFiles}
-            compact
-          />
-          <TagTable ed={ed} />
-          {ed.selected.size > 0 && (
-            <BulkBar
-              count={ed.selected.size}
-              onApply={(vals) => ed.applyBulk(vals)}
-              onClear={() => ed.clearSel()}
+          <div className="modal-body">
+            {flash && (
+              <div className={`flash flash-${flash.kind}`}>{flash.text}</div>
+            )}
+            {focusTitle && (
+              <div className="muted small tagedit-focus-note">
+                Opened from: {focusTitle}
+              </div>
+            )}
+            <FolderTree
+              root={folderRoot}
+              folder={folderName}
+              files={folderFiles}
+              compact
             />
-          )}
-        </div>
+            <TagTable
+              ed={ed}
+              onOpenAllTags={(r) =>
+                setAllTagsItem({ id: r.id, title: r.title })
+              }
+            />
+            {ed.selected.size > 0 && (
+              <BulkBar
+                count={ed.selected.size}
+                onApply={(vals) => ed.applyBulk(vals)}
+                onClear={() => ed.clearSel()}
+              />
+            )}
+          </div>
 
-        <div className="modal-foot">
-          <div className="row-end">
-            <button className="btn btn-ghost" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              disabled={saving || ed.dirtyCount === 0}
-              onClick={handleWrite}
-            >
-              <Icon name="check" size={12} />{' '}
-              {saving
-                ? 'Writing…'
-                : `Write${ed.dirtyCount > 0 ? ` (${ed.dirtyCount})` : ''} tags`}
-            </button>
+          <div className="modal-foot">
+            <div className="row-end">
+              <button className="btn btn-ghost" onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={saving || ed.dirtyCount === 0}
+                onClick={handleWrite}
+              >
+                <Icon name="check" size={12} />{' '}
+                {saving
+                  ? 'Writing…'
+                  : `Write${ed.dirtyCount > 0 ? ` (${ed.dirtyCount})` : ''} tags`}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {allTagsItem && (
+        <ItemTagsEditor
+          albumId={album.id}
+          item={allTagsItem}
+          onClose={() => setAllTagsItem(null)}
+          onSaved={(result) => handlePerTrackSaved(allTagsItem.id, result)}
+        />
+      )}
+    </>
   );
 }

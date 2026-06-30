@@ -1145,7 +1145,7 @@ h4 {
 }
 .tag-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 160px 1fr;
   gap: var(--s-3);
   align-items: baseline;
 }
@@ -1290,7 +1290,7 @@ h4 {
 .album-tracks-head,
 .album-track-main {
   display: grid;
-  grid-template-columns: 56px 1fr 200px 80px 180px;
+  grid-template-columns: 56px 1fr 200px 80px 232px;
   align-items: center;
   gap: var(--s-3);
   padding: 0 var(--s-4);
@@ -1353,6 +1353,7 @@ h4 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--text-dim);
@@ -3205,6 +3206,14 @@ h4 {
   justify-content: center;
   text-align: center;
 }
+.tte-row--with-all {
+  grid-template-columns: 34px 58px minmax(220px, 1.6fr) 1fr 1fr 78px 44px;
+}
+.tte-all-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  justify-self: center;
+}
 .tte-row:not(.tte-head):hover {
   background: var(--surface-1);
 }
@@ -3836,4 +3845,171 @@ h4 {
   .untagged-stats strong {
     font-size: 18px;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  ItemTagsEditor — per-track all-fields editor (ite-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.ite-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--s-4);
+}
+.ite-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 20px;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 32px;
+}
+.ite-row-album {
+  background: color-mix(in oklab, var(--warn) 7%, transparent);
+  border-radius: var(--r-xs);
+}
+.ite-name {
+  color: var(--text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 4px;
+}
+.ite-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-xs);
+  padding: 5px 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
+  outline: none;
+  transition:
+    background 100ms,
+    border-color 100ms,
+    box-shadow 100ms;
+}
+.ite-input:hover {
+  border-color: var(--border-soft);
+  background: var(--surface-2);
+}
+.ite-input:focus {
+  border-color: var(--accent);
+  background: var(--surface-0);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ite-value-ro {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--text-mute);
+  padding: 5px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ite-row-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--warn);
+}
+.ite-warn {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+  border-radius: var(--r-xs);
+}
+.ite-warn:focus-visible {
+  outline: 2px solid var(--warn);
+  outline-offset: 2px;
+}
+/* Visible explanatory tooltip — opens to the left of the icon (which sits at
+   the right edge of the row) so it stays inside the scrollable modal body. */
+.ite-tip {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  width: 260px;
+  padding: 10px 12px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid color-mix(in oklab, var(--warn) 45%, var(--border-soft));
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-modal, 0 8px 24px rgba(0, 0, 0, 0.35));
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  text-align: left;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.ite-tip strong {
+  color: var(--warn);
+  font-weight: 600;
+}
+.ite-warn:hover .ite-tip,
+.ite-warn:focus .ite-tip,
+.ite-warn:focus-visible .ite-tip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.ite-add {
+  margin-top: var(--s-3);
+  position: relative;
+}
+.ite-add-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  background: var(--surface-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  width: 260px;
+  padding: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.ite-add-search {
+  height: 34px;
+  font-size: 13px;
+  padding: 0 10px;
+}
+.ite-add-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ite-add-item {
+  background: transparent;
+  border: none;
+  border-radius: var(--r-xs);
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ite-add-item:hover {
+  background: var(--surface-2);
+}
+.ite-add-empty {
+  padding: 8px;
 }

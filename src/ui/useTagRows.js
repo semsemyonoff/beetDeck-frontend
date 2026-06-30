@@ -83,11 +83,24 @@ export function useTagRows(initialRows) {
     [rows, orig]
   );
 
+  // Reconcile a row (and its baseline) with values persisted elsewhere — e.g.
+  // after the per-track free-tag editor saves the same item. Updating both rows
+  // and orig keeps the grid in sync without marking the row dirty, so a later
+  // batch write neither re-sends nor reverts those fields.
+  const syncRow = useCallback((id, patch) => {
+    if (!patch || Object.keys(patch).length === 0) return;
+    const apply = (list) =>
+      list.map((r) => (r.id === id ? { ...r, ...patch } : r));
+    setRows(apply);
+    setOrig(apply);
+  }, []);
+
   const summary = useMemo(() => summarize(rows), [rows]);
 
   return {
     rows,
     setField,
+    syncRow,
     selected,
     toggle,
     selectAll,

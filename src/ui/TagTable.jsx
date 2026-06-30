@@ -22,7 +22,7 @@ function Cell({ value, ph, onChange, mono, dirty, align }) {
   );
 }
 
-export default function TagTable({ ed, showFile }) {
+export default function TagTable({ ed, showFile, onOpenAllTags }) {
   const {
     rows,
     setField,
@@ -33,9 +33,10 @@ export default function TagTable({ ed, showFile }) {
     clearSel,
     dirty,
   } = ed;
+  const rowCls = onOpenAllTags ? 'tte-row tte-row--with-all' : 'tte-row';
   return (
     <div className="tte">
-      <div className="tte-row tte-head">
+      <div className={rowCls + ' tte-head'}>
         <label className="tte-chk">
           <input
             type="checkbox"
@@ -50,12 +51,13 @@ export default function TagTable({ ed, showFile }) {
         <span className="tte-th">Artist</span>
         <span className="tte-th">Album</span>
         <span className="tte-th tte-col-year">Year</span>
+        {onOpenAllTags && <span className="tte-th" />}
       </div>
 
       {rows.map((r, i) => {
         const sel = selected.has(i);
         return (
-          <div key={i} className={'tte-row' + (sel ? ' tte-row-sel' : '')}>
+          <div key={i} className={rowCls + (sel ? ' tte-row-sel' : '')}>
             <label className="tte-chk">
               <input type="checkbox" checked={sel} onChange={() => toggle(i)} />
             </label>
@@ -104,6 +106,15 @@ export default function TagTable({ ed, showFile }) {
                 onChange={(v) => setField(i, 'year', v)}
               />
             </div>
+            {onOpenAllTags && (
+              <button
+                className="btn btn-ghost btn-sm tte-all-btn"
+                title="Edit all tags for this track"
+                onClick={() => onOpenAllTags(r)}
+              >
+                все
+              </button>
+            )}
           </div>
         );
       })}

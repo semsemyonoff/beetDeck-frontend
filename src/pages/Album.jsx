@@ -4,6 +4,7 @@ import { Cover } from '../ui/Cover.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import TagEditorModal from '../ui/TagEditorModal.jsx';
+import ItemTagsEditor from '../ui/ItemTagsEditor.jsx';
 import AlbumLyricsModal from '../ui/AlbumLyricsModal.jsx';
 import AlbumBpmModal from '../ui/AlbumBpmModal.jsx';
 import {
@@ -86,6 +87,7 @@ export default function Album({ id, dataVersion = 0 }) {
   const [lyricsCache, setLyricsCache] = useState({}); // item_id -> {has_lyrics, lyrics, source}
   const [lyricsModal, setLyricsModal] = useState(null); // {item, lyrics, source}
   const [tagsModal, setTagsModal] = useState(null); // {item, tags}
+  const [itemTagsEditor, setItemTagsEditor] = useState(null); // {item} | null
   const [genrePreview, setGenrePreview] = useState(null); // {old, new}
   const [genreEdit, setGenreEdit] = useState(null); // string
   const [coverPreview, setCoverPreview] = useState(null); // {source, url}
@@ -1215,21 +1217,12 @@ export default function Album({ id, dataVersion = 0 }) {
                       </button>
                       <button
                         className="track-mini-btn"
-                        title="Tags"
-                        aria-label="Tags"
+                        title="View tags"
+                        aria-label="View tags"
                         onClick={() => openTagsModal(t)}
                       >
                         <Icon name="tag" size={11} />{' '}
                         <span className="mini-label">tags</span>
-                      </button>
-                      <button
-                        className="track-mini-btn"
-                        title="Edit tags"
-                        aria-label="Edit tags"
-                        onClick={() => setTagEditorModal({ focusTrack: t.id })}
-                      >
-                        <Icon name="edit" size={11} />{' '}
-                        <span className="mini-label">edit</span>
                       </button>
                     </span>
                   </div>
@@ -1598,12 +1591,30 @@ export default function Album({ id, dataVersion = 0 }) {
         />
       )}
 
-      {tagsModal && (
+      {tagsModal && !itemTagsEditor && (
         <TagsModal
           item={tagsModal.item}
           tags={tagsModal.tags}
           error={tagsModal.error}
           onClose={() => setTagsModal(null)}
+          onEdit={() => setItemTagsEditor({ item: tagsModal.item })}
+        />
+      )}
+
+      {itemTagsEditor && (
+        <ItemTagsEditor
+          albumId={data.id}
+          item={itemTagsEditor.item}
+          onClose={() => setItemTagsEditor(null)}
+          onSaved={(res) => {
+            // On partial success (DB written but file write failed) the editor
+            // keeps itself open to surface the warnings — don't unmount it here
+            // or the warning is never seen.
+            if (res?.warnings?.length) return;
+            const item = itemTagsEditor.item;
+            setItemTagsEditor(null);
+            openTagsModal(item);
+          }}
         />
       )}
 
@@ -1738,7 +1749,7 @@ function LyricsModal({ item, payload, onClose, onEdit, onRefetch }) {
   );
 }
 
-function TagsModal({ item, tags, error, onClose }) {
+function TagsModal({ item, tags, error, onClose, onEdit }) {
   useModalDismiss(onClose);
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -1769,6 +1780,18 @@ function TagsModal({ item, tags, error, onClose }) {
                 ))}
             </dl>
           )}
+        </div>
+        <div className="modal-foot">
+          <div className="row-end">
+            <button className="btn btn-ghost" onClick={onClose}>
+              Close
+            </button>
+            {onEdit && (
+              <button className="btn btn-primary" onClick={onEdit}>
+                <Icon name="edit" size={12} /> Edit
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
