@@ -12,6 +12,23 @@ const THEME_ORDER = ['auto', 'light', 'dark'];
 // module load; the platform does not change during a session.
 const SHORTCUT = searchShortcut();
 
+// A version number, linked to its GitHub release notes when the backend
+// supplied a URL (absent for the 0.0.0 dev build); plain text otherwise.
+// External link, so a raw <a> with target/rel rather than the SPA RouteLink.
+function VersionNumber({ label, url, className }) {
+  if (!url) return <span className={className}>{label}</span>;
+  return (
+    <a
+      className={className}
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {label}
+    </a>
+  );
+}
+
 function effectiveTheme(mode) {
   if (mode !== 'auto') return mode;
   return window.matchMedia('(prefers-color-scheme: light)').matches
@@ -264,9 +281,15 @@ export default function Topbar({ onScanStart, version }) {
             className="topbar-version"
             title={`beetDeck v${version.beetdeck} · beets ${version.beets}`}
           >
-            v<span className="topbar-version-app">{version.beetdeck}</span>
+            v
+            <VersionNumber
+              label={version.beetdeck}
+              url={version.beetdeck_url}
+              className="topbar-version-app"
+            />
             <span className="topbar-version-sep">·</span>
-            beets {version.beets}
+            beets{' '}
+            <VersionNumber label={version.beets} url={version.beets_url} />
           </span>
         )}
         <button

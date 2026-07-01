@@ -13,7 +13,7 @@ export default function App() {
   const route = useHashRoute();
   const [scanViewModel, setScanViewModel] = useState(null);
   const [dataVersion, setDataVersion] = useState(0); // bumped when a scan changes the library
-  const [version, setVersion] = useState(null); // { beetdeck, beets } | null
+  const [version, setVersion] = useState(null); // { beetdeck, beets, beetdeck_url, beets_url } | null
   const scanPollRef = useRef(null);
 
   const startScanPolling = useCallback(() => {

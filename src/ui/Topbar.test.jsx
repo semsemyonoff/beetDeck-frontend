@@ -96,6 +96,58 @@ describe('Topbar brand link', () => {
   });
 });
 
+describe('Topbar version', () => {
+  beforeEach(() => {
+    stubMatchMedia(false);
+    stubLocation();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    restoreLocation();
+  });
+
+  it('links each version number to its release notes, opening in a new tab', () => {
+    renderTopbar({
+      version: {
+        beetdeck: '0.2.0',
+        beets: '2.12.0',
+        beetdeck_url:
+          'https://github.com/semsemyonoff/beetDeck/releases/tag/v0.2.0',
+        beets_url: 'https://github.com/beetbox/beets/releases/tag/v2.12.0',
+      },
+    });
+    const app = screen.getByRole('link', { name: '0.2.0' });
+    expect(app).toHaveAttribute(
+      'href',
+      'https://github.com/semsemyonoff/beetDeck/releases/tag/v0.2.0'
+    );
+    expect(app).toHaveAttribute('target', '_blank');
+    expect(app).toHaveAttribute('rel', 'noopener noreferrer');
+
+    const beets = screen.getByRole('link', { name: '2.12.0' });
+    expect(beets).toHaveAttribute(
+      'href',
+      'https://github.com/beetbox/beets/releases/tag/v2.12.0'
+    );
+  });
+
+  it('renders a version number as plain text when its URL is absent', () => {
+    // Dev build: beetdeck_url is null, so 0.0.0 must not become a link.
+    renderTopbar({
+      version: {
+        beetdeck: '0.0.0',
+        beets: '2.12.0',
+        beetdeck_url: null,
+        beets_url: 'https://github.com/beetbox/beets/releases/tag/v2.12.0',
+      },
+    });
+    expect(screen.queryByRole('link', { name: '0.0.0' })).toBeNull();
+    expect(screen.getByText('0.0.0')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '2.12.0' })).toBeInTheDocument();
+  });
+});
+
 describe('Topbar search hotkey', () => {
   beforeEach(() => {
     stubMatchMedia(false);

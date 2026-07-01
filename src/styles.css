@@ -241,6 +241,16 @@ h4 {
 .topbar-version-sep {
   color: var(--text-faint);
 }
+/* Version numbers link to their GitHub release notes; inherit the muted
+   version-bar color and only reveal linkiness (accent + underline) on hover. */
+.topbar-version a {
+  color: inherit;
+  text-decoration: none;
+}
+.topbar-version a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
 .brand {
   display: inline-flex;
   align-items: center;
