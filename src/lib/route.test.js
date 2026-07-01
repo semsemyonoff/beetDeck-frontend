@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { parse, navigate } from './route.js';
+import { parse, navigate, hrefFor } from './route.js';
 
 describe('parse', () => {
   it('returns library for empty hash', () => {
@@ -35,6 +35,14 @@ describe('parse', () => {
   it('falls back to library for unknown routes', () => {
     expect(parse('#/settings')).toEqual({ name: 'library' });
     expect(parse('#/artist')).toEqual({ name: 'library' });
+  });
+
+  it('returns scan route', () => {
+    expect(parse('#/scan')).toEqual({ name: 'scan' });
+  });
+
+  it('returns scan route with trailing slash ignored', () => {
+    expect(parse('scan')).toEqual({ name: 'scan' });
   });
 
   it('decodes percent-encoded artist name', () => {
@@ -79,6 +87,78 @@ describe('parse', () => {
       name: 'artist',
       artist: 'test%2',
     });
+  });
+});
+
+describe('hrefFor', () => {
+  it('returns #/ for library target', () => {
+    expect(hrefFor({ name: 'library' })).toBe('#/');
+  });
+
+  it('returns #/ for null target', () => {
+    expect(hrefFor(null)).toBe('#/');
+  });
+
+  it('returns encoded artist href', () => {
+    expect(hrefFor({ name: 'artist', artist: 'Portishead' })).toBe(
+      '#/artist/Portishead'
+    );
+  });
+
+  it('encodes special chars in artist name', () => {
+    expect(hrefFor({ name: 'artist', artist: 'foo bar' })).toBe(
+      '#/artist/foo%20bar'
+    );
+  });
+
+  it('encodes unicode artist name', () => {
+    const name = 'Sigur Rós';
+    expect(hrefFor({ name: 'artist', artist: name })).toBe(
+      '#/artist/' + encodeURIComponent(name)
+    );
+  });
+
+  it('returns album href', () => {
+    expect(hrefFor({ name: 'album', id: '42' })).toBe('#/album/42');
+  });
+
+  it('returns bare untagged href', () => {
+    expect(hrefFor({ name: 'untagged' })).toBe('#/untagged');
+  });
+
+  it('returns untagged href with encoded dir', () => {
+    const dir = '/Music/Loose Bits';
+    expect(hrefFor({ name: 'untagged', dir })).toBe(
+      '#/untagged/' + encodeURIComponent(dir)
+    );
+  });
+
+  it('parse(hrefFor(t)) round-trips artist', () => {
+    const t = { name: 'artist', artist: 'Sigur Rós' };
+    expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  it('parse(hrefFor(t)) round-trips album', () => {
+    const t = { name: 'album', id: '99' };
+    expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  it('parse(hrefFor(t)) round-trips untagged with dir', () => {
+    const t = { name: 'untagged', dir: '/Music/Loose Bits' };
+    expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  it('returns #/scan for scan target', () => {
+    expect(hrefFor({ name: 'scan' })).toBe('#/scan');
+  });
+
+  it('parse(hrefFor(t)) round-trips scan', () => {
+    const t = { name: 'scan' };
+    expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  it('parse(#/) equals library', () => {
+    expect(parse('#/')).toEqual({ name: 'library' });
   });
 });
 

@@ -241,12 +241,24 @@ h4 {
 .topbar-version-sep {
   color: var(--text-faint);
 }
+/* Version numbers link to their GitHub release notes; inherit the muted
+   version-bar color and only reveal linkiness (accent + underline) on hover. */
+.topbar-version a {
+  color: inherit;
+  text-decoration: none;
+}
+.topbar-version a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
 .brand {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
   padding: 6px 8px;
   border-radius: var(--r-sm);
+  text-decoration: none;
+  color: inherit;
 }
 .brand:hover {
   background: var(--surface-1);
@@ -519,6 +531,8 @@ h4 {
   padding: 4px 8px;
   border-radius: var(--r-xs);
   color: var(--text-mute);
+  text-decoration: none;
+  cursor: pointer;
 }
 .crumb:hover {
   color: var(--text);
@@ -611,17 +625,20 @@ h4 {
 }
 
 .lib-row-head {
-  display: grid;
-  grid-template-columns: 16px 50px 1fr auto;
+  display: flex;
   align-items: center;
   gap: var(--s-3);
-  width: 100%;
   padding: var(--row-pad-y) var(--s-4);
-  text-align: left;
   transition: background 120ms;
 }
 .lib-row-head:hover {
   background: var(--surface-1);
+}
+.lib-row-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
 }
 .lib-chevron {
   display: inline-flex;
@@ -635,11 +652,14 @@ h4 {
   transform: rotate(90deg);
 }
 .lib-row-name {
+  flex: 1;
   font-weight: 500;
   color: var(--text);
   font-size: 14px;
   padding: 4px 4px;
   border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
 }
 .lib-row-name:hover {
   color: var(--accent);
@@ -706,6 +726,9 @@ h4 {
   background: var(--surface-1);
   box-shadow: inset 0 0 0 1px var(--border-soft);
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition:
     background 120ms,
     transform 120ms;
@@ -805,6 +828,25 @@ h4 {
     0 8px 24px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.04);
 }
+.wall-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.wall-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.wall-card-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
 .wall-card-info {
   display: flex;
   flex-direction: column;
@@ -830,9 +872,18 @@ h4 {
 }
 .wall-card-artist {
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  z-index: 1;
 }
 .wall-card-artist:hover {
   color: var(--accent);
+}
+.wall-card-artist:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
 }
 .wall-card-year {
   font-family: var(--f-mono);
@@ -847,6 +898,7 @@ h4 {
   border-radius: 999px;
   background: var(--warn);
   color: #1a1a1a;
+  pointer-events: none;
 }
 .wall-card-check {
   position: absolute;
@@ -859,6 +911,7 @@ h4 {
   justify-content: center;
   border-radius: 999px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 .wall-card-check-ok {
   background: var(--ok);
@@ -948,6 +1001,9 @@ h4 {
   gap: 10px;
   text-align: left;
   position: relative;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition: transform 160ms;
 }
 .album-card:hover {
@@ -1099,7 +1155,7 @@ h4 {
 }
 .tag-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: 160px 1fr;
   gap: var(--s-3);
   align-items: baseline;
 }
@@ -1244,7 +1300,7 @@ h4 {
 .album-tracks-head,
 .album-track-main {
   display: grid;
-  grid-template-columns: 56px 1fr 200px 80px 180px;
+  grid-template-columns: 56px 1fr 200px 80px 232px;
   align-items: center;
   gap: var(--s-3);
   padding: 0 var(--s-4);
@@ -1307,6 +1363,7 @@ h4 {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--text-dim);
@@ -1324,6 +1381,24 @@ h4 {
 }
 .track-mini-btn-empty {
   color: var(--text-faint);
+}
+.track-mini-btn-has {
+  color: var(--ok);
+}
+/* Numeric BPM shown in place of the label: align digits, nudge weight up */
+.track-mini-btn .mini-label.mini-bpm {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.lyrics-agg-partial {
+  color: var(--ok);
+}
+.lyrics-agg-all {
+  color: var(--ok);
+  background: var(--ok-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ok) 50%, transparent);
 }
 
 .album-track-lyrics {
@@ -2414,24 +2489,363 @@ h4 {
 /* scan banner */
 .scan-banner {
   position: sticky;
-  top: 48px;
-  z-index: 90;
-  padding: 6px 16px;
-  font-size: 12.5px;
-  font-weight: 500;
-  text-align: center;
+  top: var(--topbar-h);
+  z-index: 45;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 9px clamp(var(--s-5), 4vw, 56px);
+  background: color-mix(in oklab, var(--bg) 78%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--border-soft);
 }
-.scan-banner--running {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface-1));
+.scan-banner-done {
+  background: color-mix(in oklab, var(--ok) 9%, var(--bg));
+  border-bottom-color: color-mix(in oklab, var(--ok) 32%, var(--border-soft));
+}
+.scan-banner-error {
+  background: color-mix(in oklab, var(--warn) 9%, var(--bg));
+  border-bottom-color: color-mix(in oklab, var(--warn) 36%, var(--border-soft));
+}
+.scan-banner-glyph {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
   color: var(--accent);
 }
-.scan-banner--done {
-  background: color-mix(in srgb, var(--ok) 15%, var(--surface-1));
+.scan-banner-done .scan-banner-glyph {
+  background: var(--ok-soft);
   color: var(--ok);
 }
-.scan-banner--error {
-  background: color-mix(in srgb, var(--warn) 15%, var(--surface-1));
+.scan-banner-error .scan-banner-glyph {
+  background: var(--warn-soft);
   color: var(--warn);
+}
+.scan-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.scan-banner-textrow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.scan-banner-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+.scan-banner-count {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+.scan-banner-pct {
+  color: var(--accent);
+  font-size: 11.5px;
+}
+.scan-banner-item {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scan-banner-msg {
+  font-size: 13px;
+  color: var(--text);
+}
+.scan-banner-done .scan-banner-msg {
+  color: color-mix(in oklab, var(--ok) 90%, white);
+}
+.scan-banner-error .scan-banner-msg {
+  color: color-mix(in oklab, var(--warn) 92%, white);
+}
+.scan-banner-msg .mono {
+  color: inherit;
+}
+.scan-banner-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.scan-details {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 4px 9px;
+  border-radius: var(--r-xs);
+  text-decoration: none;
+}
+.scan-details:hover {
+  background: var(--accent-soft);
+}
+.scan-banner-done .scan-details {
+  color: var(--ok);
+}
+.scan-banner-done .scan-details:hover {
+  background: var(--ok-soft);
+}
+.scan-banner-error .scan-details {
+  color: var(--warn);
+}
+.scan-banner-error .scan-details:hover {
+  background: var(--warn-soft);
+}
+.scan-banner-x {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-xs);
+  color: var(--text-mute);
+}
+.scan-banner-x:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.scan-progress {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.scan-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in oklab, var(--accent) 60%, var(--lime, #a3e635))
+  );
+  border-radius: 999px;
+  transition: width 400ms ease;
+}
+.scan-progress-indet .scan-progress-fill {
+  width: 36%;
+  animation: scan-indet 1.3s ease-in-out infinite;
+}
+@keyframes scan-indet {
+  0% {
+    left: -38%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+.scan-spin {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+
+/* scan-log screen */
+.page-scan {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--topbar-h) - 180px);
+}
+.scan-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-6);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-4);
+  margin-bottom: var(--s-4);
+  border-bottom: 1px solid var(--border-soft);
+}
+.scan-head-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.scan-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 280px;
+  flex: 1;
+  max-width: 420px;
+  padding: 12px var(--s-4);
+  background: var(--surface-0);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+.scan-summary-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.scan-summary-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.scan-summary-running {
+  color: var(--accent);
+}
+.scan-summary-done {
+  color: var(--ok);
+}
+.scan-summary-error {
+  color: var(--warn);
+}
+.scan-summary-count {
+  font-size: 11.5px;
+  color: var(--text-mute);
+}
+.scan-summary-counts {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.scan-summary-counts .mono {
+  font-size: 12.5px;
+}
+.scan-log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+  flex-wrap: wrap;
+}
+.scan-log-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-mute);
+}
+.scan-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok) 70%, transparent);
+  animation: scan-pulse 1.4s ease-out infinite;
+}
+@keyframes scan-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok) 60%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+.scan-log {
+  flex: 1 1 auto;
+  min-height: 320px;
+  overflow-y: auto;
+  background: var(--surface-0);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-lg);
+  padding: var(--s-3) var(--s-2);
+}
+.scan-log-line {
+  display: grid;
+  grid-template-columns: 76px 64px 1fr;
+  gap: var(--s-3);
+  align-items: baseline;
+  padding: 2px var(--s-3);
+  border-radius: var(--r-xs);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.scan-log-line:hover {
+  background: var(--surface-1);
+}
+.scan-log-ts {
+  color: var(--text-faint);
+}
+.scan-log-lvl {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.scan-log-msg {
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+.scan-log-added .scan-log-lvl,
+.scan-log-added .scan-log-msg {
+  color: var(--ok);
+}
+.scan-log-removed .scan-log-lvl,
+.scan-log-removed .scan-log-msg {
+  color: var(--warn);
+}
+.scan-log-warn .scan-log-lvl,
+.scan-log-warn .scan-log-msg {
+  color: var(--warn);
+}
+.scan-log-skip .scan-log-lvl {
+  color: var(--warn);
+}
+.scan-log-skip .scan-log-msg {
+  color: color-mix(in oklab, var(--warn) 60%, var(--text-mute));
+}
+.scan-log-summary {
+  background: var(--surface-1);
+  margin-top: 4px;
+}
+.scan-log-summary .scan-log-lvl {
+  color: var(--accent);
+}
+.scan-log-summary .scan-log-msg {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ScanLog mobile overrides — kept after the base scan styles so equal-specificity
+   rules win by source order at ≤600px (media queries don't add specificity). */
+@media (max-width: 600px) {
+  .scan-head {
+    gap: var(--s-4);
+  }
+  .scan-summary {
+    max-width: none;
+  }
+  .scan-log-line {
+    grid-template-columns: 62px 1fr;
+  }
+  .scan-log-lvl {
+    display: none;
+  }
 }
 
 /* search dropdown — anchored directly under the search input */
@@ -2475,6 +2889,8 @@ h4 {
   padding: 6px 14px;
   gap: 10px;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
   transition: background 80ms;
 }
@@ -2524,6 +2940,9 @@ h4 {
   gap: var(--s-3);
   width: 100%;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   padding: 10px var(--s-4);
   transition: background 120ms;
 }
@@ -2797,6 +3216,14 @@ h4 {
   justify-content: center;
   text-align: center;
 }
+.tte-row--with-all {
+  grid-template-columns: 34px 58px minmax(220px, 1.6fr) 1fr 1fr 78px 44px;
+}
+.tte-all-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  justify-self: center;
+}
 .tte-row:not(.tte-head):hover {
   background: var(--surface-1);
 }
@@ -3046,6 +3473,311 @@ h4 {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ *  Album Lyrics Modal
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-lyrics {
+  max-width: 860px;
+}
+.alm-head {
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+.alm-head-left {
+  flex: 1;
+  min-width: 0;
+}
+.alm-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+.alm-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+.alm-progress-bar {
+  flex: 1;
+  max-width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.alm-progress-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 999px;
+  transition: width 200ms ease;
+}
+.alm-ready-count {
+  font-variant-numeric: tabular-nums;
+}
+.alm-body {
+  display: flex;
+  flex-direction: column;
+}
+.alm-row {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.alm-row:last-child {
+  border-bottom: none;
+}
+.alm-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.alm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.alm-track-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alm-track-artist {
+  flex-shrink: 0;
+}
+.alm-row-status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+.alm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.alm-badge-ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.alm-badge-muted {
+  color: var(--text-faint);
+  background: var(--surface-2);
+}
+.alm-badge-err {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+.alm-row-pending .alm-track-title,
+.alm-row-pending .alm-track-artist,
+.alm-row-applying .alm-track-title,
+.alm-row-applying .alm-track-artist,
+.alm-row-skipped .alm-track-title,
+.alm-row-skipped .alm-track-artist,
+.alm-row-not-found .alm-track-title,
+.alm-row-not-found .alm-track-artist {
+  opacity: 0.55;
+}
+.alm-compare {
+  margin-top: var(--s-2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+}
+.lyrics-compare-col {
+  min-width: 0;
+}
+.lyrics-compare-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.lyrics-compare-tag {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.lyrics-compare-tag-same {
+  color: var(--text-faint);
+  background: var(--surface-2);
+}
+
+/* Lyric lines inside the compare panes use the album-page two-column layout
+ * (faint LRC timecode + text), with a narrower timecode column to fit the
+ * split modal width. */
+.lyrics-compare-pane .lyric-line {
+  grid-template-columns: 78px 1fr;
+  gap: var(--s-3);
+}
+.lyrics-compare-pane .lyric-ts {
+  white-space: nowrap;
+}
+
+/* git-style line highlighting inside the lyrics compare panes — full-bleed
+ * background tint pulled out to the pane edges via negative margins. */
+.diff-line {
+  padding: 0 var(--s-3);
+  margin: 0 calc(-1 * var(--s-3));
+}
+.diff-line-added {
+  background: color-mix(in oklab, var(--ok) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--ok);
+}
+.diff-line-removed {
+  background: color-mix(in oklab, var(--danger) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+/* Phones: the tiny 4px/220px progress bar reads as cramped under the wrapped
+ * header — drop it lower and let it span the full width with a taller track. */
+@media (max-width: 600px) {
+  .alm-progress {
+    margin-top: var(--s-4);
+  }
+  .alm-progress-bar {
+    max-width: none;
+    height: 7px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Album BPM modal (abm-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-bpm {
+  max-width: 640px;
+}
+.abm-head {
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+.abm-head-left {
+  flex: 1;
+  min-width: 0;
+}
+.abm-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+.abm-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+.abm-progress-bar {
+  flex: 1;
+  max-width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.abm-progress-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 999px;
+  transition: width 200ms ease;
+}
+.abm-body {
+  display: flex;
+  flex-direction: column;
+}
+.abm-row {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.abm-row:last-child {
+  border-bottom: none;
+}
+.abm-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.abm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.abm-track-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.abm-track-artist {
+  flex-shrink: 0;
+}
+.abm-row-status {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+.abm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.abm-badge-ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.abm-badge-err {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+.abm-row-pending .abm-track-title,
+.abm-row-pending .abm-track-artist,
+.abm-row-computing .abm-track-title,
+.abm-row-computing .abm-track-artist {
+  opacity: 0.55;
+}
+@media (max-width: 600px) {
+  .abm-progress {
+    margin-top: var(--s-4);
+  }
+  .abm-progress-bar {
+    max-width: none;
+    height: 7px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  *  Tag editor modal
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -3123,4 +3855,171 @@ h4 {
   .untagged-stats strong {
     font-size: 18px;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  ItemTagsEditor — per-track all-fields editor (ite-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.ite-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--s-4);
+}
+.ite-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 20px;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 32px;
+}
+.ite-row-album {
+  background: color-mix(in oklab, var(--warn) 7%, transparent);
+  border-radius: var(--r-xs);
+}
+.ite-name {
+  color: var(--text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 4px;
+}
+.ite-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-xs);
+  padding: 5px 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
+  outline: none;
+  transition:
+    background 100ms,
+    border-color 100ms,
+    box-shadow 100ms;
+}
+.ite-input:hover {
+  border-color: var(--border-soft);
+  background: var(--surface-2);
+}
+.ite-input:focus {
+  border-color: var(--accent);
+  background: var(--surface-0);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ite-value-ro {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--text-mute);
+  padding: 5px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ite-row-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--warn);
+}
+.ite-warn {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+  border-radius: var(--r-xs);
+}
+.ite-warn:focus-visible {
+  outline: 2px solid var(--warn);
+  outline-offset: 2px;
+}
+/* Visible explanatory tooltip — opens to the left of the icon (which sits at
+   the right edge of the row) so it stays inside the scrollable modal body. */
+.ite-tip {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  width: 260px;
+  padding: 10px 12px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid color-mix(in oklab, var(--warn) 45%, var(--border-soft));
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-modal, 0 8px 24px rgba(0, 0, 0, 0.35));
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  text-align: left;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+.ite-tip strong {
+  color: var(--warn);
+  font-weight: 600;
+}
+.ite-warn:hover .ite-tip,
+.ite-warn:focus .ite-tip,
+.ite-warn:focus-visible .ite-tip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.ite-add {
+  margin-top: var(--s-3);
+  position: relative;
+}
+.ite-add-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  background: var(--surface-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  width: 260px;
+  padding: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.ite-add-search {
+  height: 34px;
+  font-size: 13px;
+  padding: 0 10px;
+}
+.ite-add-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ite-add-item {
+  background: transparent;
+  border: none;
+  border-radius: var(--r-xs);
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ite-add-item:hover {
+  background: var(--surface-2);
+}
+.ite-add-empty {
+  padding: 8px;
 }

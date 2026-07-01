@@ -254,4 +254,39 @@ describe('Untagged — folder index fallback (no dir)', () => {
     );
     expect(screen.getByText('Nothing to clean up')).toBeInTheDocument();
   });
+
+  it('renders Library breadcrumb as a link with href="#/"', async () => {
+    vi.stubGlobal('fetch', makeFetch());
+    await act(async () => {
+      render(<Untagged />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    const link = screen.getByRole('link', { name: /library/i });
+    expect(link).toHaveAttribute('href', '#/');
+  });
+});
+
+describe('Untagged — folder detail breadcrumbs', () => {
+  beforeEach(stubLocation);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  it('renders Library and Untagged breadcrumbs as links in folder detail view', async () => {
+    vi.stubGlobal('fetch', makeFetch());
+    await act(async () => {
+      render(<Untagged dir={DIR} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    const links = screen.getAllByRole('link');
+    const hrefs = links.map((l) => l.getAttribute('href'));
+    expect(hrefs).toContain('#/');
+    expect(hrefs).toContain('#/untagged');
+  });
 });

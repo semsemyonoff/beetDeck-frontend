@@ -1,6 +1,6 @@
 # beetDeck frontend
 
-React 18 + Vite single-page app for [beetDeck](https://beets.io). It talks to the
+React 19 + Vite single-page app for [beetDeck](https://beets.io). It talks to the
 beetDeck backend purely over HTTP (`/api`, `/static`) — there is no shared code or
 filesystem with the backend.
 
@@ -63,8 +63,8 @@ npm run format:check # Prettier (check only)
 - `index.html` — Vite entry; includes an inline FOUC-fix script that sets `data-theme` on `<html>` before modules load.
 - `src/main.jsx` — React entry, imports `styles.css`.
 - `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
-- `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `scan`, `tagEditor`, `platform`, `useModalDismiss`.
-- `src/ui/` — shared widgets (Topbar, Icon, Segmented, Cover, IdentifyModal, useTagRows, FolderTree, TagTable, BulkBar, UntaggedGroup, ItemsIdentifyModal, TagEditorModal).
+- `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `scan`, `tagEditor`, `itemTags`, `platform`, `lyricsFetchQueue`, `bpmComputeQueue`, `useModalDismiss`.
+- `src/ui/` — shared widgets (RouteLink, Topbar, Icon, Segmented, Cover, IdentifyModal, useTagRows, FolderTree, TagTable, BulkBar, UntaggedGroup, ItemsIdentifyModal, TagEditorModal, ItemTagsEditor, AlbumLyricsModal, AlbumBpmModal).
 - `src/pages/` — Library, Artist, Album, Untagged.
 - `src/styles.css` — dark default (`:root`), light override (`:root[data-theme="light"]`); accent `#ec4868` shared.
 

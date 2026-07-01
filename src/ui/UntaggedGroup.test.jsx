@@ -101,9 +101,19 @@ describe('UntaggedGroup', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
+  it('folder row renders as an anchor with correct href', () => {
+    render(<UntaggedGroup folders={FOLDERS} />);
+    const link = screen.getByText('Loose').closest('a');
+    expect(link).not.toBeNull();
+    expect(link).toHaveAttribute(
+      'href',
+      '#/untagged/' + encodeURIComponent('/Music/Loose')
+    );
+  });
+
   it('clicking a folder row navigates to the untagged folder route', () => {
     render(<UntaggedGroup folders={FOLDERS} />);
-    fireEvent.click(screen.getByText('Loose').closest('button'));
+    fireEvent.click(screen.getByText('Loose').closest('a'));
     expect(window.location.hash).toBe(
       '#/untagged/' + encodeURIComponent('/Music/Loose')
     );
@@ -111,10 +121,17 @@ describe('UntaggedGroup', () => {
 
   it('clicking a second folder row navigates to its route', () => {
     render(<UntaggedGroup folders={FOLDERS} />);
-    fireEvent.click(screen.getByText('Album').closest('button'));
+    fireEvent.click(screen.getByText('Album').closest('a'));
     expect(window.location.hash).toBe(
       '#/untagged/' + encodeURIComponent('/Music/Artist A/Album')
     );
+  });
+
+  it('unt-banner-bar remains a toggle button with no href', () => {
+    render(<UntaggedGroup folders={FOLDERS} />);
+    const toggleBtn = document.querySelector('.unt-banner-bar');
+    expect(toggleBtn.tagName.toLowerCase()).toBe('button');
+    expect(toggleBtn).not.toHaveAttribute('href');
   });
 
   it('starts open and hides rows after toggle click', () => {
@@ -248,7 +265,7 @@ describe('Library + UntaggedGroup integration', () => {
     await act(async () => {
       render(<Library />);
     });
-    fireEvent.click(screen.getByText('Loose').closest('button'));
+    fireEvent.click(screen.getByText('Loose').closest('a'));
     expect(window.location.hash).toBe(
       '#/untagged/' + encodeURIComponent('/Music/Loose')
     );
