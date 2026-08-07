@@ -1,217 +1,128 @@
-# beetDeck frontend — project documentation
+# beetDeck frontend — agent notes
 
-## Project Overview
+React 19 + Vite single-page app for browsing and managing a [beets](https://beets.io)
+music library: library browser, artist/album pages, and the cover-art, genre,
+lyrics, BPM and identification flows. It consumes the beetDeck backend purely over
+HTTP (`/api`, `/static`) — no shared code or filesystem with the backend.
 
-This repository is the **frontend** of beetDeck — a React 19 + Vite single-page
-app for browsing and managing a [beets](https://beets.io) music library. It
-renders the library browser, artist/album pages, and the cover-art, genre,
-lyrics, and identification flows. It consumes the beetDeck backend purely over
-HTTP (`/api`, `/static`); there is no shared code or filesystem with the backend.
+This file records the conventions and non-obvious contracts. Mechanical detail
+(the file tree, the endpoint shapes) lives elsewhere; see the pointers below.
 
-## Tech Stack
+## Tech stack
 
-- **Framework**: React 19 (function components + hooks only)
-- **Build tool**: Vite 8 with `@vitejs/plugin-react`
-- **Language**: plain JavaScript + JSX (no TypeScript)
-- **Routing**: hash-based, hand-rolled in `useHashRoute.js` (no router library)
-- **State**: `useState` / `useReducer` only (no state-management library)
-- **Tooling**: ESLint (flat config) + Prettier
+Mostly defined by what it deliberately does **not** use:
 
-## Project Structure
+- React 19, function components and hooks only — no class components.
+- Plain JavaScript + JSX — **no TypeScript**.
+- Hash routing hand-rolled in `useHashRoute.js` — **no router library**.
+- `useState` / `useReducer` — **no state-management library**.
+- Vite 8 + `@vitejs/plugin-react`; ESLint (flat config) + Prettier; Vitest + RTL.
 
-```
-.
-├── index.html              # Vite entry HTML (inline FOUC-fix script + loads src/main.jsx)
-├── vite.config.js          # Vite config: dev proxy, prod base, manifest, Vitest block
-├── eslint.config.js        # ESLint flat config (React + hooks + react-refresh + vitest globals)
-├── .prettierrc.json        # Prettier config
-├── package.json
-├── test/
-│   └── setup.js            # @testing-library/jest-dom imports for Vitest
-└── src/
-    ├── main.jsx            # React entry; mounts <App>, imports styles.css
-    ├── App.jsx             # Top-level shell: topbar, search, rescan polling, route switch
-    ├── useHashRoute.js     # useHashRoute() hook; useRouteLink/isModifiedClick; re-exports navigate() from lib/route.js
-    ├── styles.css          # All styling: dark default (:root), light override (:root[data-theme="light"])
-    ├── assets/             # Static assets (logo.png)
-    ├── lib/                # Pure helpers (no React imports) — each has a co-located *.test.js
-    │   ├── route.js        # parse(hash) / navigate(target) / hrefFor(target)
-    │   ├── albums.js       # mapAlbum / isIdentified(album) / needsReview(album)
-    │   ├── library.js      # mapApi / totals / sortArtists / filterArtists / filterAlbums / letterGroups
-    │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
-    │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
-    │   ├── scan.js         # buildScanSummary, buildScanViewModel (status→banner VM), scanProgressPct, isIndeterminate, applyLogChunk/parseLogLines (log tail), classifyLogLevel (mirrors backend parse_beets_line levels; pinned to beets 2.12.0 — change both together)
-    │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize / applyBulk / rowDirty / batchPayload
-│   ├── itemTags.js     # mergeRows / delta / addableFields — pure helpers for ItemTagsEditor (per-track free tag editor)
-    │   ├── platform.js     # isMac(nav) / searchShortcut(nav) → { mac, label, matches(event) } for the ⌘K/Ctrl K search hotkey
-    │   ├── lyricsFetchQueue.js  # runLyricsFetchQueue — client pool (max 6) of single-track fetch requests; AbortSignal cancel; progress + per-track callbacks
-    │   ├── bpmComputeQueue.js  # runBpmComputeQueue — client pool (max 2, CPU-bound) for single-track BPM compute; onTrackStart fires before each fetch; AbortSignal only stops dequeuing (in-flight writes always settle)
-    │   └── useModalDismiss.js  # React hook: Escape-to-close for modals (backdrop-click is wired per modal)
-    ├── ui/                 # Shared widgets
-    │   ├── RouteLink.jsx       # <a href> wrapper over useRouteLink; plain left-click = SPA nav, modified/middle/right = browser
-    │   ├── ScanBanner.jsx      # Sticky scan progress/result banner; determinate (full) vs indeterminate (quick) bar, current item, "Details" link, dismiss × (persists until dismissed — no auto-dismiss)
-    │   ├── Topbar.jsx
-    │   ├── Icon.jsx
-    │   ├── Segmented.jsx
-    │   ├── Cover.jsx           # Album cover; SVG palette placeholder when has_cover is false
-    │   ├── IdentifyModal.jsx
-    │   ├── useTagRows.js       # Editor state hook: rows, selection, setField, applyBulk, commit, summary
-    │   ├── FolderTree.jsx      # Folder path tree with per-file basenames and durations
-    │   ├── TagTable.jsx        # Editable per-track grid (track #, title, artist, album, year)
-    │   ├── BulkBar.jsx         # Bulk-apply bar for album-level fields → "Apply to N"
-    │   ├── UntaggedGroup.jsx   # Pinned amber banner in Library (UntaggedGroup + UntaggedFolderRow)
-    │   ├── ItemsIdentifyModal.jsx  # Item-identify flow (identify → poll → apply → confirm → navigate)
-    │   ├── TagEditorModal.jsx  # Album tag editor modal (opened from Album page *Edit tags* action)
-│   ├── ItemTagsEditor.jsx  # Per-track free tag editor modal: all editable beets fields; opened from TagsModal (Album.jsx) + TagTable «все» button; loads GET /api/items/fields + GET /api/album/<id>/track/<id>/tags; saves via PATCH /api/items/<id>/tags
-    │   ├── AlbumLyricsModal.jsx  # Album lyrics fetch-preview-confirm modal (props-driven; state machine: pending/found/applying/applied/skipped/not-found/error)
-    │   └── AlbumBpmModal.jsx    # Album BPM progress modal (no apply step — writes immediately); per-track rows pending→computing→done/error; driven by runBpmComputeQueue
-    └── pages/              # Route views
-        ├── Library.jsx     # Index + Wall layouts
-        ├── Artist.jsx
-        ├── Album.jsx
-        ├── Untagged.jsx
-        └── ScanLog.jsx     # Scan-log screen: offset-polls GET /api/rescan/log, level-colored lines, auto-scroll while live, stops polling once finished
-```
+## Layout
+
+`src/lib/` holds pure helpers with a co-located `*.test.js`, `src/ui/` shared
+widgets, `src/pages/` route views. Annotated tree in [`docs/layout.md`](docs/layout.md).
+
+Two things the tree cannot show:
+
+- `src/lib/useModalDismiss.js` is the one module in `lib/` that imports React —
+  it is a hook, not a pure helper (hence its `.test.jsx`).
+- `src/lib/scan.js` `classifyLogLevel` **mirrors the backend's**
+  `parse_beets_line` log levels and is pinned to the beets version the backend
+  pins (2.12.0). The two must change together, across repositories.
 
 ## Routing
 
-`useHashRoute.js` is the entire router. `useHashRoute()` parses `window.location.hash`
-into a route object; `navigate(target)` writes the hash. Routes:
+`useHashRoute.js` is the entire router: `useHashRoute()` parses
+`window.location.hash`, `navigate(target)` writes it. Routes:
 
 - `#/` — Library
-- `#/artist/<name>` — Artist (name is `encodeURIComponent`'d)
+- `#/artist/<name>` — Artist (`encodeURIComponent`'d)
 - `#/album/<id>` — Album
-- `#/untagged` — Untagged folder index (pinned amber banner; folder list fallback)
-- `#/untagged/<dir>` — Per-folder tag editor (dir is `encodeURIComponent`'d; decoded once in `parse()`)
-- `#/scan` — Scan log for the current/last run (the banner's "Details" link)
+- `#/untagged` — Untagged folder index
+- `#/untagged/<dir>` — per-folder tag editor (`encodeURIComponent`'d, decoded once in `parse()`)
+- `#/scan` — scan log for the current/last run
 
-Anything unrecognized falls back to the Library route.
+Anything unrecognized falls back to Library.
 
-### Adding navigable entities — RouteLink pattern
+**Every navigable element must be a real `<a href>`** so middle-click, Ctrl/Cmd+click
+and "Open in new tab" work. Use `hrefFor` / `useRouteLink` / `<RouteLink>` rather
+than an `onClick` that calls `navigate()` — see [`docs/routing.md`](docs/routing.md)
+for the API and the nested-card (stretched-link) pattern.
 
-All navigable UI elements (album cards, artist names, breadcrumbs, search results,
-folder rows) must be real `<a href>` elements so the browser enables middle-click,
-Ctrl/Cmd+click, and the "Open in new tab" context menu. Use the shared abstractions:
+Exceptions that stay non-anchors: toggle/action buttons (`lib-row-head`,
+`unt-banner-bar`, scan, theme) remain `<button>`, and navigations that follow an
+async action (e.g. the post-identify redirect) stay `navigate()`.
 
-- **`hrefFor(target)`** in `lib/route.js` — builds the `#/...` hash string for any
-  target object. Pure JS, no React. Use this wherever you need the URL string.
-- **`useRouteLink(target)`** in `useHashRoute.js` — returns `{ href, onClick }`.
-  The handler intercepts only a plain left-click (no modifiers, `button === 0`,
-  not `defaultPrevented`) for in-place SPA navigation; everything else falls through
-  to the browser.
-- **`isModifiedClick(e)`** in `useHashRoute.js` — `true` when the event is a
-  middle/right click or has a modifier key. Use this in side-effect `onClick`
-  callbacks (e.g. closing a search overlay only on plain clicks).
-- **`<RouteLink>`** in `ui/RouteLink.jsx` — thin `<a>` wrapper over the hook.
-  Pass `target`, optional `className`, `children`, and an optional `onClick` for
-  side effects (fires before the hook's handler). Use this for standalone links.
+## Talking to the backend
 
-For **nested cards** (an album link wrapping cover + title, with a sibling artist
-link): use the stretched-link pattern — no nested anchors. The card becomes a
-positioned container (`position: relative`), the primary link gets a full-card
-`::after` overlay (`z-index: 0`), and the secondary link sits above (`z-index: 1`).
-Mark decorative absolutely-positioned siblings (`pointer-events: none`) so they
-don't block the overlay. See `.wall-card` in `styles.css` for the reference
-implementation.
+Call absolute paths (`/api/...`) so the same code works behind the dev proxy and
+in production; never hardcode a backend origin in a component. In dev,
+`vite.config.js` proxies `/api` and `/static` to `BACKEND_URL`
+(default `http://localhost:5000`). New fields on existing endpoints are additive only.
 
-Toggle/action buttons (`lib-row-head`, `unt-banner-bar`, scan, theme) stay plain
-`<button>` elements. Programmatic navigations that follow async actions (e.g.
-post-identify redirect) stay `navigate()`.
+The endpoint contracts are the backend's OpenAPI spec (`/apidoc/scalar/`,
+`/apidoc/openapi.json`) — read them there, do not mirror them here.
 
-## Backend API
+Client-owned invariants:
 
-The UI calls the backend with **absolute** paths (`/api/...`) so the same code
-works behind the dev proxy and in production. In dev, `vite.config.js` proxies
-`/api` and `/static` to the backend (`BACKEND_URL`, default `http://localhost:5000`).
-New fields on existing endpoints are treated as additive only.
-
-Patterns used against the API:
-
-- `App.jsx` polls `GET /api/rescan/status` on an interval while a rescan runs, and
-  fetches it once on mount to recover an in-flight or finished-but-undismissed scan
-  (the banner/log survive a reload). `ScanBanner` consumes the progress fields
-  (`phase`/`processed`/`total`/`current_item`/`run_id`); the × calls
-  `POST /api/rescan/dismiss` then hides the banner (no auto-dismiss). `ScanLog`
-  offset-polls `GET /api/rescan/log` (`{text, offset}`) and stops once the run finishes.
-- `IdentifyModal.jsx` drives the identify flow (`identify` → poll `status` → `apply` → `confirm`).
-- `TagEditorModal.jsx` and the untagged folder editor post to `POST /api/items/metadata-batch` for album-level + per-track tag writes in one request.
-- `ItemTagsEditor.jsx` loads `GET /api/items/fields` (beets field catalog) and `GET /api/album/<id>/track/<id>/tags` in parallel on open, merges via `lib/itemTags.js mergeRows()`, and saves with `PATCH /api/items/<id>/tags` (delta only). Opened from `TagsModal` in `Album.jsx` (Edit button) and from `TagTable` (per-row «все» button, only when `TagEditorModal` passes the `onOpenAllTags` prop).
-- `ItemsIdentifyModal.jsx` drives the items identify flow (same polling cycle as `IdentifyModal`).
-- `AlbumLyricsModal` + `lyricsFetchQueue` drive the album "Fetch all" lyrics flow:
-  `runLyricsFetchQueue` fans out up to 6 concurrent `POST /api/album/<id>/track/<id>/lyrics/fetch`
-  calls (with an `AbortSignal`); the modal writes via `POST /api/album/<id>/track/<id>/lyrics/confirm`
-  (individual track) or `POST /api/album/<id>/lyrics/confirm` with `item_ids` ("Apply all"; response
-  includes `written_item_ids` — only those tracks are marked applied). Confirm requests are NOT
-  aborted when the modal closes (writes to disk are not idempotent).
-- `AlbumBpmModal` + `bpmComputeQueue` drive the album "BPM all" flow:
-  `runBpmComputeQueue` fans out up to 2 concurrent `POST /api/album/<id>/track/<id>/bpm/compute`
-  calls (CPU-bound; ~9s/track via librosa). The `AbortSignal` only stops dequeuing new tracks —
-  in-flight writes are never aborted because the server keeps computing/writing regardless, and
-  aborting mid-write is not idempotent. The queue promise resolves only after all in-flight requests
-  settle, letting the page keep the album run locked and prevent a second overlapping run.
-  `has_bpm` on each track in `GET /api/album/<id>` allows the UI to color buttons on first paint.
-
-## Build & Dev
-
-```bash
-npm install
-npm run dev            # Vite dev server on :5173 (HMR), proxies /api + /static
-npm run build          # production build -> dist/ with a Vite manifest
-npm run lint           # ESLint
-npm run format         # Prettier (write)
-```
-
-- **Dev**: `base` is `/` and the dev server proxies API calls to the backend.
-- **Prod**: `base` is `/static/dist/`; the backend serves the bundle from
-  `/static/dist/` and reads the Vite manifest to inject the hashed entry JS/CSS.
-  Place the built `dist/` into the backend's `src/static/dist/`. The one-command
-  hand-off is `make sync-frontend-dist` from the backend repo — see the backend
-  `README.md` "Syncing the frontend build" section for details.
-
-## Testing
-
-Vitest + React Testing Library. Run inside the DWE container:
-
-```bash
-dwe cmd frontend.test          # run once (npm test)
-# watch / coverage have no dedicated dwe command; invoke the npm script directly:
-dwe cmd frontend.npm --set args="run test:watch"   # watch mode
-dwe cmd frontend.npm --set args="run test:cov"     # with coverage
-```
-
-Or directly (host node, from `services/frontend/src/`):
-
-```bash
-npm test               # vitest run
-npm run test:watch     # vitest (watch)
-npm run test:cov       # vitest run --coverage
-```
-
-- Co-locate tests next to the module they test (`lib/route.test.js`, etc.).
-- `src/lib/` helpers are pure JS — test them with table-driven unit tests, no
-  browser environment needed.
-- `useModalDismiss.js` and `IdentifyModal.jsx` use RTL + jsdom; setup file is
-  `test/setup.js` (imports `@testing-library/jest-dom`).
-- **Every task that adds or changes pure logic must add/update Vitest tests.**
-  Pure CSS/markup tweaks do not require a unit test.
+- **The modals hold no network code.** `AlbumLyricsModal` and `AlbumBpmModal` are
+  props-driven state machines; the requests live in `src/pages/Album.jsx` and in
+  the two queue modules. Add a call there, not in the modal.
+- `runLyricsFetchQueue` (`CONCURRENCY = 6`) and `runBpmComputeQueue`
+  (`CONCURRENCY = 2` — CPU-bound, ~9s/track on the server) pool the per-track
+  fetch/compute requests.
+- **An `AbortSignal` only stops dequeuing; in-flight requests are never aborted**
+  and confirm/write requests are never aborted at all — the server writes to disk
+  regardless and the write is not idempotent. The queue promise resolves only
+  after every in-flight request settles, which is what lets the page keep the
+  album run locked against a second overlapping run.
+- Bulk lyrics confirm returns `written_item_ids`; mark only those tracks applied.
+- Scan status is snake_case from the API and is mapped **once** by
+  `buildScanViewModel` (`src/lib/scan.js`, applied in `App.jsx`). `ScanBanner`
+  consumes the camelCase view model; `runId` is consumed by `ScanLog`, not the
+  banner. A new scan field must be threaded through the mapper.
+- `App.jsx` also fetches rescan status once on mount, so an in-flight or
+  finished-but-undismissed scan survives a page reload. The banner has no
+  auto-dismiss: `×` calls `POST /api/rescan/dismiss`.
 
 ## Theme
 
-- Dark theme is the default (bare `:root` block in `styles.css`).
-- Light theme overrides surface/text/border tokens via `:root[data-theme="light"]`.
-  Do NOT add a `[data-theme="dark"]` selector (specificity trap).
-- The `<html>` element's `data-theme` attribute is set by an inline script in
-  `index.html` _before_ the module loads (prevents FOUC).
-- The Topbar cycles `auto → light → dark`, persisting to `localStorage.theme`.
+- Dark is the default (bare `:root` in `styles.css`); light overrides
+  surface/text/border tokens via `:root[data-theme="light"]`.
+- **Do NOT add a `[data-theme="dark"]` selector** — specificity trap.
+- `<html data-theme>` is set by an inline script in `index.html` _before_ the
+  module loads (prevents FOUC). The Topbar cycles `auto → light → dark` and
+  persists to `localStorage.theme`.
 - Shared tokens (`--accent: #ec4868`, `--ok`, `--warn`, `--danger`) are not
   overridden per theme unless contrast requires it.
 
 ## Conventions
 
-- Function components and hooks only; no class components.
-- Keep `react/jsx-runtime` style (no explicit `React` import needed for JSX).
-- Absolute API paths; no hardcoded backend origin in components.
-- Pure helpers (no React) live in `src/lib/`; each module has a co-located test.
-- Use `useModalDismiss` from `src/lib/useModalDismiss.js` on every modal for
-  Escape-to-close; backdrop-click dismissal is wired per modal in the JSX.
-- Run `npm run lint` and `npm run format` before committing.
+- Keep `react/jsx-runtime` style — no explicit `React` import for JSX.
+- Pure helpers live in `src/lib/`, each with a co-located test.
+- Every modal uses `useModalDismiss` for Escape-to-close; backdrop-click dismissal
+  is wired per modal in the JSX.
+- Run lint and format before committing.
+
+## Testing
+
+Vitest + React Testing Library. `environment: 'jsdom'` is set globally in
+`vite.config.js`, with `test/setup.js` importing `@testing-library/jest-dom` —
+component tests need no per-file setup.
+
+- Co-locate tests with the module under test (`lib/route.test.js`, `ui/TagTable.test.jsx`).
+- `src/lib/` helpers are pure JS — table-driven unit tests, no DOM needed.
+- Components, pages and hooks are covered by RTL suites (`*.test.jsx`).
+- **Every change that adds or alters pure logic must add/update a Vitest test.**
+  Pure CSS/markup tweaks do not.
+
+Commands (`npm test`, `test:watch`, `test:cov`, `lint`, `format`) are listed in
+`README.md`.
+
+## Production build
+
+`base` is `/` in dev and `/static/dist/` for `vite build`. The backend serves the
+bundle from its own `beetdeck/static/dist/` and reads the Vite manifest to inject
+the hashed entry JS/CSS, so a production hand-off means copying this repo's
+`dist/` into the backend repo's `beetdeck/static/dist/`.

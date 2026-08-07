@@ -6,7 +6,7 @@ filesystem with the backend.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 24+ (see `engines` in `package.json`)
 
 ## Dev workflow
 
@@ -32,11 +32,8 @@ npm run build        # outputs to dist/ with a Vite manifest
 
 The build uses `base: '/static/dist/'`, because in production the backend serves
 the bundle from `/static/dist/` and reads the Vite manifest to inject the hashed
-entry JS/CSS into its page shell. Copy the built `dist/` into the backend's
-`src/static/dist/` to serve the UI from the backend.
-
-The backend repo's `make sync-frontend-dist` target does both steps in one
-command (build here, copy there). See the backend README for details.
+entry JS/CSS into its page shell. Copy the built `dist/` into the backend repo's
+`beetdeck/static/dist/` to serve the UI from the backend.
 
 ## Testing
 
@@ -46,8 +43,10 @@ npm run test:watch   # vitest (watch mode)
 npm run test:cov     # vitest run --coverage
 ```
 
-Tests live next to the modules they cover (`src/lib/*.test.js`). All pure
-helpers in `src/lib/` have table-driven unit tests. RTL tests use `test/setup.js`.
+Tests live next to the modules they cover. All pure helpers in `src/lib/` have
+table-driven unit tests; components and pages have React Testing Library suites.
+`vite.config.js` sets `environment: 'jsdom'` globally and `test/setup.js` loads
+`@testing-library/jest-dom`.
 
 ## Linting & formatting
 
@@ -58,22 +57,9 @@ npm run format       # Prettier (write)
 npm run format:check # Prettier (check only)
 ```
 
-## Layout
+## Further documentation
 
-- `index.html` — Vite entry; includes an inline FOUC-fix script that sets `data-theme` on `<html>` before modules load.
-- `src/main.jsx` — React entry, imports `styles.css`.
-- `src/App.jsx` — top-level shell, hash-routed via `useHashRoute.js`.
-- `src/lib/` — pure helpers (no React): `route`, `albums`, `library`, `disc`, `diff`, `scan`, `tagEditor`, `itemTags`, `platform`, `lyricsFetchQueue`, `bpmComputeQueue`, `useModalDismiss`.
-- `src/ui/` — shared widgets (RouteLink, Topbar, Icon, Segmented, Cover, IdentifyModal, useTagRows, FolderTree, TagTable, BulkBar, UntaggedGroup, ItemsIdentifyModal, TagEditorModal, ItemTagsEditor, AlbumLyricsModal, AlbumBpmModal).
-- `src/pages/` — Library, Artist, Album, Untagged.
-- `src/styles.css` — dark default (`:root`), light override (`:root[data-theme="light"]`); accent `#ec4868` shared.
-
-## Conventions
-
-- Plain JavaScript + JSX (no TypeScript).
-- No router library — `useHashRoute.js` is the whole router. Routes: `#/`, `#/artist/<name>`, `#/album/<id>`, `#/untagged` (folder index), `#/untagged/<dir>` (per-folder tag editor). Artist names and folder dirs are `encodeURIComponent`'d.
-- No state management library — `useState` / `useReducer` only.
-- Pure helpers live in `src/lib/`; each has a co-located `*.test.js`.
-- Every modal uses `useModalDismiss` (Escape + backdrop-click).
-- Absolute API paths (`/api/...`) so the dev proxy and prod both work.
-- New fields on existing backend endpoints are additive only.
+- `CLAUDE.md` — notes for AI agents: conventions, routing rules, and the
+  client-side invariants around the fetch queues and the scan view model.
+- `docs/layout.md` — annotated source tree.
+- `docs/routing.md` — the `RouteLink` API and the stretched-link card pattern.
