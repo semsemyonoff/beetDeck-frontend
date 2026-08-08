@@ -4,6 +4,7 @@ import Segmented from '../ui/Segmented.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
 import { mapAlbum, isIdentified } from '../lib/albums.js';
+import { useDocumentTitle } from '../lib/useDocumentTitle.js';
 
 export default function Artist({ name, dataVersion = 0 }) {
   const [data, setData] = useState(null);
@@ -47,6 +48,10 @@ export default function Artist({ name, dataVersion = 0 }) {
     if (filter === 'noident') list = list.filter((a) => !a.identified);
     return [...list].sort((a, b) => (a.year || 0) - (b.year || 0));
   }, [albums, filter]);
+
+  // The name comes from the route, so the tab title is right before the fetch
+  // lands — unlike the album page, which only learns its title from the payload.
+  useDocumentTitle(name);
 
   if (error) {
     return (

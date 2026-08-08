@@ -8,6 +8,7 @@ import {
   fireEvent,
 } from '@testing-library/react';
 import Album from './Album.jsx';
+import { APP_NAME } from '../lib/useDocumentTitle.js';
 
 vi.mock('../lib/lyricsFetchQueue.js', () => ({
   CONCURRENCY: 6,
@@ -2513,5 +2514,73 @@ describe('Album — TagsModal Edit button / ItemTagsEditor (Task 6 entry point A
       expect(screen.getByText(/file write failed/i)).toBeInTheDocument()
     );
     expect(screen.getByText(/edit all tags/i)).toBeInTheDocument();
+  });
+});
+
+describe('Album — document title', () => {
+  beforeEach(() => {
+    stubLocation();
+    document.title = APP_NAME;
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockResolvedValue();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+    document.title = APP_NAME;
+  });
+
+  it('puts the album and artist in the tab title once loaded', async () => {
+    vi.stubGlobal('fetch', makeFetch());
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    expect(document.title).toBe(`Test Album — Test Artist · ${APP_NAME}`);
+  });
+
+  it('omits the artist when the album has none', async () => {
+    vi.stubGlobal('fetch', makeFetch({ ...ALBUM_DATA, albumartist: '' }));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    expect(document.title).toBe(`Test Album · ${APP_NAME}`);
+  });
+
+  it('keeps the bare app name while loading and after a failed load', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 404 })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/failed to load album/i)).toBeInTheDocument()
+    );
+    expect(document.title).toBe(APP_NAME);
+  });
+
+  it('restores the app name when the page unmounts', async () => {
+    vi.stubGlobal('fetch', makeFetch());
+    let view;
+    await act(async () => {
+      view = render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      view.unmount();
+    });
+    expect(document.title).toBe(APP_NAME);
   });
 });

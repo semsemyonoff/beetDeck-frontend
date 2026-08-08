@@ -15,9 +15,10 @@ import {
   groupByDisc,
 } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
-import { isIdentified } from '../lib/albums.js';
+import { albumLabel, isIdentified } from '../lib/albums.js';
 import { isSynced, parseLyricLines } from '../lib/lyrics.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
+import { useDocumentTitle } from '../lib/useDocumentTitle.js';
 import { runLyricsFetchQueue } from '../lib/lyricsFetchQueue.js';
 import { runBpmComputeQueue } from '../lib/bpmComputeQueue.js';
 
@@ -204,6 +205,9 @@ export default function Album({ id, dataVersion = 0 }) {
     : null;
 
   useEffect(() => setHeroCoverError(false), [coverImgSrc]);
+
+  // Stays the bare app name while the album is still loading or failed to load.
+  useDocumentTitle(albumLabel(data?.album, data?.albumartist));
 
   if (error) {
     return (
