@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapAlbum, isIdentified, needsReview } from './albums.js';
+import { mapAlbum, albumLabel, isIdentified, needsReview } from './albums.js';
 
 describe('mapAlbum', () => {
   it('maps API shape to internal shape', () => {
@@ -34,6 +34,24 @@ describe('mapAlbum', () => {
   it('sets identified false when neither tagged nor ignored', () => {
     expect(mapAlbum({ tagged: false, ignored: false }).identified).toBe(false);
   });
+});
+
+describe('albumLabel', () => {
+  const cases = [
+    [['Abbey Road', 'The Beatles'], 'Abbey Road — The Beatles'],
+    [['Abbey Road', ''], 'Abbey Road'],
+    [['Abbey Road', null], 'Abbey Road'],
+    [['Abbey Road', '  '], 'Abbey Road'],
+    [['', 'The Beatles'], 'The Beatles'],
+    [[' Abbey Road ', ' The Beatles '], 'Abbey Road — The Beatles'],
+    [[undefined, undefined], ''],
+  ];
+
+  for (const [[title, artist], expected] of cases) {
+    it(`renders ${JSON.stringify([title, artist])} as ${JSON.stringify(expected)}`, () => {
+      expect(albumLabel(title, artist)).toBe(expected);
+    });
+  }
 });
 
 describe('isIdentified / needsReview truth table', () => {

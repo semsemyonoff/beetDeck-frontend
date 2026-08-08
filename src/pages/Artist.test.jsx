@@ -7,6 +7,7 @@ import {
   fireEvent,
 } from '@testing-library/react';
 import Artist from './Artist.jsx';
+import { APP_NAME } from '../lib/useDocumentTitle.js';
 
 const origLocation = Object.getOwnPropertyDescriptor(window, 'location');
 
@@ -103,5 +104,58 @@ describe('Artist — album cards', () => {
     const link = screen.getByRole('link', { name: /Dummy Album/i });
     fireEvent.click(link, { button: 0 });
     expect(window.location.hash).toBe('#/album/1');
+  });
+});
+
+describe('Artist — document title', () => {
+  beforeEach(() => {
+    stubLocation();
+    document.title = APP_NAME;
+    vi.stubGlobal('fetch', makeFetch());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+    document.title = APP_NAME;
+  });
+
+  it('puts the artist name in the tab title', async () => {
+    await act(async () => {
+      render(<Artist name="Test Artist" />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    expect(document.title).toBe(`Test Artist · ${APP_NAME}`);
+  });
+
+  it('keeps the title after a failed load, since the name comes from the route', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 404 })
+    );
+    await act(async () => {
+      render(<Artist name="Test Artist" />);
+    });
+    await waitFor(() =>
+      expect(screen.getByText(/failed to load/i)).toBeInTheDocument()
+    );
+    expect(document.title).toBe(`Test Artist · ${APP_NAME}`);
+  });
+
+  it('restores the app name when the page unmounts', async () => {
+    let view;
+    await act(async () => {
+      view = render(<Artist name="Test Artist" />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      view.unmount();
+    });
+    expect(document.title).toBe(APP_NAME);
   });
 });

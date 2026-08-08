@@ -25,8 +25,9 @@ widgets, `src/pages/` route views. Annotated tree in [`docs/layout.md`](docs/lay
 
 Two things the tree cannot show:
 
-- `src/lib/useModalDismiss.js` is the one module in `lib/` that imports React —
-  it is a hook, not a pure helper (hence its `.test.jsx`).
+- `src/lib/useModalDismiss.js` and `src/lib/useDocumentTitle.js` are the two
+  modules in `lib/` that import React — they are hooks, not pure helpers (hence
+  their `.test.jsx`).
 - `src/lib/scan.js` `classifyLogLevel` **mirrors the backend's**
   `parse_beets_line` log levels and is pinned to the beets version the backend
   pins (2.12.0). The two must change together, across repositories.
@@ -103,6 +104,10 @@ Client-owned invariants:
 - Pure helpers live in `src/lib/`, each with a co-located test.
 - Every modal uses `useModalDismiss` for Escape-to-close; backdrop-click dismissal
   is wired per modal in the JSX.
+- `document.title` belongs to `useDocumentTitle`: a page that wants a tab title
+  calls it, everything else falls back to the bare app name it restores on
+  unmount. Its `APP_NAME` and the static `<title>` in `index.html` (what the tab
+  shows before React mounts) must stay in sync.
 - Run lint and format before committing.
 
 ## Testing

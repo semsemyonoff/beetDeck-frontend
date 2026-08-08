@@ -19,9 +19,9 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     ├── useHashRoute.js     # useHashRoute() / useRouteLink / isModifiedClick; re-exports navigate()
     ├── styles.css          # All styling: dark default (:root), light (:root[data-theme="light"])
     ├── assets/             # logo.png
-    ├── lib/                # Pure helpers (no React — except useModalDismiss.js)
+    ├── lib/                # Pure helpers (no React — except the use*.js hooks)
     │   ├── route.js        # parse(hash) / navigate(target) / hrefFor(target)
-    │   ├── albums.js       # mapAlbum / isIdentified / needsReview
+    │   ├── albums.js       # mapAlbum / albumLabel / isIdentified / needsReview
     │   ├── library.js      # mapApi / totals / sortArtists / filterArtists / filterAlbums / letterGroups
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
@@ -34,7 +34,8 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     │   ├── platform.js     # isMac / searchShortcut → ⌘K / Ctrl K search hotkey
     │   ├── lyricsFetchQueue.js  # runLyricsFetchQueue, CONCURRENCY = 6
     │   ├── bpmComputeQueue.js   # runBpmComputeQueue, CONCURRENCY = 2
-    │   └── useModalDismiss.js   # React hook: Escape-to-close for modals
+    │   ├── useModalDismiss.js   # React hook: Escape-to-close for modals
+    │   └── useDocumentTitle.js  # React hook: per-page document.title (tab title)
     ├── ui/                 # Shared widgets
     │   ├── RouteLink.jsx       # <a href> wrapper over useRouteLink
     │   ├── ScanBanner.jsx      # Sticky scan progress/result banner (consumes the scan view model)
