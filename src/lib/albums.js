@@ -16,6 +16,13 @@ export function isIdentified(album) {
   return !!album.tagged;
 }
 
+// Tab-title label for an album page: "<album> — <artist>", trimmed down to
+// whichever part is known. Album first because tab titles truncate from the end.
+export function albumLabel(title, artist) {
+  const parts = [title, artist].map((s) => (s || '').trim()).filter(Boolean);
+  return parts.join(' — ');
+}
+
 // needsReview: true when the album has not been tagged or ignored.
 // Ignored albums don't need review even though they're not tagged.
 export function needsReview(album) {
