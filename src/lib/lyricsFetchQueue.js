@@ -50,6 +50,9 @@ export async function runLyricsFetchQueue({
       onTrackResult({
         itemId,
         found: data?.found ?? false,
+        // Why a source failed, when one did. A miss with reasons is not the
+        // same news as a miss without them.
+        reasons: data?.reasons ?? [],
         newLyrics: data?.new_lyrics ?? null,
         newSynced: data?.new_synced ?? null,
         newBackend: data?.new_backend ?? null,

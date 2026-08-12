@@ -79,6 +79,16 @@ Client-owned invariants:
   after every in-flight request settles, which is what lets the page keep the
   album run locked against a second overlapping run.
 - Bulk lyrics confirm returns `written_item_ids`; mark only those tracks applied.
+- **The genre preview commits through `POST …/genre/save`, never through
+  `…/genre/confirm`.** `confirm` runs its own second Last.fm lookup and can write
+  a value other than the one on screen; it also cannot express the `merge` mode,
+  whose result exists only in the preview. The Replace/Merge switch re-requests
+  `…/genre?mode=…` and the modal shows all three values (current, fetched,
+  proposed) so the switch is a visible diff, not a hidden one.
+- A cover fetch answers with both sizes (`width`/`height` and
+  `current_width`/`current_height`); `compareCoverSize` turns them into the
+  is-this-an-upgrade verdict. `relaxed: true` means the backend only found the
+  image with its size filter lifted — always render the `warning` with it.
 - Scan status is snake_case from the API and is mapped **once** by
   `buildScanViewModel` (`src/lib/scan.js`, applied in `App.jsx`). `ScanBanner`
   consumes the camelCase view model; `runId` is consumed by `ScanLog`, not the

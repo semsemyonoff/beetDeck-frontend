@@ -2584,3 +2584,373 @@ describe('Album — document title', () => {
     expect(document.title).toBe(APP_NAME);
   });
 });
+
+/** The button inside a named action group — several groups share labels. */
+function groupButton(group, name) {
+  const label = screen.getByText(group, { selector: '.action-group-label' });
+  return within(label.parentElement).getByRole('button', { name });
+}
+
+describe('Album — genre preview modes', () => {
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  /** The album, plus a genre endpoint answering per `mode`. */
+  function genreFetch({ replace, merge, failure } = {}) {
+    return vi.fn().mockImplementation((url) => {
+      if (url === '/api/album/42') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ ...ALBUM_DATA, genre: 'Rock' }),
+        });
+      }
+      if (url.includes('/genre?mode=')) {
+        if (failure) {
+          return Promise.resolve({
+            ok: false,
+            status: 502,
+            json: () => Promise.resolve({ error: failure }),
+          });
+        }
+        const body = url.includes('mode=merge') ? merge : replace;
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+      }
+      if (url.includes('/genre/save')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({ status: 'ok', genre: 'Rock, Electronic' }),
+        });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+    });
+  }
+
+  const REPLACE = {
+    status: 'ok',
+    mode: 'replace',
+    old_genre: 'Rock',
+    fetched_genre: 'Electronic',
+    new_genre: 'Electronic',
+  };
+  const MERGE = { ...REPLACE, mode: 'merge', new_genre: 'Rock, Electronic' };
+
+  async function openPreview(handlers) {
+    vi.stubGlobal('fetch', genreFetch(handlers));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Genre', /^fetch$/i));
+    });
+  }
+
+  it('asks for replace mode by default and shows all three values', async () => {
+    await openPreview({ replace: REPLACE, merge: MERGE });
+
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => url.includes('mode=replace'))
+    ).toBe(true);
+    const dl = document.querySelector('.genre-preview-dl');
+    expect(dl).toHaveTextContent('Rock');
+    expect(dl).toHaveTextContent('Electronic');
+    expect(screen.getByRole('button', { name: 'Replace' })).toHaveClass(
+      'seg-active'
+    );
+  });
+
+  it('re-fetches in merge mode and proposes current-plus-fetched', async () => {
+    await openPreview({ replace: REPLACE, merge: MERGE });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    });
+
+    expect(
+      vi.mocked(fetch).mock.calls.some(([url]) => url.includes('mode=merge'))
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Merge' })).toHaveClass(
+      'seg-active'
+    );
+    expect(document.querySelector('.genre-preview-dl')).toHaveTextContent(
+      'Rock, Electronic'
+    );
+  });
+
+  it('commits the previewed value through save, never through confirm', async () => {
+    // `genre/confirm` runs a second, independent lookup and can write a
+    // different value than the one shown — and cannot express a merge at all.
+    await openPreview({ replace: REPLACE, merge: MERGE });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    });
+
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls.some(([url]) => url.includes('/genre/confirm'))).toBe(false);
+    const save = calls.find(([url]) => url.includes('/genre/save'));
+    expect(save).toBeTruthy();
+    expect(JSON.parse(save[1].body)).toEqual({ genre: 'Rock, Electronic' });
+  });
+
+  it('ignores a second mode click while a fetch is in flight', async () => {
+    // `busy` is one global string: two overlapping fetches would let the first
+    // completion unlock Confirm while the second is still running.
+    let release;
+    const pending = new Promise((r) => {
+      release = r;
+    });
+    let modeCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, genre: 'Rock' }),
+          });
+        }
+        if (url.includes('mode=merge')) {
+          modeCalls += 1;
+          return pending.then(() => ({
+            ok: true,
+            json: () => Promise.resolve(MERGE),
+          }));
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(REPLACE),
+        });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Genre', /^fetch$/i));
+    });
+
+    const merge = screen.getByRole('button', { name: 'Merge' });
+    fireEvent.click(merge);
+    fireEvent.click(merge);
+    expect(modeCalls).toBe(1);
+    // Confirm cannot commit the stale value while the switch is resolving.
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
+
+    await act(async () => {
+      release();
+      await pending;
+    });
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeEnabled();
+  });
+
+  it('cannot start a second lookup while a mode switch is still in flight', async () => {
+    // The path a stale response needed: close the modal mid-Merge, hit Fetch
+    // again, let the merge land on the preview the new fetch opened. The hero
+    // button is gated on any genre request, so the entry point is closed; the
+    // response that does arrive finds no preview and opens none.
+    let releaseMerge;
+    const mergePending = new Promise((r) => {
+      releaseMerge = r;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, genre: 'Rock' }),
+          });
+        }
+        if (url.includes('mode=merge')) {
+          return mergePending.then(() => ({
+            ok: true,
+            json: () => Promise.resolve(MERGE),
+          }));
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(REPLACE),
+        });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Genre', /^fetch$/i));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    fireEvent.click(document.querySelector('.modal-backdrop'));
+
+    expect(groupButton('Genre', /^fetch$/i)).toBeDisabled();
+
+    await act(async () => {
+      releaseMerge();
+      await mergePending;
+    });
+    // The dismissed modal stays dismissed, and the button is usable again.
+    expect(document.querySelector('.genre-preview-dl')).toBeNull();
+    expect(groupButton('Genre', /^fetch$/i)).toBeEnabled();
+  });
+
+  it('reports a failed mode switch inside the modal, not as a hidden flash', async () => {
+    // A .flash renders in the page body, under the modal's fixed backdrop.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, genre: 'Rock' }),
+          });
+        }
+        if (url.includes('mode=merge')) {
+          return Promise.resolve({
+            ok: false,
+            status: 502,
+            json: () =>
+              Promise.resolve({
+                error: 'Last.fm lookup failed: Access Denied',
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(REPLACE),
+        });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Genre', /^fetch$/i));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    });
+
+    const notice = document.querySelector('.genre-mode-error');
+    expect(notice).toHaveTextContent(/access denied/i);
+    // The preview it replaces is still on screen, still showing Replace.
+    expect(document.querySelector('.genre-preview-dl')).toBeInTheDocument();
+  });
+
+  it('shows a failed lookup verbatim instead of opening an empty preview', async () => {
+    await openPreview({ failure: 'Last.fm lookup failed …: Access Denied' });
+
+    expect(document.querySelector('.genre-preview-dl')).toBeNull();
+    expect(screen.getByText(/access denied/i)).toBeInTheDocument();
+  });
+});
+
+describe('Album — cover candidate sizing', () => {
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  async function fetchCover(payload) {
+    vi.stubGlobal(
+      'fetch',
+      makeFetch(ALBUM_DATA, {
+        '/cover/fetch': () =>
+          Promise.resolve({ ok: true, json: () => Promise.resolve(payload) }),
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Cover', /^fetch$/i));
+    });
+  }
+
+  it('shows both sizes and calls a bigger candidate an upgrade', async () => {
+    await fetchCover({
+      status: 'ok',
+      found: true,
+      source: 'coverart',
+      width: 1200,
+      height: 1200,
+      current_width: 500,
+      current_height: 500,
+    });
+
+    const dl = document.querySelector('.cover-size-dl');
+    expect(dl).toHaveTextContent('500×500');
+    expect(dl).toHaveTextContent('1200×1200');
+    expect(dl).toHaveTextContent(/bigger than the current cover/i);
+    expect(document.querySelector('.cover-warn')).toBeNull();
+  });
+
+  it('warns when the candidate only turned up with the size filter lifted', async () => {
+    await fetchCover({
+      status: 'ok',
+      found: true,
+      source: 'coverart',
+      width: 495,
+      height: 500,
+      current_width: null,
+      current_height: null,
+      relaxed: true,
+      min_width: 500,
+      warning:
+        'this cover (495×500) is below the configured minimum width of 500 px',
+    });
+
+    expect(document.querySelector('.cover-warn')).toHaveTextContent(
+      /below the configured minimum width of 500 px/i
+    );
+    expect(document.querySelector('.cover-size-dl')).toHaveTextContent(
+      /no cover/i
+    );
+  });
+
+  it('repeats the art sources own reasons when nothing was usable', async () => {
+    await fetchCover({
+      status: 'ok',
+      found: false,
+      reasons: ['image too small (495 < 500)'],
+    });
+
+    expect(
+      screen.getByText(/image too small \(495 < 500\)/)
+    ).toBeInTheDocument();
+    expect(document.querySelector('.cover-size-dl')).toBeNull();
+  });
+});
