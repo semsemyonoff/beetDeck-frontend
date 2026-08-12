@@ -106,12 +106,49 @@ describe('runLyricsFetchQueue', () => {
     expect(results[0]).toEqual({
       itemId: 42,
       found: true,
+      reasons: [],
       newLyrics: 'lyrics text',
       newSynced: true,
       newBackend: 'genius',
       currentLyrics: 'old lyrics',
       currentSource: 'embedded',
     });
+  });
+
+  it('passes a failed source through so a miss is not read as an absence', async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockResp({
+        found: false,
+        reasons: ['Genius: Failed: Blocked IP address'],
+        current_lyrics: '',
+        current_source: null,
+      })
+    );
+
+    const results = [];
+    await runLyricsFetchQueue({
+      albumId: 1,
+      itemIds: [42],
+      onProgress: vi.fn(),
+      onTrackResult: (r) => results.push(r),
+    });
+
+    expect(results[0].found).toBe(false);
+    expect(results[0].reasons).toEqual(['Genius: Failed: Blocked IP address']);
+  });
+
+  it('defaults reasons to an empty list when the backend sends none', async () => {
+    fetchMock.mockResolvedValueOnce(mockResp({ found: false }));
+
+    const results = [];
+    await runLyricsFetchQueue({
+      albumId: 1,
+      itemIds: [42],
+      onProgress: vi.fn(),
+      onTrackResult: (r) => results.push(r),
+    });
+
+    expect(results[0].reasons).toEqual([]);
   });
 
   it('normalises a miss response (found: false) including current fields', async () => {

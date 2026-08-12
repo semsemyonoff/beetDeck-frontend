@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../ui/Icon.jsx';
 import { Cover } from '../ui/Cover.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
+import Segmented from '../ui/Segmented.jsx';
 import IdentifyModal from '../ui/IdentifyModal.jsx';
 import TagEditorModal from '../ui/TagEditorModal.jsx';
 import ItemTagsEditor from '../ui/ItemTagsEditor.jsx';
@@ -16,6 +17,7 @@ import {
 } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
 import { albumLabel, isIdentified } from '../lib/albums.js';
+import { compareCoverSize, formatDimensions } from '../lib/cover.js';
 import { isSynced, parseLyricLines } from '../lib/lyrics.js';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
 import { useDocumentTitle } from '../lib/useDocumentTitle.js';
@@ -44,6 +46,21 @@ function LyricLines({ text, limit }) {
 function BtnSpinner() {
   return <span className="btn-spinner" aria-hidden="true" />;
 }
+
+// Verdicts from `compareCoverSize`, phrased for someone deciding whether to
+// replace the cover they have.
+const GENRE_MODES = [
+  { value: 'replace', label: 'Replace' },
+  { value: 'merge', label: 'Merge' },
+];
+
+const COVER_VERDICT_LABEL = {
+  larger: 'bigger than the current cover',
+  smaller: 'smaller than the current cover',
+  same: 'same size as the current cover',
+  new: 'the album has no cover yet',
+  unknown: 'the current cover could not be measured',
+};
 
 function ActionGroup({ label, children }) {
   return (
@@ -104,6 +121,9 @@ export default function Album({ id, dataVersion = 0 }) {
   const [almRows, setAlmRows] = useState([]);
   const [almProgress, setAlmProgress] = useState({ done: 0, total: 0 });
   const [almRunning, setAlmRunning] = useState(false);
+  // Distinct source failures seen during the run, shown inside the modal —
+  // a page flash would render under its backdrop.
+  const [almSourceFailures, setAlmSourceFailures] = useState([]);
   const almAbortRef = useRef(null);
   const [bpmCache, setBpmCache] = useState({}); // item_id -> { has_bpm, bpm }
   const [bpmOpen, setBpmOpen] = useState(false);
@@ -114,6 +134,8 @@ export default function Album({ id, dataVersion = 0 }) {
   const bpmRunRef = useRef(null); // stale-update guard: token per run
   const uploadRef = useRef(null);
   const flashTimerRef = useRef(null);
+  // Monotonic id per genre lookup; only the latest may touch the preview.
+  const genreReqRef = useRef(0);
   // Per-track monotonic sequence for refreshTrackLyrics: a write seeds the cache
   // synchronously (in call order) then fires an async GET. Two writes to the same
   // track can have their GETs resolve out of order; the older GET would clobber
@@ -283,6 +305,24 @@ export default function Album({ id, dataVersion = 0 }) {
         .filter(Boolean)
     : [];
 
+  // Any in-flight genre request locks both the mode switch and Confirm: they
+  // write the same album field, and `busy` cannot express two at once.
+  const genreBusy =
+    busy === 'genre-fetch' ||
+    busy === 'genre-merge' ||
+    busy === 'genre-confirm';
+
+  const coverVerdict = coverPreview
+    ? compareCoverSize(
+        {
+          width: coverPreview.currentWidth,
+          height: coverPreview.currentHeight,
+        },
+        { width: coverPreview.width, height: coverPreview.height },
+        { hasCurrent: !!data.has_cover }
+      )
+    : null;
+
   const onLyricsExpand = async (item) => {
     const key = `${item.disc || 1}:${item.id}`;
     if (expandedKey === key) {
@@ -348,28 +388,67 @@ export default function Album({ id, dataVersion = 0 }) {
     }
   };
 
-  const handleGenreFetch = async () => {
-    setBusy('genre-fetch');
-    const { ok, data: d } = await postJson(`/api/album/${data.id}/genre`);
-    setBusy(null);
-    if (ok) {
-      setGenrePreview({ old: d?.old_genre || '', next: d?.new_genre || '' });
-    } else {
-      showFlash('err', d?.error || 'Genre fetch failed.');
-    }
-  };
-  const handleGenreConfirm = async () => {
-    setBusy('genre-confirm');
+  // `reopen: false` for the mode switch: it runs with the modal already open,
+  // so a response that arrives after the user dismissed or committed it must
+  // not put the modal back on screen.
+  const handleGenreFetch = async (mode = 'replace', { reopen = true } = {}) => {
+    const slot = mode === 'merge' ? 'genre-merge' : 'genre-fetch';
+    const req = ++genreReqRef.current;
+    setBusy(slot);
     const { ok, data: d } = await postJson(
-      `/api/album/${data.id}/genre/confirm`
+      `/api/album/${data.id}/genre?mode=${mode}`
     );
+    // Only release the slot this call took. `busy` is one global string, so an
+    // unconditional clear would unlock Confirm while a second, still in-flight
+    // fetch is running — or worse, clear the `genre-confirm` a save is holding.
+    setBusy((current) => (current === slot ? null : current));
+    // A newer request owns the modal: a mode switch left in flight by closing
+    // the modal must not land on the preview a later Fetch opened, or Confirm
+    // would save a value nobody asked for in that modal.
+    if (req !== genreReqRef.current) return;
+    const message = d?.error || 'Genre fetch failed.';
+    if (ok) {
+      setGenrePreview((prev) => {
+        if (!reopen && prev === null) return null;
+        return {
+          mode,
+          old: d?.old_genre || '',
+          fetched: d?.fetched_genre || '',
+          next: d?.new_genre || '',
+          error: null,
+        };
+      });
+      return;
+    }
+    // A failed lookup answers 502 with its own sentence; it is not the same
+    // news as "Last.fm has nothing for this album", so it is shown verbatim.
+    // Inside the modal it has to be shown *in* the modal — a page flash renders
+    // under the fixed backdrop, where nobody sees it.
+    if (!reopen) {
+      setGenrePreview((prev) =>
+        prev === null ? null : { ...prev, error: message }
+      );
+      return;
+    }
+    showFlash('err', message);
+  };
+  // Commits through `genre/save` with the previewed string rather than through
+  // `genre/confirm`, which runs its own second Last.fm lookup and can write
+  // something other than what was shown — and knows nothing about merge mode.
+  const handleGenreConfirm = async () => {
+    const value = (genrePreview?.next || '').trim();
+    if (!value) return;
+    setBusy('genre-confirm');
+    const { ok, data: d } = await postJson(`/api/album/${data.id}/genre/save`, {
+      genre: value,
+    });
     setBusy(null);
     setGenrePreview(null);
     if (ok) {
       const partial = d?.status === 'partial';
       showFlash(
         partial ? 'warn' : 'ok',
-        `Genre saved: ${d?.genre || ''}${partial ? ' (partial write)' : ''}`
+        `Genre saved: ${d?.genre || value}${partial ? ' (partial write)' : ''}`
       );
       reload();
     } else {
@@ -406,12 +485,26 @@ export default function Album({ id, dataVersion = 0 }) {
       return;
     }
     if (!d?.found) {
-      showFlash('err', 'No cover art found online.');
+      // The art plugin's own rejection lines, when it had any: "no cover found"
+      // and "a cover was found and refused" are different problems to fix.
+      const reasons = (d?.reasons || []).join('; ');
+      showFlash(
+        'err',
+        reasons
+          ? `No usable cover art found online — ${reasons}`
+          : 'No cover art found online.'
+      );
       return;
     }
     setCoverPreview({
       source: d.source,
       url: `/api/album/${data.id}/cover/preview?v=${Date.now()}`,
+      width: d.width,
+      height: d.height,
+      currentWidth: d.current_width,
+      currentHeight: d.current_height,
+      relaxed: !!d.relaxed,
+      warning: d.warning || '',
     });
   };
   const handleCoverConfirm = async () => {
@@ -464,6 +557,8 @@ export default function Album({ id, dataVersion = 0 }) {
     if (almOpen || almRunning) return;
     const ctrl = new AbortController();
     almAbortRef.current = ctrl;
+    const sourceFailures = [];
+    setAlmSourceFailures([]);
     const initialRows = tracks.map((t) => ({
       id: t.id,
       title: t.title,
@@ -487,6 +582,11 @@ export default function Album({ id, dataVersion = 0 }) {
       signal: ctrl.signal,
       onProgress: (done, total) => setAlmProgress({ done, total }),
       onTrackResult: (result) => {
+        // One blocked source fails many tracks with the same line; collect the
+        // distinct ones so the run can say so once instead of per row.
+        for (const reason of result.reasons || []) {
+          if (!sourceFailures.includes(reason)) sourceFailures.push(reason);
+        }
         setAlmRows((prev) =>
           prev.map((r) => {
             if (r.id !== result.itemId) return r;
@@ -511,7 +611,14 @@ export default function Album({ id, dataVersion = 0 }) {
           })
         );
       },
-    }).finally(() => setAlmRunning(false));
+    }).finally(() => {
+      setAlmRunning(false);
+      // Not for a run the user cancelled, and not as a page flash: the modal
+      // is still open on top of it and `.flash` renders in the page body.
+      if (sourceFailures.length && !ctrl.signal.aborted) {
+        setAlmSourceFailures(sourceFailures);
+      }
+    });
   };
 
   const handleAlmApplyOne = async (itemId) => {
@@ -787,7 +894,15 @@ export default function Album({ id, dataVersion = 0 }) {
       return;
     }
     if (!d?.found) {
-      setTrackErrorForId(item.id, 'No lyrics found online.');
+      // A blocked or unreachable source is not the same finding as "this track
+      // has no lyrics", and only one of the two is worth retrying.
+      const reasons = (d?.reasons || []).join('; ');
+      setTrackErrorForId(
+        item.id,
+        reasons
+          ? `No lyrics fetched — a source failed: ${reasons}`
+          : 'No lyrics found online.'
+      );
       return;
     }
     const current = lyricsCache[item.id]?.lyrics || d.current_lyrics || '';
@@ -1028,8 +1143,8 @@ export default function Album({ id, dataVersion = 0 }) {
             <ActionGroup label="Genre">
               <button
                 className="btn btn-action"
-                disabled={busy === 'genre-fetch'}
-                onClick={handleGenreFetch}
+                disabled={genreBusy}
+                onClick={() => handleGenreFetch()}
               >
                 {busy === 'genre-fetch' ? (
                   <BtnSpinner />
@@ -1431,11 +1546,37 @@ export default function Album({ id, dataVersion = 0 }) {
               </button>
             </div>
             <div className="modal-body">
+              <div className="genre-mode-seg">
+                <Segmented
+                  size="sm"
+                  value={genrePreview.mode}
+                  options={GENRE_MODES}
+                  disabled={genreBusy}
+                  onChange={(mode) =>
+                    !genreBusy &&
+                    mode !== genrePreview.mode &&
+                    handleGenreFetch(mode, { reopen: false })
+                  }
+                />
+              </div>
+              {genrePreview.error && (
+                <p className="genre-mode-error" role="alert">
+                  <Icon name="alert" size={12} /> {genrePreview.error}
+                </p>
+              )}
               <dl className="genre-preview-dl">
                 <div>
                   <dt className="muted small">Current</dt>
                   <dd>
                     {genrePreview.old || <span className="muted">empty</span>}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="muted small">From Last.fm</dt>
+                  <dd>
+                    {genrePreview.fetched || (
+                      <span className="muted">nothing returned</span>
+                    )}
                   </dd>
                 </div>
                 <div>
@@ -1456,7 +1597,7 @@ export default function Album({ id, dataVersion = 0 }) {
                 </button>
                 <button
                   className="btn btn-primary"
-                  disabled={busy === 'genre-confirm'}
+                  disabled={genreBusy || !(genrePreview.next || '').trim()}
                   onClick={handleGenreConfirm}
                 >
                   {busy === 'genre-confirm' ? (
@@ -1539,6 +1680,13 @@ export default function Album({ id, dataVersion = 0 }) {
               </button>
             </div>
             <div className="modal-body" style={{ textAlign: 'center' }}>
+              {coverPreview.relaxed && (
+                <p className="cover-warn" role="alert">
+                  <Icon name="alert" size={12} />{' '}
+                  {coverPreview.warning ||
+                    'This cover is below the configured minimum width and was only found with the size filter lifted.'}
+                </p>
+              )}
               <img
                 src={coverPreview.url}
                 alt=""
@@ -1548,6 +1696,35 @@ export default function Album({ id, dataVersion = 0 }) {
                   borderRadius: 8,
                 }}
               />
+              <dl className="cover-size-dl">
+                <div>
+                  <dt className="muted small">Current</dt>
+                  <dd>
+                    {formatDimensions(
+                      coverPreview.currentWidth,
+                      coverPreview.currentHeight
+                    ) || (
+                      <span className="muted">
+                        {data.has_cover ? 'size unknown' : 'no cover'}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="muted small">Candidate</dt>
+                  <dd>
+                    {formatDimensions(
+                      coverPreview.width,
+                      coverPreview.height
+                    ) || <span className="muted">unknown</span>}
+                    {coverVerdict && (
+                      <span className={`cover-verdict is-${coverVerdict}`}>
+                        {COVER_VERDICT_LABEL[coverVerdict]}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
             </div>
             <div className="modal-foot">
               <div className="row-end">
@@ -1684,6 +1861,7 @@ export default function Album({ id, dataVersion = 0 }) {
           progress={almProgress}
           fetching={almRunning}
           applying={almApplying}
+          sourceFailures={almSourceFailures}
           onApplyAll={handleAlmApplyAll}
           onApplyOne={handleAlmApplyOne}
           onClose={closeAlmModal}

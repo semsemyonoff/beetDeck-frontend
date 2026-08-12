@@ -125,6 +125,7 @@ export default function AlbumLyricsModal({
   progress,
   fetching,
   applying,
+  sourceFailures = [],
   onApplyAll,
   onApplyOne,
   onClose,
@@ -188,6 +189,12 @@ export default function AlbumLyricsModal({
         </div>
 
         <div className="modal-body alm-body">
+          {sourceFailures.length > 0 && (
+            <p className="alm-source-warn" role="alert">
+              A lyrics source failed during this run, so a miss below is not
+              necessarily an absence: {sourceFailures.join('; ')}
+            </p>
+          )}
           {tracks.map((t) => (
             <AlmRow
               key={t.id}
