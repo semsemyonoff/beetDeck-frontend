@@ -710,3 +710,258 @@ describe('Artwork — non-grid states', () => {
     }
   );
 });
+
+describe('Artwork — lightbox and apply', () => {
+  beforeEach(stubLocation);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+    document.title = APP_NAME;
+  });
+
+  // The apply POST shares the listing's URL prefix, so it needs its own arm —
+  // matching on the prefix alone would answer a write with a listing.
+  function makeApplyFetch({
+    images = IMAGES,
+    listing = {},
+    applyStatus = 200,
+    applyBody = { status: 'ok' },
+    applyReject = null,
+  } = {}) {
+    return vi.fn().mockImplementation((url) => {
+      const u = String(url);
+      if (u === '/api/album/1')
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ALBUM,
+        });
+      if (u.endsWith('/apply')) {
+        if (applyReject) return Promise.reject(new Error(applyReject));
+        return Promise.resolve({
+          ok: applyStatus < 400,
+          status: applyStatus,
+          json: async () => applyBody,
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...LISTING, images, ...listing }),
+      });
+    });
+  }
+
+  async function open(opts = {}, tileIndex = 0) {
+    const fetchMock = makeApplyFetch(opts);
+    vi.stubGlobal('fetch', fetchMock);
+    await act(async () => {
+      render(<Artwork id="1" />);
+    });
+    await act(async () => {
+      fireEvent.click(document.querySelectorAll('.art-tile')[tileIndex]);
+    });
+    return fetchMock;
+  }
+
+  function applyCalls(fetchMock) {
+    return fetchMock.mock.calls.filter((c) => String(c[0]).endsWith('/apply'));
+  }
+
+  it('opens the lightbox on the tile that was clicked', async () => {
+    await open({}, 1);
+    expect(document.querySelector('.art-lightbox')).not.toBeNull();
+    expect(document.querySelector('.art-lb-counter')).toHaveTextContent(
+      '2 / 3'
+    );
+    expect(document.querySelector('.art-lb-frame img')).toHaveAttribute(
+      'src',
+      '/api/album/1/artwork/200?size=500'
+    );
+  });
+
+  it('stays closed until a tile is clicked, and closes again on Escape', async () => {
+    const fetchMock = makeApplyFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    await act(async () => {
+      render(<Artwork id="1" />);
+    });
+    expect(document.querySelector('.art-lightbox')).toBeNull();
+    await act(async () => {
+      fireEvent.click(document.querySelectorAll('.art-tile')[0]);
+    });
+    expect(document.querySelector('.art-lightbox')).not.toBeNull();
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+    });
+    expect(document.querySelector('.art-lightbox')).toBeNull();
+  });
+
+  it('navigates the filtered list, not the full one', async () => {
+    await open();
+    await act(async () => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+    });
+    const front = [...document.querySelectorAll('.art-chip')].find((b) =>
+      b.textContent.startsWith('Front')
+    );
+    await act(async () => {
+      fireEvent.click(front);
+    });
+    await act(async () => {
+      fireEvent.click(document.querySelectorAll('.art-tile')[0]);
+    });
+    // Two Front images, so the counter and the wrap-around both stop at 2.
+    expect(document.querySelector('.art-lb-counter')).toHaveTextContent(
+      '1 / 2'
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    });
+    expect(document.querySelector('.art-lb-counter')).toHaveTextContent(
+      '2 / 2'
+    );
+    expect(document.querySelector('.art-lb-frame img')).toHaveAttribute(
+      'src',
+      '/api/album/1/artwork/300?size=1200'
+    );
+  });
+
+  it('closes the lightbox when the chip filter changes under it', async () => {
+    await open();
+    const back = [...document.querySelectorAll('.art-chip')].find((b) =>
+      b.textContent.startsWith('Back')
+    );
+    await act(async () => {
+      fireEvent.click(back);
+    });
+    // The index points into the filtered list; keeping it would stage a frame
+    // that is no longer in the grid behind it.
+    expect(document.querySelector('.art-lightbox')).toBeNull();
+  });
+
+  it('posts the apply to the staged image and moves the marker on success', async () => {
+    const fetchMock = await open({}, 1);
+    expect(screen.queryByText('Current cover')).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /set as album cover/i })
+      );
+    });
+
+    const calls = applyCalls(fetchMock);
+    expect(calls).toHaveLength(1);
+    expect(String(calls[0][0])).toBe('/api/album/1/artwork/200/apply');
+    expect(calls[0][1]).toMatchObject({ method: 'POST' });
+
+    // The marker moves in page state: the response already confirmed the fact,
+    // and a refetch would spend a CAA listing to learn it again.
+    const flagged = [...document.querySelectorAll('.art-tile')].filter((t) =>
+      t.className.includes('art-tile-cover')
+    );
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]).toHaveTextContent('Back');
+    expect(
+      fetchMock.mock.calls.filter(
+        (c) => String(c[0]) === '/api/album/1/artwork'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('renders the success toast and drops it again', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = makeApplyFetch();
+      vi.stubGlobal('fetch', fetchMock);
+      await act(async () => {
+        render(<Artwork id="1" />);
+      });
+      await act(async () => {
+        fireEvent.click(document.querySelectorAll('.art-tile')[0]);
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('button', { name: /set as album cover/i })
+        );
+      });
+      expect(document.querySelector('.art-toast')).toHaveTextContent(
+        'Album cover set from CAA image 100'
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(document.querySelector('.art-toast')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('surfaces an apply failure and leaves the marker where it was', async () => {
+    await open(
+      {
+        listing: { current_image_id: '100' },
+        applyStatus: 500,
+        applyBody: { error: 'could not write cover to album folder' },
+      },
+      1
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /set as album cover/i })
+      );
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'could not write cover to album folder'
+    );
+    expect(document.querySelector('.art-toast')).toBeNull();
+    // The cover the album already had is still the one flagged.
+    const flagged = [...document.querySelectorAll('.art-tile')].filter((t) =>
+      t.className.includes('art-tile-cover')
+    );
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]).toHaveTextContent('Front');
+  });
+
+  it('reports a transport failure that never carried a body', async () => {
+    await open({ applyReject: 'NetworkError' }, 1);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /set as album cover/i })
+      );
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('NetworkError');
+  });
+
+  it('clears a previous apply error when another image is staged', async () => {
+    await open(
+      { applyStatus: 502, applyBody: { error: 'CAA unreachable' } },
+      1
+    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /set as album cover/i })
+      );
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+    // The error was about the previous image; carrying it over would blame this
+    // one for a failure it had no part in.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('refuses to re-apply the image that is already the cover', async () => {
+    const fetchMock = await open({ listing: { current_image_id: '100' } }, 0);
+    const btn = screen.getByRole('button', { name: /already album cover/i });
+    expect(btn).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(applyCalls(fetchMock)).toHaveLength(0);
+  });
+});

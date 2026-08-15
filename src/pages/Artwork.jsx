@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ArtLightbox from '../ui/ArtLightbox.jsx';
 import Icon from '../ui/Icon.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
 import { albumLabel } from '../lib/albums.js';
@@ -21,7 +22,10 @@ const TILE_PX = 190;
 // plausible grid rather than a promise about how many scans exist.
 const SKELETON_TILES = 8;
 
-function ArtTile({ albumId, image, isCover }) {
+// How long the "cover set" toast stays up, matching the prototype.
+const TOAST_MS = 2600;
+
+function ArtTile({ albumId, image, isCover, onOpen }) {
   const size = pickThumbSize(image, TILE_PX);
   const types = image.types || [];
   // Measured dimensions are the **original's** and are null until that file has
@@ -33,6 +37,7 @@ function ArtTile({ albumId, image, isCover }) {
     <button
       type="button"
       className={'art-tile' + (isCover ? ' art-tile-cover' : '')}
+      onClick={onOpen}
     >
       <div className="art-stage">
         <img
@@ -205,6 +210,12 @@ export default function Artwork({ id, dataVersion = 0 }) {
   // the two fetches are two effects.
   const [albumTick, setAlbumTick] = useState(0);
   const [filter, setFilter] = useState('All');
+  // The lightbox index points into the **filtered** list, so anything that can
+  // change that list closes it rather than leaving it on a stale frame.
+  const [lbIndex, setLbIndex] = useState(null);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [applyError, setApplyError] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     let aborted = false;
@@ -263,8 +274,44 @@ export default function Artwork({ id, dataVersion = 0 }) {
     };
   }, [id, dataVersion, refreshTick]);
 
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   const title = albumLabel(album?.album, album?.albumartist);
   useDocumentTitle(title ? `Artwork — ${title}` : 'Artwork');
+
+  // The one write on this page, and it lives here rather than in the lightbox:
+  // the modals in this repository hold no network code. On success the marker
+  // moves in page state — a refetch would spend a CAA listing to learn a fact
+  // the response already confirmed; on failure it stays exactly where it was.
+  async function applyImage(image) {
+    setApplyBusy(true);
+    setApplyError(null);
+    try {
+      const r = await fetch(
+        `/api/album/${id}/artwork/${image.image_id}/apply`,
+        { method: 'POST' }
+      );
+      const d = await r.json().catch(() => null);
+      if (!r.ok) {
+        throw new Error(d?.error || `request failed (HTTP ${r.status})`);
+      }
+      setListing((l) => (l ? { ...l, current_image_id: image.image_id } : l));
+      setToast(`Album cover set from CAA image ${image.image_id}`);
+    } catch (e) {
+      setApplyError(e.message || 'request failed');
+    } finally {
+      setApplyBusy(false);
+    }
+  }
+
+  function selectFilter(type) {
+    setFilter(type);
+    setLbIndex(null);
+  }
 
   // The album request feeds the whole shell, so its failure has no header to
   // hang a banner under — it is the one state that renders on a bare page.
@@ -332,7 +379,7 @@ export default function Artwork({ id, dataVersion = 0 }) {
             <button
               type="button"
               className={'art-chip' + (active === 'All' ? ' art-chip-on' : '')}
-              onClick={() => setFilter('All')}
+              onClick={() => selectFilter('All')}
             >
               All <span className="art-chip-n mono">{images.length}</span>
             </button>
@@ -343,7 +390,7 @@ export default function Artwork({ id, dataVersion = 0 }) {
                 className={
                   'art-chip' + (active === c.type ? ' art-chip-on' : '')
                 }
-                onClick={() => setFilter(c.type)}
+                onClick={() => selectFilter(c.type)}
               >
                 {c.type} <span className="art-chip-n mono">{c.count}</span>
               </button>
@@ -361,12 +408,16 @@ export default function Artwork({ id, dataVersion = 0 }) {
         </div>
 
         <div className="art-grid">
-          {shown.map((image) => (
+          {shown.map((image, i) => (
             <ArtTile
               key={image.image_id}
               albumId={id}
               image={image}
               isCover={image.image_id === listing.current_image_id}
+              onOpen={() => {
+                setApplyError(null);
+                setLbIndex(i);
+              }}
             />
           ))}
         </div>
@@ -455,6 +506,32 @@ export default function Artwork({ id, dataVersion = 0 }) {
       )}
 
       {content}
+
+      {lbIndex !== null && shown[lbIndex] && (
+        <ArtLightbox
+          albumId={id}
+          images={shown}
+          index={lbIndex}
+          currentImageId={listing?.current_image_id ?? null}
+          onIndex={(i) => {
+            setApplyError(null);
+            setLbIndex(i);
+          }}
+          onClose={() => {
+            setApplyError(null);
+            setLbIndex(null);
+          }}
+          onApply={applyImage}
+          applyBusy={applyBusy}
+          applyError={applyError}
+        />
+      )}
+
+      {toast && (
+        <div className="art-toast">
+          <Icon name="check" size={12} /> <span className="mono">{toast}</span>
+        </div>
+      )}
     </div>
   );
 }

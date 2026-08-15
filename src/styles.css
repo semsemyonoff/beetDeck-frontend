@@ -4416,6 +4416,11 @@ h4 {
 .art-lb-inner {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  /* The row must be definite, or the stage is content-sized: the frame's
+   * `height: 100%` then resolves against `auto`, the image falls back to its
+   * natural height and a ~1:8 spine pushes the whole lightbox past the
+   * viewport. Verified with a real 150×1200 strip, not reasoned about. */
+  grid-template-rows: minmax(0, 1fr);
   gap: 0;
   width: min(1240px, 100%);
   height: min(760px, 88vh);
@@ -4431,6 +4436,7 @@ h4 {
   place-items: center;
   padding: var(--s-7);
   min-width: 0;
+  min-height: 0;
   background: #05080f
     repeating-linear-gradient(
       135deg,
@@ -4444,10 +4450,22 @@ h4 {
   justify-content: center;
   width: 100%;
   height: 100%;
+  /* Without these the grid item's automatic minimum size is the image's own
+   * min-content height, which beats `height: 100%` and lets a tall scan grow
+   * the frame instead of being letterboxed inside it. */
+  min-width: 0;
+  min-height: 0;
 }
 .art-lb-frame .art-svg {
   max-width: 100%;
   max-height: 100%;
+  /* The prototype letterboxed an <svg>, which has no intrinsic size and fills
+   * the frame on its own. An <img> stops at its natural size, so a 500 px
+   * rendition would float in the middle of a ~900 px stage; these three
+   * restore the prototype's framing without cropping or stretching. */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.6));
 }
 .art-lb-nav {
@@ -4543,6 +4561,20 @@ h4 {
 .art-lb-actions .btn {
   justify-content: center;
   height: 34px;
+  /* Two of the three actions are real anchors (this repository's routing rule),
+   * and `.btn` never had to suppress the UA underline before — same reason the
+   * empty states carry their own rule. */
+  text-decoration: none;
+}
+/* Scoped on purpose: the prototype leaned on a global `.btn:disabled`, which
+ * this file deliberately does not carry (it would restyle every disabled button
+ * in the SPA). Without a rule of some kind the disabled "Set as album cover"
+ * is pixel-identical to an enabled one — and RTL, which asserts the attribute,
+ * cannot see that. */
+.art-lb-actions .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  filter: saturate(0.75);
 }
 
 .art-toast {
