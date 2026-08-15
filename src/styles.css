@@ -4079,3 +4079,509 @@ h4 {
 .ite-add-empty {
   padding: 8px;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Artwork gallery (Cover Art Archive) — .art-*
+ *  Uniform square tiles + letterboxed art: ratios run 1:8 → 2:1, so the square
+ *  keeps badges/comments on one baseline while the letterbox still reads the
+ *  true shape of each scan.
+ *  Ported from docs/design/project/styles.css (the design prototype), minus two
+ *  rules that block carried: .badge-warn (already defined above) and a global
+ *  .btn:disabled, which would restyle every disabled button in the SPA.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.page-artwork {
+  padding-bottom: var(--s-9);
+}
+.crumb-static-now {
+  color: var(--text);
+}
+
+.art-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-6);
+}
+.art-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.art-head-side {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.art-mbid {
+  color: var(--text-faint);
+}
+
+.art-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: var(--s-5);
+}
+.art-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.art-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+.art-chip:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.art-chip-n {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.art-chip-on {
+  background: var(--accent-soft);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--accent) 45%, transparent);
+}
+.art-chip-on .art-chip-n {
+  color: color-mix(in oklab, var(--accent) 70%, white);
+}
+.art-count-line {
+  font-size: 11.5px;
+  color: var(--text-mute);
+  letter-spacing: 0.01em;
+}
+.art-count-skel {
+  display: block;
+  margin-bottom: var(--s-4);
+}
+
+.art-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--s-4);
+}
+.art-tile {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border-radius: var(--r-md);
+  background: var(--surface-0);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+  overflow: hidden;
+  transition:
+    box-shadow 120ms,
+    transform 120ms;
+}
+.art-tile:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    var(--sh-2);
+  transform: translateY(-2px);
+}
+.art-tile-cover {
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.art-stage {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: #060a14
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.022) 0 6px,
+      transparent 6px 12px
+    );
+}
+/* The prototype letterboxes an inline <svg>; the real page renders an <img> in
+   the same box under the same class name (the responsive rule below matches on
+   it), so object-fit — which an <svg> does not need — is added here. */
+.art-svg {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.art-flag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+.art-flag-cover {
+  background: color-mix(in oklab, var(--accent) 82%, transparent);
+  color: var(--accent-fg);
+}
+.art-flag-unapproved {
+  top: auto;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(8, 12, 24, 0.78);
+  color: var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn) 35%, transparent);
+}
+.art-ratio {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  color: var(--text-mute);
+  background: rgba(6, 10, 20, 0.72);
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+}
+.art-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 11px 12px;
+  border-top: 1px solid var(--border-soft);
+}
+.art-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.art-type {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.art-type-front {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: color-mix(in oklab, var(--accent) 72%, white);
+}
+.art-type-back {
+  background: color-mix(in oklab, var(--lime) 16%, transparent);
+  color: color-mix(in oklab, var(--lime) 68%, white);
+}
+.art-type-medium {
+  background: color-mix(in oklab, var(--ok) 16%, transparent);
+  color: var(--ok);
+}
+.art-comment {
+  font-size: 11px;
+  color: var(--text-mute);
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.art-tile-skel {
+  pointer-events: none;
+}
+.art-skel-stage {
+  background: var(--surface-1);
+  animation: art-pulse 1.4s ease-in-out infinite;
+}
+.art-skel-line {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  animation: art-pulse 1.4s ease-in-out infinite;
+}
+.art-skel-line-sm {
+  height: 8px;
+  opacity: 0.7;
+}
+@keyframes art-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.art-empty {
+  max-width: 560px;
+  margin: var(--s-10) auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+.art-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-lg);
+  display: grid;
+  place-items: center;
+  background: var(--surface-1);
+  color: var(--text-mute);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+.art-empty-title {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.art-empty-body {
+  font-size: 13px;
+  color: var(--text-mute);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.art-empty-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
+.art-error {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface-0));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--danger) 35%, transparent);
+}
+.art-error-icon {
+  color: var(--danger);
+  display: inline-flex;
+}
+.art-error-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.art-error-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.art-error-reason {
+  font-size: 11px;
+  color: var(--text-mute);
+  overflow-wrap: anywhere;
+}
+.art-error-hint {
+  margin-top: var(--s-4);
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.art-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(3, 7, 18, 0.82);
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
+  animation: fade-in 120ms ease-out;
+}
+.art-lb-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 0;
+  width: min(1240px, 100%);
+  height: min(760px, 88vh);
+  background: var(--surface-0);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-modal);
+  overflow: hidden;
+  animation: pop-in 140ms ease-out;
+}
+.art-lb-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--s-7);
+  min-width: 0;
+  background: #05080f
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.02) 0 8px,
+      transparent 8px 16px
+    );
+}
+.art-lb-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.art-lb-frame .art-svg {
+  max-width: 100%;
+  max-height: 100%;
+  filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.6));
+}
+.art-lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+  background: rgba(12, 18, 34, 0.8);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.art-lb-nav:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.art-lb-prev {
+  left: 14px;
+}
+.art-lb-next {
+  right: 14px;
+}
+.art-lb-counter {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text-mute);
+  background: rgba(6, 10, 20, 0.7);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.art-lb-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-left: 1px solid var(--border-soft);
+  overflow-y: auto;
+}
+.art-lb-side-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.art-lb-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.art-lb-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.art-lb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.art-lb-meta > div {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: var(--s-3);
+  align-items: baseline;
+}
+.art-lb-meta dt {
+  color: var(--text-mute);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.art-lb-meta dd {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.art-lb-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border-soft);
+}
+.art-lb-actions .btn {
+  justify-content: center;
+  height: 34px;
+}
+
+.art-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 320;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow:
+    var(--sh-2),
+    inset 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.btn-badge {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-dim);
+}
+.btn-action:hover .btn-badge {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .art-lb-inner {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 92vh;
+  }
+  .art-lb-side {
+    border-left: none;
+    border-top: 1px solid var(--border-soft);
+  }
+  .art-lb-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

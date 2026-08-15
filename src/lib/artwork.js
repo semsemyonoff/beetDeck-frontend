@@ -164,3 +164,37 @@ export function slideDimensions(image, naturalSize) {
     ? { width: RATIO_LONG_EDGE, height: short }
     : { width: short, height: RATIO_LONG_EDGE };
 }
+
+/**
+ * Where the listing on screen came from. `source` is a closed set on the
+ * backend, so an unknown value means the API grew one and the page says so
+ * rather than rendering an empty gap.
+ */
+const SOURCE_LABEL = {
+  storage: 'local storage',
+  cache: 'cache',
+  remote: 'Cover Art Archive',
+};
+
+/**
+ * The API timestamp is ISO-8601 UTC. Rendered date+minute, not through
+ * `toLocaleString`: the provenance line is an operational fact ("this listing
+ * is from yesterday"), and a locale-dependent string makes it untestable for
+ * the sake of an hour of precision nobody reads here. A value that is not an
+ * ISO timestamp is passed through rather than dropped.
+ */
+export function formatFetchedAt(iso) {
+  if (!iso) return null;
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(String(iso));
+  return m ? `${m[1]} ${m[2]} UTC` : String(iso);
+}
+
+/** The page-header line built from a listing's `source` + `fetched_at`. */
+export function provenanceLine(listing) {
+  if (!listing) return null;
+  const label = SOURCE_LABEL[listing.source] || listing.source;
+  if (!label) return null;
+  const at = formatFetchedAt(listing.fetched_at);
+  // A remote listing has no `fetched_at` — it *is* the fetch.
+  return at ? `from ${label} · fetched ${at}` : `from ${label} · just fetched`;
+}

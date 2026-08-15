@@ -4,6 +4,7 @@ import ScanBanner from './ui/ScanBanner.jsx';
 import Library from './pages/Library.jsx';
 import Artist from './pages/Artist.jsx';
 import Album from './pages/Album.jsx';
+import Artwork from './pages/Artwork.jsx';
 import Untagged from './pages/Untagged.jsx';
 import ScanLog from './pages/ScanLog.jsx';
 import { useHashRoute } from './useHashRoute.js';
@@ -139,6 +140,9 @@ export default function App() {
         )}
         {route.name === 'album' && (
           <Album key={route.id} id={route.id} dataVersion={dataVersion} />
+        )}
+        {route.name === 'artwork' && (
+          <Artwork key={route.id} id={route.id} dataVersion={dataVersion} />
         )}
         {route.name === 'untagged' && (
           <Untagged

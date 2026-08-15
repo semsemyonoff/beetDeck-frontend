@@ -4,7 +4,9 @@ import {
   RATIO_LONG_EDGE,
   TYPE_ORDER,
   filterByType,
+  formatFetchedAt,
   pickThumbSize,
+  provenanceLine,
   slideDimensions,
   sortImages,
   typeCounts,
@@ -300,4 +302,54 @@ describe('slideDimensions', () => {
   it('returns null for a missing image with nothing loaded', () => {
     expect(slideDimensions(null, null)).toBeNull();
   });
+});
+
+describe('formatFetchedAt', () => {
+  const CASES = [
+    ['2026-08-14T12:00:00Z', '2026-08-14 12:00 UTC'],
+    ['2026-08-14T12:34:56.789012Z', '2026-08-14 12:34 UTC'],
+    ['2026-08-14T12:34:56+00:00', '2026-08-14 12:34 UTC'],
+    // Anything that is not an ISO timestamp is shown as-is rather than dropped:
+    // a value the API grew is still a fact about the listing.
+    ['yesterday', 'yesterday'],
+  ];
+
+  it.each(CASES)('formats %s', (iso, expected) => {
+    expect(formatFetchedAt(iso)).toBe(expected);
+  });
+
+  it.each([null, undefined, ''])('returns null for %p', (iso) => {
+    expect(formatFetchedAt(iso)).toBeNull();
+  });
+});
+
+describe('provenanceLine', () => {
+  const CASES = [
+    [
+      { source: 'storage', fetched_at: '2026-08-14T12:00:00Z' },
+      'from local storage · fetched 2026-08-14 12:00 UTC',
+    ],
+    [
+      { source: 'cache', fetched_at: '2026-08-14T12:00:00Z' },
+      'from cache · fetched 2026-08-14 12:00 UTC',
+    ],
+    // A remote listing *is* the fetch, so it carries no timestamp.
+    [
+      { source: 'remote', fetched_at: null },
+      'from Cover Art Archive · just fetched',
+    ],
+    // An unknown source is rendered rather than blanked — the closed set grew.
+    [{ source: 'mirror', fetched_at: null }, 'from mirror · just fetched'],
+  ];
+
+  it.each(CASES)('renders %o', (listing, expected) => {
+    expect(provenanceLine(listing)).toBe(expected);
+  });
+
+  it.each([null, { source: null }, { source: '' }])(
+    'returns null without a source (%p)',
+    (listing) => {
+      expect(provenanceLine(listing)).toBeNull();
+    }
+  );
 });
