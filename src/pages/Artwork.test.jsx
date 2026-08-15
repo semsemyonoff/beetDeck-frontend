@@ -36,6 +36,42 @@ const ALBUM = {
   ignored: false,
 };
 
+function image(overrides) {
+  return {
+    image_id: '1',
+    types: ['Front'],
+    front: true,
+    back: false,
+    approved: true,
+    comment: '',
+    thumb_sizes: [250, 500, 1200],
+    mb_url: `https://musicbrainz.org/release/${MBID}`,
+    width: null,
+    height: null,
+    ...overrides,
+  };
+}
+
+const IMAGES = [
+  image({ image_id: '100', width: 1425, height: 1425 }),
+  image({
+    image_id: '200',
+    types: ['Back'],
+    front: false,
+    back: true,
+    comment: 'rear sleeve, slight crease',
+    thumb_sizes: [250, 500],
+  }),
+  image({
+    image_id: '300',
+    types: ['Booklet', 'Front'],
+    front: false,
+    approved: false,
+    width: 2400,
+    height: 1200,
+  }),
+];
+
 const LISTING = {
   mb_albumid: MBID,
   available: true,
@@ -228,6 +264,214 @@ describe('Artwork — shell', () => {
   it('puts the album in the tab title', async () => {
     await renderArtwork();
     expect(document.title).toBe(`Artwork — Dummy — Portishead · ${APP_NAME}`);
+  });
+});
+
+describe('Artwork — chips and grid', () => {
+  beforeEach(stubLocation);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+    document.title = APP_NAME;
+  });
+
+  function withImages(images = IMAGES, extra = {}) {
+    return renderArtwork({ listing: { ...LISTING, images, ...extra } });
+  }
+
+  function tiles() {
+    return [...document.querySelectorAll('.art-tile')];
+  }
+
+  function chip(name) {
+    return [...document.querySelectorAll('.art-chip')].find((b) =>
+      b.textContent.startsWith(name)
+    );
+  }
+
+  it('renders one tile per image, ordered by primary type', async () => {
+    await withImages();
+    expect(tiles()).toHaveLength(3);
+    // sortImages: Front, Back, Booklet — the front cover leads the grid.
+    expect(
+      tiles().map((t) => t.querySelector('.art-type').textContent)
+    ).toEqual(['Front', 'Back', 'Booklet']);
+  });
+
+  it('renders every type of an image as its own badge', async () => {
+    await withImages();
+    const booklet = tiles()[2];
+    expect(
+      [...booklet.querySelectorAll('.art-type')].map((s) => s.textContent)
+    ).toEqual(['Booklet', 'Front']);
+    // The class carries the type so the prototype's per-type colours apply.
+    expect(booklet.querySelector('.art-type').className).toContain(
+      'art-type-booklet'
+    );
+  });
+
+  it('builds the chips from the types present, with counts', async () => {
+    await withImages();
+    const labels = [...document.querySelectorAll('.art-chip')].map((b) =>
+      b.textContent.replace(/\s+/g, ' ').trim()
+    );
+    // Front counts twice: an image with two types counts under each, because
+    // the chips filter rather than partition.
+    expect(labels).toEqual(['All 3', 'Front 2', 'Back 1', 'Booklet 1']);
+    expect(chip('All').className).toContain('art-chip-on');
+  });
+
+  it('narrows the grid to the active chip', async () => {
+    await withImages();
+    await act(async () => {
+      fireEvent.click(chip('Front'));
+    });
+    expect(tiles()).toHaveLength(2);
+    expect(chip('Front').className).toContain('art-chip-on');
+    expect(chip('All').className).not.toContain('art-chip-on');
+    expect(
+      screen.getByText(/3 images from Cover Art Archive · showing 2 front/)
+    ).toBeInTheDocument();
+  });
+
+  it('goes back to the full grid when All is clicked', async () => {
+    await withImages();
+    await act(async () => {
+      fireEvent.click(chip('Back'));
+    });
+    expect(tiles()).toHaveLength(1);
+    await act(async () => {
+      fireEvent.click(chip('All'));
+    });
+    expect(tiles()).toHaveLength(3);
+  });
+
+  it('falls back to All when a refresh drops the filtered type', async () => {
+    // Leaving the active chip pointing at a type that is gone would render an
+    // empty grid with no visible cause.
+    const fetchMock = makeFetch({
+      listing: { ...LISTING, images: IMAGES },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    await act(async () => {
+      render(<Artwork id="1" />);
+    });
+    await act(async () => {
+      fireEvent.click(chip('Back'));
+    });
+    expect(tiles()).toHaveLength(1);
+
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () =>
+          url === '/api/album/1' ? ALBUM : { ...LISTING, images: [IMAGES[0]] },
+      })
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    });
+    await waitFor(() => expect(tiles()).toHaveLength(1));
+    expect(chip('All').className).toContain('art-chip-on');
+    expect(chip('Back')).toBeUndefined();
+  });
+
+  it('flags the tile whose id matches current_image_id', async () => {
+    await withImages(IMAGES, { current_image_id: '200' });
+    const flagged = tiles().filter((t) =>
+      t.className.includes('art-tile-cover')
+    );
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]).toHaveTextContent('Back');
+    expect(screen.getAllByText('Current cover')).toHaveLength(1);
+  });
+
+  it('flags no tile when the album has no applied CAA cover', async () => {
+    await withImages();
+    expect(screen.queryByText('Current cover')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.art-tile-cover')).toHaveLength(0);
+  });
+
+  it('marks unapproved images and leaves approved ones unmarked', async () => {
+    await withImages();
+    expect(screen.getAllByText('Not approved')).toHaveLength(1);
+    expect(tiles()[2]).toHaveTextContent('Not approved');
+  });
+
+  it('renders a comment only when the image carries one', async () => {
+    await withImages();
+    const comments = [...document.querySelectorAll('.art-comment')].map(
+      (c) => c.textContent
+    );
+    expect(comments).toEqual(['rear sleeve, slight crease']);
+  });
+
+  it('shows the measured size, and an em dash when the API has none', async () => {
+    await withImages();
+    const sizes = tiles().map((t) => t.querySelector('.art-ratio').textContent);
+    // 200 has never had its original fetched, so nothing measured it. The 250 px
+    // tile in front of you was measured — reporting *that* would be a false fact
+    // about the scan.
+    expect(sizes).toEqual(['1425×1425', '—', '2400×1200']);
+  });
+
+  it('describes each tile image by its types', async () => {
+    await withImages();
+    expect(
+      screen.getByRole('img', { name: 'Booklet, Front artwork' })
+    ).toBeInTheDocument();
+  });
+
+  it('describes an untyped image without an empty alt', async () => {
+    await withImages([image({ image_id: '400', types: [] })]);
+    expect(
+      screen.getByRole('img', { name: 'Untyped artwork' })
+    ).toBeInTheDocument();
+  });
+
+  it('loads tiles lazily', async () => {
+    await withImages();
+    for (const img of screen.getAllByRole('img')) {
+      expect(img).toHaveAttribute('loading', 'lazy');
+      // The responsive rule in styles.css matches on this class, despite the
+      // name — the prototype letterboxed an <svg> in the same box.
+      expect(img.className).toContain('art-svg');
+    }
+  });
+
+  // Architectural, not behavioural: every byte goes through the backend proxy.
+  // A later refactor to a direct coverartarchive.org URL would keep the gallery
+  // looking identical while making local storage pointless and pulling an
+  // external origin into the page — this is the test that stops it.
+  it('sources every tile from the backend proxy at the tile size', async () => {
+    await withImages();
+    expect(
+      screen.getAllByRole('img').map((i) => i.getAttribute('src'))
+    ).toEqual([
+      '/api/album/1/artwork/100?size=250',
+      '/api/album/1/artwork/200?size=250',
+      '/api/album/1/artwork/300?size=250',
+    ]);
+  });
+
+  it('asks for the original when CAA generated no thumbnails', async () => {
+    await withImages([image({ image_id: '500', thumb_sizes: [] })]);
+    expect(screen.getByRole('img')).toHaveAttribute(
+      'src',
+      '/api/album/1/artwork/500?size=full'
+    );
+  });
+
+  it('renders an empty grid without crashing when there are no images', async () => {
+    await withImages([]);
+    expect(tiles()).toHaveLength(0);
+    expect(
+      screen.getByText(/0 images from Cover Art Archive/)
+    ).toBeInTheDocument();
+    // Only the All chip; there are no types to build the rest from.
+    expect(document.querySelectorAll('.art-chip')).toHaveLength(1);
   });
 });
 
