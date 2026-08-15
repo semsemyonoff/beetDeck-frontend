@@ -1257,6 +1257,11 @@ h4 {
 .action-group-btns .btn-action:last-child {
   border-right: none;
 }
+/* Same reason as `.art-empty-actions .btn`: the Gallery entry is a real anchor
+   (routing rule), and `.btn` deliberately does not suppress the UA underline. */
+.action-group-btns .btn-action {
+  text-decoration: none;
+}
 .action-group-btns .btn-action:hover {
   background: var(--surface-2);
   color: var(--text);
