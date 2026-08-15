@@ -44,6 +44,19 @@ export const TYPE_ORDER = [
 /** Long edge used when a slide's size is only known as a ratio. */
 export const RATIO_LONG_EDGE = 1200;
 
+/**
+ * The grid tile's guaranteed minimum width, matching the CSS
+ * `repeat(auto-fill, minmax(190px, 1fr))`.
+ *
+ * It lives here rather than in the page because the lightbox needs the *same*
+ * number: PhotoSwipe's placeholder is only instant if it names the rendition the
+ * grid actually loaded, and `pickThumbSize` is what decides that. Hardcoding a
+ * size on either side desynchronises them for any image whose `thumb_sizes` do
+ * not happen to include it — the placeholder then misses the browser cache and
+ * asks the proxy for a rendition the backend answers `400` for.
+ */
+export const TILE_PX = 190;
+
 const UNKNOWN_TYPE_RANK = TYPE_ORDER.length;
 
 /** Rank of an image's primary type; unknown and untyped both sort last. */

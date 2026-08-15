@@ -505,6 +505,34 @@ describe('Artwork — refresh', () => {
     );
     expect(albumCalls).toHaveLength(1);
   });
+
+  it('spends the ?refresh=1 on the run it was asked for and no later one', async () => {
+    // A background rescan bumps `dataVersion` with nobody on this page. If the
+    // intent lived in the tick alone it would never return to 0, and every such
+    // bump after the first Refresh would keep spending the CAA courtesy budget.
+    const fetchMock = makeFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    let rerender;
+    await act(async () => {
+      ({ rerender } = render(<Artwork id="1" dataVersion={0} />));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    });
+    await waitFor(() => expect(artworkCalls(fetchMock)).toHaveLength(2));
+
+    await act(async () => {
+      rerender(<Artwork id="1" dataVersion={1} />);
+    });
+
+    await waitFor(() =>
+      expect(artworkCalls(fetchMock)).toEqual([
+        '/api/album/1/artwork',
+        '/api/album/1/artwork?refresh=1',
+        '/api/album/1/artwork',
+      ])
+    );
+  });
 });
 
 describe('Artwork — non-grid states', () => {
@@ -668,6 +696,61 @@ describe('Artwork — non-grid states', () => {
     expect(document.querySelector('.art-error-reason')).toHaveTextContent(
       'NetworkError'
     );
+  });
+
+  it('banners a 200 whose listing body cannot be read', async () => {
+    // `null` is this page's loading state, so an unreadable 200 that fell
+    // through would leave the skeleton up for good — no error, no Retry.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json:
+            url === '/api/album/1'
+              ? async () => ALBUM
+              : async () => {
+                  throw new SyntaxError('Unexpected token <');
+                },
+        })
+      )
+    );
+    await act(async () => {
+      render(<Artwork id="1" />);
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText('Cover Art Archive did not respond')
+      ).toBeInTheDocument()
+    );
+    expect(document.querySelector('.art-tile-skel')).toBeNull();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('banners a 200 whose album body cannot be read', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json:
+            url === '/api/album/1'
+              ? async () => {
+                  throw new SyntaxError('Unexpected token <');
+                }
+              : async () => LISTING,
+        })
+      )
+    );
+    await act(async () => {
+      render(<Artwork id="1" />);
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Could not load this album')).toBeInTheDocument()
+    );
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
   // The three non-grid outcomes are three different problems with three
@@ -838,6 +921,20 @@ describe('Artwork — lightbox and apply', () => {
     });
     // The index points into the filtered list; keeping it would stage a frame
     // that is no longer in the grid behind it.
+    expect(document.querySelector('.art-lightbox')).toBeNull();
+  });
+
+  it('closes the lightbox when the listing itself is refetched', async () => {
+    // Same hazard as the chip filter, one level up: the whole list is replaced
+    // while the index survives, so the viewer re-opens by itself on whatever
+    // image now sits at that position — which Set as cover would then write.
+    await open();
+    expect(document.querySelector('.art-lightbox')).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    });
+
     expect(document.querySelector('.art-lightbox')).toBeNull();
   });
 

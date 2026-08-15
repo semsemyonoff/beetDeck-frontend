@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ArtLightbox from '../ui/ArtLightbox.jsx';
 import Icon from '../ui/Icon.jsx';
 import RouteLink from '../ui/RouteLink.jsx';
 import { albumLabel } from '../lib/albums.js';
 import {
+  TILE_PX,
   filterByType,
   pickThumbSize,
   provenanceLine,
@@ -11,12 +12,6 @@ import {
   typeCounts,
 } from '../lib/artwork.js';
 import { useDocumentTitle } from '../lib/useDocumentTitle.js';
-
-// The grid is `repeat(auto-fill, minmax(190px, 1fr))`, so 190 is the box a tile
-// is guaranteed to be at least as wide as. `pickThumbSize` turns it into the
-// smallest rendition that covers it — asking for the largest instead is what
-// puts 40 originals through the proxy on one gallery open.
-const TILE_PX = 190;
 
 // The listing carries no count before it arrives, so the skeleton is a fixed
 // plausible grid rather than a promise about how many scans exist.
@@ -202,9 +197,17 @@ export default function Artwork({ id, dataVersion = 0 }) {
   const [albumError, setAlbumError] = useState(null);
   const [listing, setListing] = useState(null);
   const [listingError, setListingError] = useState(null);
-  // 0 is the mount load; every later value is a user-driven Refresh, which is
-  // the only thing that may spend the CAA courtesy budget with `?refresh=1`.
+  // The tick only re-runs the effect; the intent to spend the CAA courtesy
+  // budget lives in the ref beside it and is **consumed** by the run it belongs
+  // to. A counter alone cannot express this: it never returns to 0, so after one
+  // Refresh every later re-run — including the `dataVersion` bumps a background
+  // rescan fires with no user on this page — would keep sending `?refresh=1`.
   const [refreshTick, setRefreshTick] = useState(0);
+  const forceRefresh = useRef(false);
+  function refreshListing() {
+    forceRefresh.current = true;
+    setRefreshTick((v) => v + 1);
+  }
   // The album request has its own retry counter: a Retry on the listing banner
   // must not re-request metadata that arrived fine, which is the same reason
   // the two fetches are two effects.
@@ -229,6 +232,13 @@ export default function Artwork({ id, dataVersion = 0 }) {
           err.status = r.status;
           throw err;
         }
+        // `null` is the loading state for this page's shell, so an unreadable
+        // 200 body has to become an error here or the skeleton never resolves.
+        if (d === null) {
+          const err = new Error('the response body was not readable');
+          err.status = r.status;
+          throw err;
+        }
         return d;
       })
       .then((d) => {
@@ -247,8 +257,14 @@ export default function Artwork({ id, dataVersion = 0 }) {
     let aborted = false;
     setListing(null);
     setListingError(null);
-    const url =
-      `/api/album/${id}/artwork` + (refreshTick > 0 ? '?refresh=1' : '');
+    // The list this index points into is about to be replaced, and the index
+    // survives the swap; leaving it set re-opens the viewer by itself when the
+    // new listing lands — on whatever image now sits at that position, which an
+    // apply would then write as the album cover.
+    setLbIndex(null);
+    const force = forceRefresh.current;
+    forceRefresh.current = false;
+    const url = `/api/album/${id}/artwork` + (force ? '?refresh=1' : '');
     fetch(url)
       .then(async (r) => {
         // The banner states the reason the backend gave — "CAA could not be
@@ -257,6 +273,14 @@ export default function Artwork({ id, dataVersion = 0 }) {
         const d = await r.json().catch(() => null);
         if (!r.ok) {
           const err = new Error(d?.error || '');
+          err.status = r.status;
+          throw err;
+        }
+        // A 200 whose body is not JSON leaves nothing to render, and `null`
+        // reads as "still loading" to every branch below — the page would sit on
+        // its skeleton for good with no error and no Retry.
+        if (d === null) {
+          const err = new Error('the response body was not readable');
           err.status = r.status;
           throw err;
         }
@@ -339,9 +363,12 @@ export default function Artwork({ id, dataVersion = 0 }) {
   const mbid = listing?.mb_albumid || album.mb_albumid || '';
   const storageOk =
     listing && listing.storage_enabled && !listing.storage_error;
-  const provenance = listing ? provenanceLine(listing) : '';
+  // Both helpers own the "no listing yet" case (`provenanceLine` returns null,
+  // `sortImages` returns []); re-deciding it here would make two places answer
+  // the same question, with a different falsy value each.
+  const provenance = provenanceLine(listing);
 
-  const images = listing ? sortImages(listing.images) : [];
+  const images = sortImages(listing?.images);
   const counts = typeCounts(images);
   // A Refresh can drop the type the active chip filters on; falling back to All
   // beats leaving the grid empty with no visible cause.
@@ -360,7 +387,7 @@ export default function Artwork({ id, dataVersion = 0 }) {
         title="Cover Art Archive did not respond"
         error={listingError}
         hint="The cover already in your files is untouched. Local scans stay available from the album screen."
-        onRetry={() => setRefreshTick((v) => v + 1)}
+        onRetry={refreshListing}
       />
     );
   } else if (!listing) {
@@ -488,10 +515,7 @@ export default function Artwork({ id, dataVersion = 0 }) {
                   : 'Cache only'}
             </span>
           )}
-          <button
-            className="btn btn-ghost"
-            onClick={() => setRefreshTick((v) => v + 1)}
-          >
+          <button className="btn btn-ghost" onClick={refreshListing}>
             <Icon name="refresh" size={13} /> Refresh
           </button>
         </div>

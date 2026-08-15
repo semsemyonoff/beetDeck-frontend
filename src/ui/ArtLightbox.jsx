@@ -3,7 +3,7 @@ import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import 'photoswipe/style.css';
 import Icon from './Icon.jsx';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
-import { pickThumbSize, slideDimensions } from '../lib/artwork.js';
+import { TILE_PX, pickThumbSize, slideDimensions } from '../lib/artwork.js';
 
 // The stage is the lightbox inner (max 1240) minus the 320 px metadata rail,
 // so ~880 CSS px at the widest. `pickThumbSize` turns that into the smallest
@@ -170,9 +170,11 @@ export default function ArtLightbox({
       const dims = slideDimensions(a, naturalRef.current[a.image_id]);
       return {
         src: `/api/album/${albumId}/artwork/${a.image_id}?size=full`,
-        // Already in the browser cache from the grid, so the placeholder is
-        // instant and the transition does not start on an empty frame.
-        msrc: `/api/album/${albumId}/artwork/${a.image_id}?size=250`,
+        // Resolved through the grid's own rule, not pinned to 250: the tile
+        // loaded `pickThumbSize(a, TILE_PX)`, and only that exact URL is already
+        // in the browser cache. An image whose `thumb_sizes` omit 250 would
+        // otherwise get a placeholder the backend answers `400` for.
+        msrc: `/api/album/${albumId}/artwork/${a.image_id}?size=${pickThumbSize(a, TILE_PX)}`,
         alt: altFor(a.types),
         ...(dims || {}),
       };

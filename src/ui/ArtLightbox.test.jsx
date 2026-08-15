@@ -372,6 +372,25 @@ describe('ArtLightbox — PhotoSwipe fullscreen', () => {
     expect(data[1].alt).toBe('Booklet, Front artwork');
   });
 
+  it('resolves the placeholder through the grid rule, not a fixed 250', () => {
+    // Only the exact URL the tile loaded is in the browser cache, and 250 is not
+    // a rendition every image has — a hardcoded one misses the cache and asks
+    // the proxy for a size the backend answers 400 for.
+    setup({
+      images: [
+        image({ image_id: '400', thumb_sizes: [500, 1200] }),
+        image({ image_id: '500', thumb_sizes: [] }),
+      ],
+      index: 0,
+    });
+    fireEvent.click(stagedImage());
+    const data = pswp().loadAndOpen.mock.calls[0][1];
+    expect(data.map((d) => d.msrc)).toEqual([
+      '/api/album/1/artwork/400?size=500',
+      '/api/album/1/artwork/500?size=full',
+    ]);
+  });
+
   it('takes the slide size from the measured original when the API has one', () => {
     setup({ index: 0 });
     fireEvent.click(stagedImage());
