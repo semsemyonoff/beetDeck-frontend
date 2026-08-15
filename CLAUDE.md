@@ -51,11 +51,14 @@ Two things the tree cannot show:
 - `#/` — Library
 - `#/artist/<name>` — Artist (`encodeURIComponent`'d)
 - `#/album/<id>` — Album
+- `#/album/<id>/artwork` — Cover Art Archive gallery for that album
 - `#/untagged` — Untagged folder index
 - `#/untagged/<dir>` — per-folder tag editor (`encodeURIComponent`'d, decoded once in `parse()`)
 - `#/scan` — scan log for the current/last run
 
-Anything unrecognized falls back to Library.
+Anything unrecognized falls back to Library — except an unknown suffix under
+`#/album/<id>/…`, which keeps rendering the album page rather than losing the id
+the URL still carries.
 
 **Every navigable element must be a real `<a href>`** so middle-click, Ctrl/Cmd+click
 and "Open in new tab" work. Use `hrefFor` / `useRouteLink` / `<RouteLink>` rather

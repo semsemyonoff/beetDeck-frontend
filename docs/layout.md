@@ -26,6 +26,8 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
     │   ├── lyrics.js       # parseLyricLines / isSynced
+    │   ├── artwork.js      # sortImages / typeCounts / filterByType / pickThumbSize /
+    │   │                   #   slideDimensions / formatFetchedAt / provenanceLine
     │   ├── scan.js         # buildScanSummary / buildScanViewModel / scanProgressPct /
     │   │                   #   isIndeterminate / applyLogChunk / parseLogLines / classifyLogLevel
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize /
@@ -51,11 +53,15 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     │   ├── TagEditorModal.jsx  # Album tag editor (Album page → "Edit tags")
     │   ├── ItemTagsEditor.jsx  # Per-track free tag editor over all editable beets fields
     │   ├── AlbumLyricsModal.jsx # Album lyrics fetch→preview→confirm (props-driven state machine)
-    │   └── AlbumBpmModal.jsx    # Album BPM progress (no apply step — writes immediately)
+    │   ├── AlbumBpmModal.jsx    # Album BPM progress (no apply step — writes immediately)
+    │   └── ArtLightbox.jsx      # Artwork overlay: metadata + Set-as-cover, and the
+    │                            #   PhotoSwipe fullscreen layer over the filtered list
     └── pages/              # Route views
         ├── Library.jsx     # Index + Wall layouts
         ├── Artist.jsx
         ├── Album.jsx       # Owns the lyrics/BPM network calls the modals render
+        ├── Artwork.jsx     # Cover Art Archive gallery; owns the listing fetch and
+        │                   #   the apply POST the lightbox renders
         ├── Untagged.jsx
         └── ScanLog.jsx     # Offset-polls the scan log, level-colored lines, auto-scroll while live
 ```
