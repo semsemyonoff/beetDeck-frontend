@@ -1,7 +1,9 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import PhotoSwipeLightbox from 'photoswipe/lightbox';
+import 'photoswipe/style.css';
 import Icon from './Icon.jsx';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
-import { pickThumbSize } from '../lib/artwork.js';
+import { pickThumbSize, slideDimensions } from '../lib/artwork.js';
 
 // The stage is the lightbox inner (max 1240) minus the 320 px metadata rail,
 // so ~880 CSS px at the widest. `pickThumbSize` turns that into the smallest
@@ -9,6 +11,11 @@ import { pickThumbSize } from '../lib/artwork.js';
 const STAGE_PX = 900;
 
 const DASH = '—';
+
+/** One alt string for both layers, so a slide reads the same in fullscreen. */
+function altFor(types) {
+  return types?.length ? `${types.join(', ')} artwork` : 'Untyped artwork';
+}
 
 /** `<dt>/<dd>` pair; an unknown value is an em dash, never a guess. */
 function MetaRow({ label, value, mono = true }) {
@@ -33,7 +40,13 @@ function MetaRow({ label, value, mono = true }) {
  *
  * `images` is the **filtered** list the grid is showing and `index` points into
  * it: navigation that walked the unfiltered list would leave the chip the user
- * picked and land on a tile that is not on screen.
+ * picked and land on a tile that is not on screen. PhotoSwipe's `dataSource` is
+ * built from the same list for the same reason.
+ *
+ * Two layers, one index: this component owns metadata and actions, PhotoSwipe
+ * owns pixels and zoom. While PhotoSwipe is up it also owns `Escape` and the
+ * arrows — this component's own handlers are suspended, or one press would
+ * collapse both layers and one arrow would advance two frames.
  */
 export default function ArtLightbox({
   albumId,
@@ -49,7 +62,22 @@ export default function ArtLightbox({
   const count = images?.length || 0;
   const image = count ? images[index] : null;
 
-  useModalDismiss(onClose);
+  const [fullscreen, setFullscreen] = useState(false);
+  const pswpRef = useRef(null);
+  // Natural sizes of the renditions this component has actually staged, keyed
+  // by image id. The API reports the original's size only once that file has
+  // been stored, so for everything else this ratio is all PhotoSwipe gets.
+  const naturalRef = useRef({});
+  // The PhotoSwipe instance outlives any single render, so its `change`
+  // handler reads the callback through a ref rather than closing over the one
+  // that existed at construction time.
+  const onIndexRef = useRef(onIndex);
+  useEffect(() => {
+    onIndexRef.current = onIndex;
+  }, [onIndex]);
+
+  // Passing `null` unbinds the hook: while PhotoSwipe is open, Escape is its.
+  useModalDismiss(fullscreen ? null : onClose);
 
   const prev = useCallback(() => {
     if (count) onIndex((index - 1 + count) % count);
@@ -61,13 +89,69 @@ export default function ArtLightbox({
   // Escape is `useModalDismiss`'s; the arrows are this component's own. Both sit
   // on `document` so they agree about which listener runs first.
   useEffect(() => {
+    if (fullscreen) return undefined;
     const onKey = (e) => {
       if (e.key === 'ArrowLeft') prev();
       else if (e.key === 'ArrowRight') next();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [prev, next]);
+  }, [prev, next, fullscreen]);
+
+  // One instance for the component's lifetime. `pswpModule` is a dynamic import
+  // so the ~40 kB core lands in its own chunk that only this route pays for,
+  // and it is only fetched when someone actually goes fullscreen.
+  useEffect(() => {
+    const lightbox = new PhotoSwipeLightbox({
+      pswpModule: () => import('photoswipe'),
+      // PhotoSwipe defaults to 0.8, which assumes the layer behind it is a
+      // page grid worth glimpsing. Here it is this component's own overlay —
+      // metadata rail, actions and all — and at 0.8 it reads straight through
+      // the fullscreen image. Verified in the browser, not reasoned about.
+      bgOpacity: 1,
+    });
+    lightbox.on('change', () => {
+      const i = lightbox.pswp?.currIndex;
+      // Write the fullscreen index back into page state, so closing lands on
+      // the frame fullscreen ended on rather than the one it started from.
+      if (typeof i === 'number') onIndexRef.current?.(i);
+    });
+    lightbox.on('close', () => setFullscreen(false));
+    lightbox.init();
+    pswpRef.current = lightbox;
+    return () => {
+      pswpRef.current = null;
+      lightbox.destroy();
+    };
+  }, []);
+
+  const rememberNatural = useCallback((e) => {
+    const el = e.currentTarget;
+    const id = el?.dataset?.imageId;
+    if (id && el.naturalWidth > 0 && el.naturalHeight > 0) {
+      naturalRef.current[id] = {
+        naturalWidth: el.naturalWidth,
+        naturalHeight: el.naturalHeight,
+      };
+    }
+  }, []);
+
+  const openFullscreen = useCallback(() => {
+    const lightbox = pswpRef.current;
+    if (!lightbox || !count) return;
+    const dataSource = images.map((a) => {
+      const dims = slideDimensions(a, naturalRef.current[a.image_id]);
+      return {
+        src: `/api/album/${albumId}/artwork/${a.image_id}?size=full`,
+        // Already in the browser cache from the grid, so the placeholder is
+        // instant and the transition does not start on an empty frame.
+        msrc: `/api/album/${albumId}/artwork/${a.image_id}?size=250`,
+        alt: altFor(a.types),
+        ...(dims || {}),
+      };
+    });
+    if (lightbox.loadAndOpen(index, dataSource)) setFullscreen(true);
+  }, [albumId, count, images, index]);
 
   if (!image) return null;
 
@@ -101,12 +185,25 @@ export default function ArtLightbox({
             </span>
           </button>
           <div className="art-lb-frame">
+            {/* Clicking the staged image hands the pixels to PhotoSwipe. The
+                <img> is the target rather than a wrapping <button> because the
+                frame's layout rules are what letterbox an extreme ratio. */}
             <img
               className="art-svg"
               src={`/api/album/${albumId}/artwork/${image.image_id}?size=${size}`}
-              alt={
-                types.length ? `${types.join(', ')} artwork` : 'Untyped artwork'
-              }
+              alt={altFor(types)}
+              data-image-id={image.image_id}
+              onLoad={rememberNatural}
+              onClick={openFullscreen}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openFullscreen();
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              title="Open fullscreen"
             />
           </div>
           <button

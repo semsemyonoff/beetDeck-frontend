@@ -18,6 +18,17 @@ Mostly defined by what it deliberately does **not** use:
 - `useState` / `useReducer` — **no state-management library**.
 - Vite 8 + `@vitejs/plugin-react`; ESLint (flat config) + Prettier; Vitest + RTL.
 
+The one runtime dependency beyond React is **`photoswipe`** (5.x, MIT, zero
+dependencies), the fullscreen image viewer behind the artwork gallery's lightbox.
+It is here because pinch-zoom, pan, momentum and the gesture handling a scan
+viewer needs are weeks of work to get right and none of it is beetDeck-specific.
+It stays cheap because `pswpModule: () => import('photoswipe')` puts the core in
+its own lazy chunk — nothing but a fullscreen open loads it, and only
+`photoswipe/lightbox` plus `photoswipe/style.css` are imported eagerly, from
+`ui/ArtLightbox.jsx`. Add a dependency with `dwe cmd frontend.npm -- install <pkg>`
+and commit `package-lock.json`; hand-editing `package.json` and running
+`frontend.install` reports success without installing anything.
+
 ## Layout
 
 `src/lib/` holds pure helpers with a co-located `*.test.js`, `src/ui/` shared

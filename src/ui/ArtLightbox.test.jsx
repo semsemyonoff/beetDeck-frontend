@@ -1,6 +1,47 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  act,
+} from '@testing-library/react';
 import ArtLightbox from './ArtLightbox.jsx';
+
+// PhotoSwipe is never rendered in jsdom — it measures a viewport that does not
+// exist. The seam is the lightbox class, so the tests assert on the calls the
+// component makes into it and on the events it subscribes to.
+const pswpInstances = [];
+
+vi.mock('photoswipe/lightbox', () => ({
+  default: class PhotoSwipeLightboxMock {
+    constructor(options) {
+      this.options = options;
+      this.listeners = {};
+      this.init = vi.fn();
+      this.destroy = vi.fn();
+      this.loadAndOpen = vi.fn(() => true);
+      this.pswp = { currIndex: 0 };
+      pswpInstances.push(this);
+    }
+    on(name, fn) {
+      (this.listeners[name] ||= []).push(fn);
+    }
+    emit(name) {
+      (this.listeners[name] || []).forEach((fn) => fn());
+    }
+  },
+}));
+
+/** The one instance the component under test built. */
+function pswp() {
+  expect(pswpInstances).toHaveLength(1);
+  return pswpInstances[0];
+}
+
+function stagedImage() {
+  return document.querySelector('.art-lb-frame img');
+}
 
 const MBID = '1b022e01-4da6-387b-8658-8678046e4cef';
 
@@ -54,6 +95,10 @@ function metaValue(label) {
   );
   return dt?.nextElementSibling;
 }
+
+beforeEach(() => {
+  pswpInstances.length = 0;
+});
 
 afterEach(cleanup);
 
@@ -273,5 +318,138 @@ describe('ArtLightbox — actions', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(props.onApply).toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+});
+
+describe('ArtLightbox — PhotoSwipe fullscreen', () => {
+  it('builds one instance with a lazily imported core', () => {
+    setup();
+    expect(pswp().init).toHaveBeenCalledTimes(1);
+    // The core must arrive through a dynamic import, or every route pays for
+    // it in the entry chunk.
+    expect(typeof pswp().options.pswpModule).toBe('function');
+    // PhotoSwipe's own 0.8 backdrop reads straight through to this
+    // component's overlay, which is not a gallery worth glimpsing.
+    expect(pswp().options.bgOpacity).toBe(1);
+  });
+
+  it('destroys the instance on unmount', () => {
+    const { unmount } = setup();
+    const lightbox = pswp();
+    expect(lightbox.destroy).not.toHaveBeenCalled();
+    unmount();
+    expect(lightbox.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens at the staged index when the image is clicked', () => {
+    setup({ index: 1 });
+    fireEvent.click(stagedImage());
+    expect(pswp().loadAndOpen).toHaveBeenCalledTimes(1);
+    expect(pswp().loadAndOpen.mock.calls[0][0]).toBe(1);
+  });
+
+  it('opens from the keyboard as well as from a click', () => {
+    setup({ index: 2 });
+    fireEvent.keyDown(stagedImage(), { key: 'Enter' });
+    expect(pswp().loadAndOpen).toHaveBeenCalledWith(2, expect.anything());
+  });
+
+  it('builds the dataSource from the filtered list, through the proxy', () => {
+    // The page hands the lightbox the images the active chip is showing; a
+    // dataSource built from the full list would let the fullscreen arrows walk
+    // outside the filter and desync the index on close.
+    const shown = [IMAGES[0], IMAGES[2]];
+    setup({ images: shown, index: 0 });
+    fireEvent.click(stagedImage());
+    const data = pswp().loadAndOpen.mock.calls[0][1];
+    expect(data).toHaveLength(2);
+    expect(data.map((d) => d.src)).toEqual([
+      '/api/album/1/artwork/100?size=full',
+      '/api/album/1/artwork/300?size=full',
+    ]);
+    // The placeholder is the tile the grid already loaded.
+    expect(data[1].msrc).toBe('/api/album/1/artwork/300?size=250');
+    expect(data[1].alt).toBe('Booklet, Front artwork');
+  });
+
+  it('takes the slide size from the measured original when the API has one', () => {
+    setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    const data = pswp().loadAndOpen.mock.calls[0][1];
+    expect(data[0]).toMatchObject({ width: 1425, height: 1425 });
+    expect(data[2]).toMatchObject({ width: 2400, height: 1200 });
+  });
+
+  it('omits the slide size for an image nothing has measured yet', () => {
+    setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    const unmeasured = pswp().loadAndOpen.mock.calls[0][1][1];
+    expect(unmeasured.width).toBeUndefined();
+    expect(unmeasured.height).toBeUndefined();
+  });
+
+  it('derives the ratio from the staged rendition once it has loaded', () => {
+    // CAA reports no dimensions and the original has not been fetched, so the
+    // thumbnail the user is looking at is the only ratio available.
+    setup({ index: 1 });
+    const img = stagedImage();
+    Object.defineProperty(img, 'naturalWidth', { value: 500 });
+    Object.defineProperty(img, 'naturalHeight', { value: 250 });
+    fireEvent.load(img);
+    fireEvent.click(img);
+    const data = pswp().loadAndOpen.mock.calls[0][1];
+    expect(data[1].width / data[1].height).toBe(2);
+    // Only the staged image was measured; the others are still unknown.
+    expect(data[0]).toMatchObject({ width: 1425, height: 1425 });
+  });
+
+  it('writes the fullscreen index back into the page', () => {
+    const { props } = setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    pswp().pswp.currIndex = 2;
+    act(() => pswp().emit('change'));
+    expect(props.onIndex).toHaveBeenLastCalledWith(2);
+  });
+
+  it('suspends its own Escape and arrows while fullscreen is open', () => {
+    const { props } = setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    // One Escape must not collapse both layers, one arrow must not advance
+    // two frames — PhotoSwipe owns both keys while it is up.
+    expect(props.onClose).not.toHaveBeenCalled();
+    expect(props.onIndex).not.toHaveBeenCalled();
+  });
+
+  it('takes the keys back when fullscreen closes', () => {
+    const { props } = setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    // PhotoSwipe closing is a state change in the component, so it has to be
+    // flushed before the re-bound listeners exist.
+    act(() => pswp().emit('close'));
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(props.onIndex).toHaveBeenCalledWith(1);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it('keeps its own keys when the open was refused', () => {
+    // `loadAndOpen` answers false when a gallery is already open; flagging
+    // fullscreen anyway would leave the in-page layer deaf to Escape with
+    // nothing on top of it.
+    const { props } = setup({ index: 0 });
+    pswp().loadAndOpen.mockReturnValue(false);
+    fireEvent.click(stagedImage());
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it('builds the instance even when there is nothing to stage', () => {
+    // The hooks run before the empty-list early return; a conditional
+    // instance would be a hook-order violation.
+    setup({ images: [], index: 0 });
+    expect(pswp().init).toHaveBeenCalledTimes(1);
+    expect(pswp().loadAndOpen).not.toHaveBeenCalled();
   });
 });
