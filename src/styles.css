@@ -4360,6 +4360,12 @@ h4 {
   gap: var(--s-2);
   margin-top: var(--s-2);
 }
+/* The prototype's next actions were <button>s; the repository's routing rule
+   makes them real anchors, and `.btn` has never had to suppress the UA
+   underline before. Scoped, not added to `.btn` itself. */
+.art-empty-actions .btn {
+  text-decoration: none;
+}
 
 .art-error {
   display: flex;

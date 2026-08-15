@@ -133,7 +133,7 @@ describe('Artwork — shell', () => {
     document.title = APP_NAME;
   });
 
-  it('shows a loading line until both fetches settle', async () => {
+  it('shows skeleton tiles until the listing settles', async () => {
     let resolveListing;
     vi.stubGlobal(
       'fetch',
@@ -153,30 +153,20 @@ describe('Artwork — shell', () => {
     await act(async () => {
       render(<Artwork id="1" />);
     });
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(document.querySelectorAll('.art-tile-skel').length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getByText(/fetching release images/i)).toBeInTheDocument();
 
     await act(async () => {
       resolveListing();
     });
     await waitFor(() =>
-      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+      expect(document.querySelector('.art-tile-skel')).toBeNull()
     );
     expect(
       screen.getByRole('heading', { name: 'Artwork' })
     ).toBeInTheDocument();
-  });
-
-  it.each([
-    ['the album request', { albumStatus: 500 }],
-    ['the listing request', { listingStatus: 502 }],
-  ])('shows an error line when %s fails', async (_label, opts) => {
-    await renderArtwork(opts);
-    await waitFor(() =>
-      expect(screen.getByText(/Failed to load artwork/i)).toBeInTheDocument()
-    );
-    expect(
-      screen.queryByRole('heading', { name: 'Artwork' })
-    ).not.toBeInTheDocument();
   });
 
   it('renders the breadcrumbs as real anchors', async () => {
@@ -464,14 +454,16 @@ describe('Artwork — chips and grid', () => {
     );
   });
 
-  it('renders an empty grid without crashing when there are no images', async () => {
+  it('renders the empty state, not an empty grid, when there are no images', async () => {
     await withImages([]);
     expect(tiles()).toHaveLength(0);
+    // An empty toolbar over an empty grid says nothing; the designed state does.
+    expect(document.querySelector('.art-toolbar')).toBeNull();
     expect(
-      screen.getByText(/0 images from Cover Art Archive/)
+      screen.getByRole('heading', {
+        name: /Cover Art Archive has no images for this release/i,
+      })
     ).toBeInTheDocument();
-    // Only the All chip; there are no types to build the rest from.
-    expect(document.querySelectorAll('.art-chip')).toHaveLength(1);
   });
 });
 
@@ -513,4 +505,208 @@ describe('Artwork — refresh', () => {
     );
     expect(albumCalls).toHaveLength(1);
   });
+});
+
+describe('Artwork — non-grid states', () => {
+  beforeEach(stubLocation);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+    document.title = APP_NAME;
+  });
+
+  const NO_MBID = {
+    ...LISTING,
+    mb_albumid: '',
+    available: false,
+    reason: 'album has no MusicBrainz id',
+    source: null,
+    fetched_at: null,
+  };
+
+  it('explains an album with no MusicBrainz id and offers Identify', async () => {
+    await renderArtwork({
+      album: { ...ALBUM, mb_albumid: '' },
+      listing: NO_MBID,
+    });
+    expect(
+      screen.getByRole('heading', { name: 'This album has no MusicBrainz ID' })
+    ).toBeInTheDocument();
+    // The next action is a real anchor back to the album page, where Identify
+    // lives — middle-click and "open in new tab" have to work.
+    const identify = screen.getByRole('link', { name: /identify album/i });
+    expect(identify).toHaveAttribute('href', '#/album/1');
+    // The backend's own words, not a paraphrase of them.
+    expect(screen.getByText(/album has no MusicBrainz id/)).toBeInTheDocument();
+  });
+
+  it('does not claim a missing id when the id is simply not a release id', async () => {
+    await renderArtwork({
+      listing: {
+        ...NO_MBID,
+        mb_albumid: MBID,
+        reason: "album's MusicBrainz id is not a release id",
+      },
+    });
+    expect(
+      screen.getByRole('heading', {
+        name: "This album's MusicBrainz ID is not a release ID",
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('This album has no MusicBrainz ID')
+    ).not.toBeInTheDocument();
+  });
+
+  it('explains a release CAA holds no art for, and links to add it', async () => {
+    await renderArtwork();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Cover Art Archive has no images for this release',
+      })
+    ).toBeInTheDocument();
+    const add = screen.getByRole('link', { name: /add art on musicbrainz/i });
+    expect(add).toHaveAttribute(
+      'href',
+      `https://musicbrainz.org/release/${MBID}/cover-art`
+    );
+    expect(add).toHaveAttribute('target', '_blank');
+    expect(add).toHaveAttribute('rel', 'noreferrer');
+  });
+
+  it('banners a 502 with the reason the backend gave', async () => {
+    await renderArtwork({
+      listingStatus: 502,
+      listing: { error: 'coverartarchive.org: connect timeout' },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText('Cover Art Archive did not respond')
+      ).toBeInTheDocument()
+    );
+    const reason = document.querySelector('.art-error-reason');
+    expect(reason).toHaveTextContent('HTTP 502');
+    expect(reason).toHaveTextContent('coverartarchive.org: connect timeout');
+    // The album loaded fine, so the shell it feeds stays on screen.
+    expect(
+      screen.getByRole('heading', { name: 'Artwork' })
+    ).toBeInTheDocument();
+  });
+
+  it('re-issues the listing request when Retry is clicked', async () => {
+    const fetchMock = await renderArtwork({
+      listingStatus: 502,
+      listing: { error: 'boom' },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    });
+    await waitFor(() =>
+      expect(artworkCalls(fetchMock)).toEqual([
+        '/api/album/1/artwork',
+        '/api/album/1/artwork?refresh=1',
+      ])
+    );
+    // Only the listing failed; the album is not re-requested to recover it.
+    expect(
+      fetchMock.mock.calls.filter((c) => String(c[0]) === '/api/album/1')
+    ).toHaveLength(1);
+  });
+
+  it('banners a failed album request on a bare page and retries it', async () => {
+    const fetchMock = await renderArtwork({
+      albumStatus: 500,
+      album: { error: 'database is locked' },
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Could not load this album')).toBeInTheDocument()
+    );
+    // Nothing in the shell can be rendered without the album it describes.
+    expect(
+      screen.queryByRole('heading', { name: 'Artwork' })
+    ).not.toBeInTheDocument();
+    expect(document.querySelector('.art-error-reason')).toHaveTextContent(
+      'HTTP 500 · database is locked'
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    });
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter((c) => String(c[0]) === '/api/album/1')
+      ).toHaveLength(2)
+    );
+  });
+
+  it('falls back to a bare reason when the failure carries no body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) =>
+        url === '/api/album/1'
+          ? Promise.resolve({
+              ok: true,
+              status: 200,
+              json: async () => ALBUM,
+            })
+          : Promise.reject(new Error('NetworkError'))
+      )
+    );
+    await act(async () => {
+      render(<Artwork id="1" />);
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText('Cover Art Archive did not respond')
+      ).toBeInTheDocument()
+    );
+    // No HTTP status to report — the transport never got one.
+    expect(document.querySelector('.art-error-reason')).toHaveTextContent(
+      'NetworkError'
+    );
+  });
+
+  // The three non-grid outcomes are three different problems with three
+  // different next actions; collapsing any two of them would state something
+  // about the library that nobody established.
+  it.each([
+    [
+      'no MusicBrainz id',
+      { album: { ...ALBUM, mb_albumid: '' }, listing: NO_MBID },
+      /This album has no MusicBrainz ID/,
+    ],
+    [
+      'no art for the release',
+      {},
+      /Cover Art Archive has no images for this release/,
+    ],
+    [
+      'CAA unreachable',
+      { listingStatus: 502, listing: { error: 'boom' } },
+      /Cover Art Archive did not respond/,
+    ],
+  ])(
+    'keeps the %s state distinct from the other two',
+    async (_label, opts, expected) => {
+      await renderArtwork(opts);
+      const others = [
+        /This album has no MusicBrainz ID/,
+        /Cover Art Archive has no images for this release/,
+        /Cover Art Archive did not respond/,
+      ].filter((re) => re.source !== expected.source);
+
+      await waitFor(() =>
+        expect(screen.getByText(expected)).toBeInTheDocument()
+      );
+      for (const re of others)
+        expect(screen.queryByText(re)).not.toBeInTheDocument();
+      // None of them renders a grid or a toolbar.
+      expect(document.querySelector('.art-grid')).toBeNull();
+      expect(document.querySelector('.art-toolbar')).toBeNull();
+    }
+  );
 });
