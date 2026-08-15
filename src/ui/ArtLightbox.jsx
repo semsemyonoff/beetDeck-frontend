@@ -110,6 +110,33 @@ export default function ArtLightbox({
       // the fullscreen image. Verified in the browser, not reasoned about.
       bgOpacity: 1,
     });
+    // A slide's `width`/`height` are a declaration, and PhotoSwipe derives its
+    // zoom ceiling from them. Until the backend has measured an original,
+    // `slideDimensions` can only offer the thumbnail's ratio scaled to
+    // `RATIO_LONG_EDGE`, and on a wide viewport that ceiling lands *below* the
+    // fit zoom: `canZoom` goes false, and a click closes the viewer instead of
+    // zooming into the one layer that exists to show the original's detail.
+    // The loaded <img> knows the real size, so correct the slide from it and let
+    // PhotoSwipe recompute its levels. Measured slides no-op on the equality
+    // check, and the second visit gets the size from the API anyway.
+    lightbox.on('loadComplete', ({ slide, content }) => {
+      const el = content?.element;
+      const width = el?.naturalWidth;
+      const height = el?.naturalHeight;
+      if (!slide || !width || !height) return;
+      if (slide.width === width && slide.height === height) return;
+      content.width = width;
+      content.height = height;
+      if (slide.data) {
+        slide.data.width = width;
+        slide.data.height = height;
+      }
+      slide.width = width;
+      slide.height = height;
+      // Recomputes the zoom levels from the corrected size and re-applies the
+      // current one — the same call PhotoSwipe makes on a viewport resize.
+      slide.resize?.();
+    });
     lightbox.on('change', () => {
       const i = lightbox.pswp?.currIndex;
       // Write the fullscreen index back into page state, so closing lands on

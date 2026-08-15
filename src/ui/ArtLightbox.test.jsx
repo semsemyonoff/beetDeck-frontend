@@ -27,8 +27,8 @@ vi.mock('photoswipe/lightbox', () => ({
     on(name, fn) {
       (this.listeners[name] ||= []).push(fn);
     }
-    emit(name) {
-      (this.listeners[name] || []).forEach((fn) => fn());
+    emit(name, payload) {
+      (this.listeners[name] || []).forEach((fn) => fn(payload));
     }
   },
 }));
@@ -401,6 +401,68 @@ describe('ArtLightbox — PhotoSwipe fullscreen', () => {
     expect(data[1].width / data[1].height).toBe(2);
     // Only the staged image was measured; the others are still unknown.
     expect(data[0]).toMatchObject({ width: 1425, height: 1425 });
+  });
+
+  // A slide whose size is only a ratio caps PhotoSwipe's zoom at the declared
+  // long edge, which on a wide viewport sits *below* the fit zoom: the image
+  // cannot be zoomed at all and a click closes the viewer. Found in the browser
+  // (Task 20), so the correction is pinned here.
+  function loadedSlide({ declared, natural }) {
+    const slide = {
+      width: declared[0],
+      height: declared[1],
+      data: { width: declared[0], height: declared[1] },
+      resize: vi.fn(),
+    };
+    const content = {
+      width: declared[0],
+      height: declared[1],
+      element: { naturalWidth: natural[0], naturalHeight: natural[1] },
+    };
+    return { slide, content };
+  }
+
+  it('corrects a ratio-only slide size from the loaded original', () => {
+    setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    const payload = loadedSlide({
+      declared: [1200, 601],
+      natural: [5389, 2700],
+    });
+    act(() => pswp().emit('loadComplete', payload));
+    expect(payload.slide).toMatchObject({ width: 5389, height: 2700 });
+    expect(payload.slide.data).toMatchObject({ width: 5389, height: 2700 });
+    expect(payload.content).toMatchObject({ width: 5389, height: 2700 });
+    // Zoom levels are derived at construction, so the slide has to recompute.
+    expect(payload.slide.resize).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a slide the API already measured untouched', () => {
+    setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    const payload = loadedSlide({
+      declared: [1425, 1425],
+      natural: [1425, 1425],
+    });
+    act(() => pswp().emit('loadComplete', payload));
+    expect(payload.slide.resize).not.toHaveBeenCalled();
+  });
+
+  it('ignores a load event with nothing measurable on it', () => {
+    setup({ index: 0 });
+    fireEvent.click(stagedImage());
+    const slide = { width: 1200, height: 601, resize: vi.fn() };
+    // Non-image content, and a failed image, both arrive without a size.
+    act(() => pswp().emit('loadComplete', { slide, content: {} }));
+    act(() =>
+      pswp().emit('loadComplete', {
+        slide,
+        content: { element: { naturalWidth: 0, naturalHeight: 0 } },
+      })
+    );
+    act(() => pswp().emit('loadComplete', { content: undefined }));
+    expect(slide.resize).not.toHaveBeenCalled();
+    expect(slide).toMatchObject({ width: 1200, height: 601 });
   });
 
   it('writes the fullscreen index back into the page', () => {
