@@ -42,9 +42,6 @@ describe('buildMbsyncViewModel', () => {
       unmapped: [{ itemId: 117, track: 13, title: 'Hidden' }],
       changed: true,
       fieldNames: ['label', 'title'],
-      albumFieldCount: 1,
-      trackFieldCount: 1,
-      unmappedCount: 1,
     });
   });
 
@@ -70,9 +67,6 @@ describe('buildMbsyncViewModel', () => {
       unmapped: [],
       changed: false,
       fieldNames: [],
-      albumFieldCount: 0,
-      trackFieldCount: 0,
-      unmappedCount: 0,
     });
   });
 
@@ -96,7 +90,7 @@ describe('buildMbsyncViewModel', () => {
       { itemId: 5, track: null, title: 'Bonus Track' },
       { itemId: 6, track: 9, title: null },
     ]);
-    expect(vm.unmappedCount).toBe(2);
+    expect(vm.unmapped).toHaveLength(2);
   });
 
   it('returns null for nullish input', () => {

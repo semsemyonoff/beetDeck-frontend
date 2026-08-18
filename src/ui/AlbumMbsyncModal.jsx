@@ -3,8 +3,23 @@ import Icon from './Icon.jsx';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
 import { toggleField, excludedFieldsFor } from '../lib/mbsync.js';
 
+// The diff carries whatever beets stores, not just strings: `comp` is a
+// boolean, `albumartists`/`albumtypes` are lists, `year`/`disctotal` are ints.
+// A bare `{value}` renders a boolean as nothing at all and a list as its
+// entries run together, so every non-string is spelled out here.
 function Cell({ value }) {
-  return value ? value : <span className="muted">empty</span>;
+  if (value === null || value === undefined || value === '') {
+    return <span className="muted">empty</span>;
+  }
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (Array.isArray(value)) {
+    return value.length ? (
+      value.join(', ')
+    ) : (
+      <span className="muted">empty</span>
+    );
+  }
+  return String(value);
 }
 
 function AlbumFieldRow({ row }) {
@@ -179,9 +194,13 @@ export default function AlbumMbsyncModal({
         <div className="modal-foot">
           <div className="row-end">
             <button className="btn btn-ghost" onClick={onClose}>
-              {nothingToUpdate ? 'Close' : 'Cancel'}
+              {changed ? 'Cancel' : 'Close'}
             </button>
-            {!nothingToUpdate && (
+            {/* Gated on `changed`, not on `nothingToUpdate`: a preview whose
+                only content is unmapped tracks has no field to write, and an
+                enabled Confirm there burns the stash on a no-op and flashes
+                success for a write that never happened. */}
+            {changed && (
               <button
                 className="btn btn-primary"
                 disabled={confirming || allExcluded}

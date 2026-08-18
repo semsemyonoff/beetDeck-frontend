@@ -3218,6 +3218,24 @@ describe('Album — MusicBrainz sync', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('flags a partial write rather than reporting a clean success', async () => {
+    // The database was written but at least one audio file was not — a user
+    // whose tags did not reach disk must not be told the sync just worked.
+    await renderAndOpen({
+      preview: PREVIEW_PAYLOAD,
+      confirm: { status: 'partial', write_failures: [101] },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    });
+
+    expect(screen.getByText(/partial write/i)).toBeInTheDocument();
+    expect(
+      document.querySelector('.modal-album-mbsync')
+    ).not.toBeInTheDocument();
+  });
+
   it('shows a rescan-in-flight 409 as a distinct message from a stale preview', async () => {
     await renderAndOpen({
       preview: { error: 'A library scan is in progress' },

@@ -44,9 +44,11 @@ Two things the tree cannot show:
   pins (2.12.0). The two must change together, across repositories.
 - `src/lib/mbsync.js` `buildMbsyncViewModel` follows the same one-mapper rule as
   `buildScanViewModel`: it is the single place the snake_case
-  `…/mbsync` response becomes the camelCase shape `AlbumMbsyncModal` consumes
-  (including the per-level counts the modal header shows), so a new response
-  field gets threaded through the mapper, not read ad hoc in the modal.
+  `…/mbsync` response becomes the camelCase shape `AlbumMbsyncModal` consumes,
+  so a new response field gets threaded through the mapper, not read ad hoc in
+  the modal. `fieldNames` is derived there rather than in the modal because it
+  is the union across both levels — it is what the exclusion checkboxes list
+  and what "everything is excluded" is counted against.
 
 ## Routing
 
@@ -92,8 +94,11 @@ Client-owned invariants:
   request ref plus a busy lock) and in the two queue modules. Add a call there,
   not in the modal.
 - **The MusicBrainz sync button is disabled, not explained.** `Album.jsx`
-  disables the "Sync with MusicBrainz" action when `data.mb_albumid` is absent
-  rather than letting the request round-trip into a `400`. Preview→confirm both
+  disables the **Sync** action (in the `MusicBrainz` `ActionGroup`) when
+  `data.mb_albumid` is absent rather than letting the request round-trip into a
+  `400`. The modal's own Confirm is rendered only when the preview reports
+  `changed` — a diff made up entirely of unmapped tracks has nothing to write,
+  and confirming it would consume the stash for a no-op. Preview→confirm both
   send `expected_generation`; the confirm renders the backend's `error` (and
   `reasons` when present) instead of a hardcoded sentence — three different
   `400`s exist upstream (no id, wrong `data_source`, release not found) and

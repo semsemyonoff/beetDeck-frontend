@@ -45,9 +45,6 @@ export function buildMbsyncViewModel(payload) {
     unmapped,
     changed: !!payload.changed,
     fieldNames,
-    albumFieldCount: albumFields.length,
-    trackFieldCount: trackFields.length,
-    unmappedCount: unmapped.length,
   };
 }
 

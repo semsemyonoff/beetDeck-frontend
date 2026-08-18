@@ -20,9 +20,6 @@ const CHANGED_VM = {
   unmapped: [],
   changed: true,
   fieldNames: ['label', 'title'],
-  albumFieldCount: 1,
-  trackFieldCount: 1,
-  unmappedCount: 0,
 };
 
 const NOTHING_TO_UPDATE_VM = {
@@ -35,9 +32,6 @@ const NOTHING_TO_UPDATE_VM = {
   unmapped: [],
   changed: false,
   fieldNames: [],
-  albumFieldCount: 0,
-  trackFieldCount: 0,
-  unmappedCount: 0,
 };
 
 const UNMAPPED_VM = {
@@ -47,7 +41,6 @@ const UNMAPPED_VM = {
     { itemId: 5, track: 13, title: 'Hidden Track' },
     { itemId: 6, track: null, title: null },
   ],
-  unmappedCount: 2,
 };
 
 function renderModal(overrides = {}) {
@@ -164,9 +157,44 @@ describe('AlbumMbsyncModal', () => {
       expect(screen.getByText('(untitled)')).toBeInTheDocument();
     });
 
-    it('still shows the empty-state message when there are no field changes', () => {
+    it('suppresses the empty-state message when there are unmapped tracks to show', () => {
       renderModal({ viewModel: UNMAPPED_VM });
       expect(screen.queryByText(/nothing to update/i)).not.toBeInTheDocument();
+    });
+
+    it('offers no Confirm when the only content is unmapped tracks', () => {
+      // There is no field to write: confirming would burn the stash on a no-op
+      // and flash success for a write that never happened.
+      renderModal({ viewModel: UNMAPPED_VM });
+      expect(
+        screen.queryByRole('button', { name: /confirm/i })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /close/i })
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('value rendering', () => {
+    it('spells out booleans, lists and numbers rather than dropping them', () => {
+      renderModal({
+        viewModel: {
+          ...CHANGED_VM,
+          albumFields: [
+            { field: 'comp', old: false, new: true },
+            { field: 'albumartists', old: [], new: ['Björk', 'Arca'] },
+            { field: 'year', old: 0, new: 1997 },
+          ],
+          trackFields: [],
+          fieldNames: ['comp', 'albumartists', 'year'],
+        },
+      });
+      // `true` renders as nothing at all through a bare {value}.
+      expect(screen.getByText('yes')).toBeInTheDocument();
+      expect(screen.getByText('no')).toBeInTheDocument();
+      expect(screen.getByText('Björk, Arca')).toBeInTheDocument();
+      expect(screen.getByText('1997')).toBeInTheDocument();
+      expect(screen.getByText('0')).toBeInTheDocument();
     });
   });
 
