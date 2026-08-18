@@ -8,6 +8,7 @@ import TagEditorModal from '../ui/TagEditorModal.jsx';
 import ItemTagsEditor from '../ui/ItemTagsEditor.jsx';
 import AlbumLyricsModal from '../ui/AlbumLyricsModal.jsx';
 import AlbumBpmModal from '../ui/AlbumBpmModal.jsx';
+import AlbumMbsyncModal from '../ui/AlbumMbsyncModal.jsx';
 import {
   fmtMins,
   fmtTotal,
@@ -16,6 +17,7 @@ import {
   groupByDisc,
 } from '../lib/disc.js';
 import { buildLyricsPreview } from '../lib/diff.js';
+import { buildMbsyncViewModel } from '../lib/mbsync.js';
 import { albumLabel, isIdentified } from '../lib/albums.js';
 import { compareCoverSize, formatDimensions } from '../lib/cover.js';
 import { isSynced, parseLyricLines } from '../lib/lyrics.js';
@@ -108,6 +110,9 @@ export default function Album({ id, dataVersion = 0 }) {
   const [itemTagsEditor, setItemTagsEditor] = useState(null); // {item} | null
   const [genrePreview, setGenrePreview] = useState(null); // {old, new}
   const [genreEdit, setGenreEdit] = useState(null); // string
+  const [mbsyncOpen, setMbsyncOpen] = useState(false);
+  const [mbsyncViewModel, setMbsyncViewModel] = useState(null);
+  const [mbsyncError, setMbsyncError] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null); // {source, url}
   const [identifyOpen, setIdentifyOpen] = useState(false);
   const [coverViewer, setCoverViewer] = useState(false);
@@ -136,6 +141,8 @@ export default function Album({ id, dataVersion = 0 }) {
   const flashTimerRef = useRef(null);
   // Monotonic id per genre lookup; only the latest may touch the preview.
   const genreReqRef = useRef(0);
+  // Same role for the MusicBrainz sync preview.
+  const mbsyncReqRef = useRef(0);
   // Per-track monotonic sequence for refreshTrackLyrics: a write seeds the cache
   // synchronously (in call order) then fires an async GET. Two writes to the same
   // track can have their GETs resolve out of order; the older GET would clobber
@@ -312,6 +319,8 @@ export default function Album({ id, dataVersion = 0 }) {
     busy === 'genre-merge' ||
     busy === 'genre-confirm';
 
+  const mbsyncBusy = busy === 'mbsync-fetch' || busy === 'mbsync-confirm';
+
   const coverVerdict = coverPreview
     ? compareCoverSize(
         {
@@ -386,6 +395,77 @@ export default function Album({ id, dataVersion = 0 }) {
     } else {
       showFlash('err', d?.error || 'Ignore failed.');
     }
+  };
+
+  // Two different 409s share the status code: a rescan in flight (transient,
+  // unrelated to this album's preview) and a stale/drifted preview (the album
+  // changed since the preview ran). Collapsing both into one sentence would
+  // tell the user to re-run a sync that a running scan will refuse again.
+  const mbsyncErrorMessage = (status, d) => {
+    const message = d?.error || 'MusicBrainz sync failed.';
+    if (status === 409) {
+      return message === 'A library scan is in progress'
+        ? 'A library scan is running — try again once it finishes.'
+        : 'The album changed since the preview — re-run the sync.';
+    }
+    if (status === 502) {
+      const reasons = (d?.reasons || []).join('; ');
+      return reasons ? `${message}: ${reasons}` : message;
+    }
+    return message;
+  };
+
+  const handleMbsyncFetch = async () => {
+    const req = ++mbsyncReqRef.current;
+    setBusy('mbsync-fetch');
+    const {
+      ok,
+      status,
+      data: d,
+    } = await postJson(`/api/album/${data.id}/mbsync`);
+    setBusy((current) => (current === 'mbsync-fetch' ? null : current));
+    if (req !== mbsyncReqRef.current) return;
+    if (ok) {
+      setMbsyncError(null);
+      setMbsyncViewModel(buildMbsyncViewModel(d));
+      setMbsyncOpen(true);
+      return;
+    }
+    showFlash('err', mbsyncErrorMessage(status, d));
+  };
+
+  const handleMbsyncConfirm = async (excludedFields) => {
+    setBusy('mbsync-confirm');
+    const {
+      ok,
+      status,
+      data: d,
+    } = await postJson(`/api/album/${data.id}/mbsync/confirm`, {
+      expected_generation: mbsyncViewModel?.stashGeneration,
+      excluded_fields: excludedFields,
+    });
+    setBusy(null);
+    if (ok) {
+      setMbsyncOpen(false);
+      setMbsyncViewModel(null);
+      setMbsyncError(null);
+      const partial = d?.status === 'partial';
+      showFlash(
+        partial ? 'warn' : 'ok',
+        partial
+          ? 'MusicBrainz sync applied (partial write).'
+          : 'MusicBrainz sync applied.'
+      );
+      reload();
+      return;
+    }
+    setMbsyncError(mbsyncErrorMessage(status, d));
+  };
+
+  const closeMbsyncModal = () => {
+    setMbsyncOpen(false);
+    setMbsyncViewModel(null);
+    setMbsyncError(null);
   };
 
   // `reopen: false` for the mode switch: it runs with the modal already open,
@@ -1140,6 +1220,20 @@ export default function Album({ id, dataVersion = 0 }) {
                 {data.ignored ? 'Unignore' : 'Ignore'}
               </button>
             </ActionGroup>
+            <ActionGroup label="MusicBrainz">
+              <button
+                className="btn btn-action"
+                disabled={!data.mb_albumid || mbsyncBusy}
+                onClick={handleMbsyncFetch}
+              >
+                {busy === 'mbsync-fetch' ? (
+                  <BtnSpinner />
+                ) : (
+                  <Icon name="refresh" size={12} />
+                )}{' '}
+                Sync
+              </button>
+            </ActionGroup>
             <ActionGroup label="Genre">
               <button
                 className="btn btn-action"
@@ -1758,6 +1852,16 @@ export default function Album({ id, dataVersion = 0 }) {
             </div>
           </div>
         </div>
+      )}
+
+      {mbsyncOpen && (
+        <AlbumMbsyncModal
+          viewModel={mbsyncViewModel}
+          confirming={busy === 'mbsync-confirm'}
+          error={mbsyncError}
+          onConfirm={handleMbsyncConfirm}
+          onClose={closeMbsyncModal}
+        />
       )}
 
       {lyricsModal && (
