@@ -1185,6 +1185,14 @@ export default function Album({ id, dataVersion = 0 }) {
                 )}{' '}
                 Upload
               </button>
+              {/* Rendered even without an mb_albumid: the gallery's own
+                  unavailable screen explains why and offers Identify. */}
+              <RouteLink
+                target={{ name: 'artwork', id }}
+                className="btn btn-action"
+              >
+                <Icon name="grid" size={12} /> Gallery
+              </RouteLink>
               <input
                 ref={uploadRef}
                 type="file"

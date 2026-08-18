@@ -2954,3 +2954,64 @@ describe('Album — cover candidate sizing', () => {
     expect(document.querySelector('.cover-size-dl')).toBeNull();
   });
 });
+
+describe('Album — artwork gallery link', () => {
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  async function renderAlbum(data = ALBUM_DATA) {
+    vi.stubGlobal('fetch', makeFetch(data));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+  }
+
+  function galleryLink() {
+    const label = screen.getByText('Cover', {
+      selector: '.action-group-label',
+    });
+    return within(label.parentElement).getByRole('link', { name: /gallery/i });
+  }
+
+  it('renders Gallery in the Cover group as a real link to the artwork route', async () => {
+    await renderAlbum();
+
+    const link = galleryLink();
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '#/album/42/artwork');
+  });
+
+  it('renders the link when the album has no MusicBrainz id', async () => {
+    await renderAlbum({ ...ALBUM_DATA, mb_albumid: '' });
+
+    expect(galleryLink()).toHaveAttribute('href', '#/album/42/artwork');
+  });
+
+  it('renders the link when the album has a MusicBrainz id', async () => {
+    await renderAlbum({
+      ...ALBUM_DATA,
+      tagged: true,
+      mb_albumid: '11111111-2222-3333-4444-555555555555',
+    });
+
+    expect(galleryLink()).toHaveAttribute('href', '#/album/42/artwork');
+  });
+
+  it('carries no image-count badge', async () => {
+    await renderAlbum();
+
+    expect(galleryLink().querySelector('.btn-badge')).toBeNull();
+  });
+});
