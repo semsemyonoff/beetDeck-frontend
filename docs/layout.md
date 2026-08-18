@@ -26,8 +26,9 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     │   ├── disc.js         # basename / fmtMins / fmtTotal / parseLength / discStats / groupByDisc
     │   ├── diff.js         # distanceToScore / buildDiffRows / buildAlbumDiffRows / buildLyricsPreview
     │   ├── lyrics.js       # parseLyricLines / isSynced
-    │   ├── artwork.js      # sortImages / typeCounts / filterByType / pickThumbSize /
-    │   │                   #   slideDimensions / formatFetchedAt / provenanceLine
+    │   ├── artwork.js      # typeCounts / filterByType / pickThumbSize / pickStageSize /
+    │   │                   #   slideDimensions / mbCoverArtUrl / formatFetchedAt /
+    │   │                   #   provenanceLine
     │   ├── scan.js         # buildScanSummary / buildScanViewModel / scanProgressPct /
     │   │                   #   isIndeterminate / applyLogChunk / parseLogLines / classifyLogLevel
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize /

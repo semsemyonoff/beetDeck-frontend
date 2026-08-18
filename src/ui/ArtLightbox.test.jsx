@@ -39,8 +39,14 @@ function pswp() {
   return pswpInstances[0];
 }
 
+/** The sharp layer — the one that carries the alt text and opens fullscreen. */
 function stagedImage() {
-  return document.querySelector('.art-lb-frame img');
+  return document.querySelector('.art-lb-shot');
+}
+
+/** The cached low-res layer underneath it, if this slide has one. */
+function placeholderImage() {
+  return document.querySelector('.art-lb-blur');
 }
 
 const MBID = '1b022e01-4da6-387b-8658-8678046e4cef';
@@ -105,19 +111,68 @@ afterEach(cleanup);
 describe('ArtLightbox — staging', () => {
   it('renders the staged image through the proxy at the picked size', () => {
     setup();
-    const img = document.querySelector('.art-lb-frame img');
     // 1200 is the smallest rendition covering the ~900 px stage; asking for
-    // `full` here would put an original through the proxy per open.
-    expect(img).toHaveAttribute('src', '/api/album/1/artwork/100?size=1200');
-    expect(img).toHaveAttribute('alt', 'Front artwork');
+    // `full` here would put an original through the proxy for nothing.
+    expect(stagedImage()).toHaveAttribute(
+      'src',
+      '/api/album/1/artwork/100?size=1200'
+    );
+    expect(stagedImage()).toHaveAttribute('alt', 'Front artwork');
+  });
+
+  it('stages the original when no rendition covers the stage', () => {
+    // The blur the stage rule exists to fix: 500 px on a ~900 px stage.
+    setup({ images: [image({ thumb_sizes: [250, 500] })], index: 0 });
+    expect(stagedImage()).toHaveAttribute(
+      'src',
+      '/api/album/1/artwork/100?size=full'
+    );
   });
 
   it('falls back to the original when CAA generated no thumbnails', () => {
     setup({ images: [image({ thumb_sizes: [] })], index: 0 });
-    expect(document.querySelector('.art-lb-frame img')).toHaveAttribute(
+    expect(stagedImage()).toHaveAttribute(
       'src',
       '/api/album/1/artwork/100?size=full'
     );
+  });
+
+  it('holds the frame with the tile the grid already loaded', () => {
+    setup();
+    // The grid's own rendition, so it is in the browser cache and paints at
+    // once while the sharp one crosses the proxy.
+    expect(placeholderImage()).toHaveAttribute(
+      'src',
+      '/api/album/1/artwork/100?size=250'
+    );
+    // Decorative: one alt string per slide, on the layer that carries it.
+    expect(placeholderImage()).toHaveAttribute('alt', '');
+    expect(placeholderImage()).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('skips the placeholder when it would be the staged rendition itself', () => {
+    // No thumbnails: the tile and the stage are both the original, and a second
+    // <img> for the same bytes would buy nothing.
+    setup({ images: [image({ thumb_sizes: [] })], index: 0 });
+    expect(placeholderImage()).toBeNull();
+  });
+
+  it('spins until the staged rendition has actually loaded', () => {
+    setup();
+    expect(document.querySelector('.art-lb-spinner')).not.toBeNull();
+    expect(stagedImage().className).not.toContain('is-loaded');
+    fireEvent.load(stagedImage());
+    expect(document.querySelector('.art-lb-spinner')).toBeNull();
+    expect(stagedImage().className).toContain('is-loaded');
+  });
+
+  it('spins again when the arrows move to an image that has not loaded', () => {
+    const { rerender, props } = setup({ index: 0 });
+    fireEvent.load(stagedImage());
+    expect(document.querySelector('.art-lb-spinner')).toBeNull();
+    rerender(<ArtLightbox {...props} index={1} />);
+    // The load state belongs to the slide, not to the component.
+    expect(document.querySelector('.art-lb-spinner')).not.toBeNull();
   });
 
   it('renders the counter as position over the filtered list', () => {
@@ -163,6 +218,20 @@ describe('ArtLightbox — navigation', () => {
     expect(props.onIndex).toHaveBeenCalledWith(2);
     fireEvent.keyDown(document, { key: 'ArrowLeft' });
     expect(props.onIndex).toHaveBeenCalledWith(0);
+  });
+
+  it('hides the arrows when the filtered list holds one image', () => {
+    setup({ images: [image()], index: 0 });
+    expect(
+      screen.queryByRole('button', { name: 'Next' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Previous' })
+    ).not.toBeInTheDocument();
+    // The position still reads as a fact about the list it came from.
+    expect(document.querySelector('.art-lb-counter')).toHaveTextContent(
+      '1 / 1'
+    );
   });
 
   it('drops the arrow handlers on unmount', () => {
@@ -284,28 +353,21 @@ describe('ArtLightbox — actions', () => {
     ).toBeEnabled();
   });
 
-  it('links to MusicBrainz and to the original through the proxy', () => {
+  it('links to the original through the proxy', () => {
     setup({ index: 1 });
-    const mb = screen.getByRole('link', { name: /open in musicbrainz/i });
-    expect(mb).toHaveAttribute(
-      'href',
-      `https://musicbrainz.org/release/${MBID}`
-    );
-    expect(mb).toHaveAttribute('target', '_blank');
-    expect(mb).toHaveAttribute('rel', 'noreferrer');
-
     const dl = screen.getByRole('link', { name: /download/i });
     // Through the proxy: no coverartarchive.org origin ever reaches the page.
     expect(dl).toHaveAttribute('href', '/api/album/1/artwork/200?size=full');
     expect(dl).toHaveAttribute('download');
   });
 
-  it('drops the MusicBrainz link when the listing carries no url', () => {
-    setup({ images: [image({ mb_url: '' })], index: 0 });
+  it('carries no MusicBrainz link of its own', () => {
+    // CAA has no per-image page, so every slide's link was the same release
+    // URL; it lives once, in the page header. See pages/Artwork.jsx.
+    setup({ index: 1 });
     expect(
-      screen.queryByRole('link', { name: /open in musicbrainz/i })
+      screen.queryByRole('link', { name: /musicbrainz/i })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument();
   });
 
   it('holds no network code of its own', () => {
@@ -331,6 +393,9 @@ describe('ArtLightbox — PhotoSwipe fullscreen', () => {
     // PhotoSwipe's own 0.8 backdrop reads straight through to this
     // component's overlay, which is not a gallery worth glimpsing.
     expect(pswp().options.bgOpacity).toBe(1);
+    // Multi-megabyte originals make PhotoSwipe's 2 s default the common wait,
+    // not the rare one — two seconds with no feedback reads as a hung viewer.
+    expect(pswp().options.preloaderDelay).toBeLessThanOrEqual(500);
   });
 
   it('destroys the instance on unmount', () => {

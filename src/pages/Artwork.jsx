@@ -6,16 +6,12 @@ import { albumLabel } from '../lib/albums.js';
 import {
   TILE_PX,
   filterByType,
+  mbCoverArtUrl,
   pickThumbSize,
   provenanceLine,
-  sortImages,
   typeCounts,
 } from '../lib/artwork.js';
 import { useDocumentTitle } from '../lib/useDocumentTitle.js';
-
-// The listing carries no count before it arrives, so the skeleton is a fixed
-// plausible grid rather than a promise about how many scans exist.
-const SKELETON_TILES = 8;
 
 // How long the "cover set" toast stays up, matching the prototype.
 const TOAST_MS = 2600;
@@ -74,33 +70,16 @@ function ArtTile({ albumId, image, isCover, onOpen }) {
   );
 }
 
-function ArtSkeleton() {
-  return (
-    <div className="art-tile art-tile-skel" aria-hidden="true">
-      <div className="art-stage art-skel-stage" />
-      <div className="art-meta">
-        <div className="art-skel-line" style={{ width: '44%' }} />
-        <div
-          className="art-skel-line art-skel-line-sm"
-          style={{ width: '70%' }}
-        />
-      </div>
-    </div>
-  );
-}
-
+// A spinner, not a skeleton grid. The listing carries no count before it
+// arrives, so eight placeholder tiles drew a release that may hold one scan or
+// forty — a layout of a thing nobody has seen yet. The same `searching-state`
+// block the identify modals use while they wait on a remote lookup.
 function ArtLoading() {
   return (
-    <>
-      <div className="art-count-line mono art-count-skel">
-        fetching release images…
-      </div>
-      <div className="art-grid">
-        {Array.from({ length: SKELETON_TILES }, (_, i) => (
-          <ArtSkeleton key={i} />
-        ))}
-      </div>
-    </>
+    <div className="searching-state">
+      <div className="spinner" />
+      <div className="muted small">Fetching release images…</div>
+    </div>
   );
 }
 
@@ -153,7 +132,7 @@ function ArtEmptyNoArt({ mbid }) {
       <div className="art-empty-actions">
         <a
           className="btn btn-primary"
-          href={`https://musicbrainz.org/release/${mbid}/cover-art`}
+          href={mbCoverArtUrl(mbid)}
           target="_blank"
           rel="noreferrer"
         >
@@ -363,12 +342,16 @@ export default function Artwork({ id, dataVersion = 0 }) {
   const mbid = listing?.mb_albumid || album.mb_albumid || '';
   const storageOk =
     listing && listing.storage_enabled && !listing.storage_error;
-  // Both helpers own the "no listing yet" case (`provenanceLine` returns null,
-  // `sortImages` returns []); re-deciding it here would make two places answer
-  // the same question, with a different falsy value each.
+  // `provenanceLine` owns the "no listing yet" case; re-deciding it here would
+  // make two places answer the same question, with a different falsy value each.
   const provenance = provenanceLine(listing);
 
-  const images = sortImages(listing?.images);
+  // Rendered in the order the API returned, which is CAA's, which is the order
+  // MusicBrainz shows on the release's cover art page — that ordering is an
+  // editorial decision made there (the front cover leads, a booklet runs in page
+  // order), and re-sorting it by type here scrambled multi-type scans out of
+  // their sequence. The gallery is a view of that page, so it follows it.
+  const images = listing?.images || [];
   const counts = typeCounts(images);
   // A Refresh can drop the type the active chip filters on; falling back to All
   // beats leaving the grid empty with no visible cause.
@@ -514,6 +497,19 @@ export default function Artwork({ id, dataVersion = 0 }) {
                   ? 'Storage unavailable'
                   : 'Cache only'}
             </span>
+          )}
+          {/* One link for the release, not one per tile: MusicBrainz has no
+              per-image page, so forty copies of it in forty lightboxes were
+              forty ways to reach the same cover art page. */}
+          {mbid && (
+            <a
+              className="btn btn-ghost"
+              href={mbCoverArtUrl(mbid)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Icon name="tag" size={13} /> Open in MusicBrainz
+            </a>
           )}
           <button className="btn btn-ghost" onClick={refreshListing}>
             <Icon name="refresh" size={13} /> Refresh

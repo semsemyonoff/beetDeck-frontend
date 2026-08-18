@@ -4117,6 +4117,13 @@ h4 {
   display: flex;
   align-items: center;
   gap: var(--s-3);
+  flex-wrap: wrap;
+}
+/* The MusicBrainz action is a real anchor (this repository's routing rule) and
+ * `.btn` never had to suppress the UA underline — same rule as the lightbox
+ * actions and the empty states. */
+.art-head-side a.btn {
+  text-decoration: none;
 }
 .art-mbid {
   color: var(--text-faint);
@@ -4172,11 +4179,6 @@ h4 {
   color: var(--text-mute);
   letter-spacing: 0.01em;
 }
-.art-count-skel {
-  display: block;
-  margin-bottom: var(--s-4);
-}
-
 .art-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -4311,33 +4313,6 @@ h4 {
   text-wrap: pretty;
 }
 
-.art-tile-skel {
-  pointer-events: none;
-}
-.art-skel-stage {
-  background: var(--surface-1);
-  animation: art-pulse 1.4s ease-in-out infinite;
-}
-.art-skel-line {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  animation: art-pulse 1.4s ease-in-out infinite;
-}
-.art-skel-line-sm {
-  height: 8px;
-  opacity: 0.7;
-}
-@keyframes art-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 .art-empty {
   max-width: 560px;
   margin: var(--s-10) auto;
@@ -4458,6 +4433,9 @@ h4 {
     );
 }
 .art-lb-frame {
+  /* The two layers are stacked, not laid out: the cached thumbnail holds the
+   * frame while the sharp rendition arrives. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4470,6 +4448,8 @@ h4 {
   min-height: 0;
 }
 .art-lb-frame .art-svg {
+  position: absolute;
+  inset: 0;
   max-width: 100%;
   max-height: 100%;
   /* The prototype letterboxed an <svg>, which has no intrinsic size and fills
@@ -4480,6 +4460,37 @@ h4 {
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.6));
+}
+/* The low-res layer: same box, same `object-fit`, so an identical ratio puts it
+ * exactly under the sharp one. Blurred on purpose — an upscaled 250 px scan
+ * reads as a placeholder rather than as a bad copy of the artwork. Scoped on
+ * the frame because the rule above it is, and a bare `.art-lb-blur` loses the
+ * `filter` cascade to it — which shows up as a placeholder that is merely soft
+ * and passes for the real thing. The scale hides the blur's feathered edge. */
+.art-lb-frame .art-lb-blur {
+  filter: blur(12px);
+  transform: scale(1.03);
+}
+.art-lb-shot {
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+.art-lb-shot.is-loaded {
+  opacity: 1;
+}
+/* The one in-flow child of the frame — both image layers are absolute — so the
+ * frame's own flex centring places it, and nothing here touches `transform`.
+ * Centring it with `translate(-50%, -50%)` is the trap: `.spinner`'s keyframes
+ * animate `transform` too, the rotate replaces the translate for the whole
+ * cycle, and the spinner lurches out of the middle and back once per turn
+ * instead of turning in place. `relative` only so `z-index` applies. */
+.art-lb-spinner {
+  position: relative;
+  z-index: 1;
+  /* The image underneath is the click target for fullscreen. */
+  pointer-events: none;
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: var(--accent);
 }
 .art-lb-nav {
   position: absolute;
@@ -4595,6 +4606,45 @@ h4 {
   opacity: 0.55;
   cursor: default;
   filter: saturate(0.75);
+}
+
+/* PhotoSwipe overrides — fullscreen artwork viewer.
+ *
+ * Its loading indicator lives in the top bar, flush left (`margin-right: auto`
+ * pushes the buttons away from it), which on a CAA original that takes seconds
+ * is a spinner in a corner while the middle of the screen sits on an upscaled
+ * placeholder — it reads as a frozen viewer. Centered on the slide instead,
+ * where the eye already is. `position: fixed` because the box it sits in is the
+ * top bar: nothing in that flow can put it in the middle of the viewport.
+ * `pointer-events` because `.pswp__top-bar > *` turns them back on, and a 44 px
+ * box over the image would eat the click that zooms it. */
+.pswp .pswp__preloader {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  width: 44px;
+  height: 44px;
+  overflow: visible;
+  pointer-events: none;
+  background: none;
+  transition: background-color 0.2s linear;
+}
+/* The backdrop belongs to the **active** state, not to the box: the element is
+ * in the DOM for the whole session and only its icon fades, so a background on
+ * the box itself is a grey disc parked in the middle of every slide — which is
+ * exactly what it was. Same 0.2s PhotoSwipe gives the icon, so the two appear
+ * together, and after the base rule so equal specificity resolves its way. */
+.pswp .pswp__preloader--active {
+  border-radius: 999px;
+  background: rgba(6, 10, 20, 0.55);
+}
+/* The icon is absolutely placed for the 50×60 top-bar box it no longer sits in;
+ * 6 px centres its 32 px square in the 44 px one. */
+.pswp .pswp__preloader .pswp__icn {
+  top: 6px;
+  left: 6px;
 }
 
 .art-toast {

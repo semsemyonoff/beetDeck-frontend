@@ -3,14 +3,34 @@ import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import 'photoswipe/style.css';
 import Icon from './Icon.jsx';
 import { useModalDismiss } from '../lib/useModalDismiss.js';
-import { TILE_PX, pickThumbSize, slideDimensions } from '../lib/artwork.js';
+import {
+  TILE_PX,
+  pickStageSize,
+  pickThumbSize,
+  slideDimensions,
+} from '../lib/artwork.js';
 
 // The stage is the lightbox inner (max 1240) minus the 320 px metadata rail,
-// so ~880 CSS px at the widest. `pickThumbSize` turns that into the smallest
-// rendition that still covers it — the same rule the grid uses at 190.
+// so ~880 CSS px at the widest — and narrower than that on a viewport this does
+// not fit, where the rail moves below.
 const STAGE_PX = 900;
 
+// A rendition is judged in **device** pixels: a 500 px scan on a 2× display is
+// blown up 3.5× before anyone sees it, which is the whole complaint
+// `pickStageSize` answers. Capped at 2 — a 3× phone would otherwise pull an
+// original for a 380 px frame.
+const MAX_DPR = 2;
+
 const DASH = '—';
+
+/** The stage's width in device pixels, which is what decides the rendition. */
+function stageTarget() {
+  const dpr = Number(globalThis.devicePixelRatio) || 1;
+  const width = Number(globalThis.innerWidth) || STAGE_PX;
+  return Math.round(
+    Math.min(width, STAGE_PX) * Math.min(Math.max(dpr, 1), MAX_DPR)
+  );
+}
 
 /** One alt string for both layers, so a slide reads the same in fullscreen. */
 function altFor(types) {
@@ -63,6 +83,11 @@ export default function ArtLightbox({
   const image = count ? images[index] : null;
 
   const [fullscreen, setFullscreen] = useState(false);
+  // Which image the staged rendition has actually finished loading, so the
+  // spinner and the low-res placeholder are tied to *this* slide and not left
+  // over from the previous one. An id, not a boolean: the arrows swap the image
+  // without unmounting anything.
+  const [stagedId, setStagedId] = useState(null);
   const pswpRef = useRef(null);
   // Natural sizes of the renditions this component has actually staged, keyed
   // by image id. The API reports the original's size only once that file has
@@ -109,6 +134,10 @@ export default function ArtLightbox({
       // metadata rail, actions and all — and at 0.8 it reads straight through
       // the fullscreen image. Verified in the browser, not reasoned about.
       bgOpacity: 1,
+      // Default 2000. These slides are CAA originals — several megabytes each
+      // — so two seconds of an upscaled 250 px placeholder with no feedback is
+      // the common case on arrow-through, not the rare one.
+      preloaderDelay: 500,
     });
     // A slide's `width`/`height` are a declaration, and PhotoSwipe derives its
     // zoom ceiling from them. Until the backend has measured an original,
@@ -152,15 +181,17 @@ export default function ArtLightbox({
     };
   }, []);
 
-  const rememberNatural = useCallback((e) => {
+  const onStageLoad = useCallback((e) => {
     const el = e.currentTarget;
     const id = el?.dataset?.imageId;
-    if (id && el.naturalWidth > 0 && el.naturalHeight > 0) {
+    if (!id) return;
+    if (el.naturalWidth > 0 && el.naturalHeight > 0) {
       naturalRef.current[id] = {
         naturalWidth: el.naturalWidth,
         naturalHeight: el.naturalHeight,
       };
     }
+    setStagedId(id);
   }, []);
 
   const openFullscreen = useCallback(() => {
@@ -185,7 +216,9 @@ export default function ArtLightbox({
   if (!image) return null;
 
   const types = image.types || [];
-  const size = pickThumbSize(image, STAGE_PX);
+  const thumbSize = pickThumbSize(image, TILE_PX);
+  const stageSize = pickStageSize(image, stageTarget());
+  const staged = stagedId === image.image_id;
   const measured = image.width > 0 && image.height > 0;
   const thumbs = image.thumb_sizes || [];
   const isCover = image.image_id === currentImageId;
@@ -201,28 +234,48 @@ export default function ArtLightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="art-lb-stage">
-          <button
-            type="button"
-            className="art-lb-nav art-lb-prev"
-            onClick={prev}
-            aria-label="Previous"
-          >
-            <span
-              style={{ transform: 'rotate(180deg)', display: 'inline-flex' }}
+          {/* Nothing to page to with one image in the filtered list, and both
+              arrows would wrap onto the frame already on screen. PhotoSwipe
+              hides its own for the same reason (`.pswp--one-slide`). */}
+          {count > 1 && (
+            <button
+              type="button"
+              className="art-lb-nav art-lb-prev"
+              onClick={prev}
+              aria-label="Previous"
             >
-              <Icon name="chevron" size={18} />
-            </span>
-          </button>
+              <span
+                style={{ transform: 'rotate(180deg)', display: 'inline-flex' }}
+              >
+                <Icon name="chevron" size={18} />
+              </span>
+            </button>
+          )}
           <div className="art-lb-frame">
+            {/* The grid's own rendition, underneath: it is already in the
+                browser cache, so it paints in the same frame the lightbox opens
+                in and carries the wait for a `full` original that can be several
+                megabytes. Same ratio, same `object-fit`, so the sharp layer
+                lands exactly on top of it. Decorative — the alt text and the
+                click target belong to the real one. */}
+            {stageSize !== thumbSize && (
+              <img
+                className="art-svg art-lb-blur"
+                src={`/api/album/${albumId}/artwork/${image.image_id}?size=${thumbSize}`}
+                alt=""
+                aria-hidden="true"
+              />
+            )}
             {/* Clicking the staged image hands the pixels to PhotoSwipe. The
                 <img> is the target rather than a wrapping <button> because the
                 frame's layout rules are what letterbox an extreme ratio. */}
             <img
-              className="art-svg"
-              src={`/api/album/${albumId}/artwork/${image.image_id}?size=${size}`}
+              key={image.image_id}
+              className={'art-svg art-lb-shot' + (staged ? ' is-loaded' : '')}
+              src={`/api/album/${albumId}/artwork/${image.image_id}?size=${stageSize}`}
               alt={altFor(types)}
               data-image-id={image.image_id}
-              onLoad={rememberNatural}
+              onLoad={onStageLoad}
               onClick={openFullscreen}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -234,15 +287,20 @@ export default function ArtLightbox({
               tabIndex={0}
               title="Open fullscreen"
             />
+            {!staged && (
+              <span className="spinner art-lb-spinner" aria-hidden="true" />
+            )}
           </div>
-          <button
-            type="button"
-            className="art-lb-nav art-lb-next"
-            onClick={next}
-            aria-label="Next"
-          >
-            <Icon name="chevron" size={18} />
-          </button>
+          {count > 1 && (
+            <button
+              type="button"
+              className="art-lb-nav art-lb-next"
+              onClick={next}
+              aria-label="Next"
+            >
+              <Icon name="chevron" size={18} />
+            </button>
+          )}
           <div className="art-lb-counter mono">
             {index + 1} / {count}
           </div>
@@ -326,16 +384,9 @@ export default function ArtLightbox({
                   ? 'Setting cover…'
                   : 'Set as album cover'}
             </button>
-            {image.mb_url && (
-              <a
-                className="btn btn-ghost"
-                href={image.mb_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Icon name="tag" size={13} /> Open in MusicBrainz
-              </a>
-            )}
+            {/* No MusicBrainz link here: CAA has no per-image page, so every
+                slide's would have been the same release URL. It lives once, in
+                the page header beside Refresh. */}
             {/* Through the proxy like every other byte on this page — the
                 browser never learns an upstream CAA URL. */}
             <a className="btn btn-ghost" href={fullHref} download>

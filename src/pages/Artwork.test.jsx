@@ -133,7 +133,7 @@ describe('Artwork — shell', () => {
     document.title = APP_NAME;
   });
 
-  it('shows skeleton tiles until the listing settles', async () => {
+  it('shows a spinner until the listing settles', async () => {
     let resolveListing;
     vi.stubGlobal(
       'fetch',
@@ -153,16 +153,17 @@ describe('Artwork — shell', () => {
     await act(async () => {
       render(<Artwork id="1" />);
     });
-    expect(document.querySelectorAll('.art-tile-skel').length).toBeGreaterThan(
-      0
-    );
+    // A spinner, not a skeleton grid: the count is unknown until the listing
+    // lands, so a placeholder grid drew a release nobody had seen yet.
+    expect(document.querySelector('.searching-state .spinner')).not.toBeNull();
     expect(screen.getByText(/fetching release images/i)).toBeInTheDocument();
+    expect(document.querySelector('.art-grid')).toBeNull();
 
     await act(async () => {
       resolveListing();
     });
     await waitFor(() =>
-      expect(document.querySelector('.art-tile-skel')).toBeNull()
+      expect(document.querySelector('.searching-state')).toBeNull()
     );
     expect(
       screen.getByRole('heading', { name: 'Artwork' })
@@ -244,6 +245,36 @@ describe('Artwork — shell', () => {
     ).toBeInTheDocument();
   });
 
+  it('links the header to the release cover art page on MusicBrainz', async () => {
+    await renderArtwork();
+    const mb = document.querySelector('.art-head-side a.btn');
+    expect(mb).toHaveTextContent('Open in MusicBrainz');
+    // The cover art tab, not the release page: this gallery's subject is the
+    // artwork. One link for the release — CAA has no per-image page.
+    expect(mb).toHaveAttribute(
+      'href',
+      `https://musicbrainz.org/release/${MBID}/cover-art`
+    );
+    expect(mb).toHaveAttribute('target', '_blank');
+    expect(mb).toHaveAttribute('rel', 'noreferrer');
+  });
+
+  it('drops the MusicBrainz link when there is no release id to link to', async () => {
+    await renderArtwork({
+      album: { ...ALBUM, mb_albumid: '' },
+      listing: {
+        ...LISTING,
+        mb_albumid: '',
+        available: false,
+        reason: 'album has no MusicBrainz id',
+      },
+    });
+    expect(document.querySelector('.art-head-side a.btn')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: /refresh/i })
+    ).toBeInTheDocument();
+  });
+
   it('renders the provenance line from source and fetched_at', async () => {
     await renderArtwork();
     expect(
@@ -280,13 +311,20 @@ describe('Artwork — chips and grid', () => {
     );
   }
 
-  it('renders one tile per image, ordered by primary type', async () => {
-    await withImages();
+  it('renders one tile per image, in the order the listing arrived', async () => {
+    // CAA's order, which is the order MusicBrainz shows on the release's cover
+    // art page — an editorial decision made there. Re-sorting by type here put
+    // a multi-type scan (Booklet · Front) among the front covers, out of the
+    // booklet sequence it belongs to.
+    await withImages([
+      image({ image_id: '300', types: ['Booklet', 'Front'] }),
+      image({ image_id: '100', types: ['Front'] }),
+      image({ image_id: '200', types: ['Back'] }),
+    ]);
     expect(tiles()).toHaveLength(3);
-    // sortImages: Front, Back, Booklet — the front cover leads the grid.
     expect(
       tiles().map((t) => t.querySelector('.art-type').textContent)
-    ).toEqual(['Front', 'Back', 'Booklet']);
+    ).toEqual(['Booklet', 'Front', 'Back']);
   });
 
   it('renders every type of an image as its own badge', async () => {
@@ -724,7 +762,7 @@ describe('Artwork — non-grid states', () => {
         screen.getByText('Cover Art Archive did not respond')
       ).toBeInTheDocument()
     );
-    expect(document.querySelector('.art-tile-skel')).toBeNull();
+    expect(document.querySelector('.searching-state')).toBeNull();
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
@@ -858,9 +896,11 @@ describe('Artwork — lightbox and apply', () => {
     expect(document.querySelector('.art-lb-counter')).toHaveTextContent(
       '2 / 3'
     );
-    expect(document.querySelector('.art-lb-frame img')).toHaveAttribute(
+    // Image 200 has no rendition that covers the stage, so it stages the
+    // original — see `pickStageSize`.
+    expect(document.querySelector('.art-lb-shot')).toHaveAttribute(
       'src',
-      '/api/album/1/artwork/200?size=500'
+      '/api/album/1/artwork/200?size=full'
     );
   });
 
@@ -905,7 +945,7 @@ describe('Artwork — lightbox and apply', () => {
     expect(document.querySelector('.art-lb-counter')).toHaveTextContent(
       '2 / 2'
     );
-    expect(document.querySelector('.art-lb-frame img')).toHaveAttribute(
+    expect(document.querySelector('.art-lb-shot')).toHaveAttribute(
       'src',
       '/api/album/1/artwork/300?size=1200'
     );

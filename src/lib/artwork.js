@@ -15,11 +15,14 @@
  */
 
 /**
- * The MusicBrainz cover art type vocabulary, in the order the gallery shows it.
+ * The MusicBrainz cover art type vocabulary, in the order the **chips** show it.
  *
  * Front leads because it is the image someone came for; the rest run roughly
  * outside-in. Types CAA adds later are not in this list and are deliberately
- * not dropped — see `typeCounts` and `sortImages`.
+ * not dropped — see `typeCounts`.
+ *
+ * It orders the chips and nothing else. The **grid** renders the listing in the
+ * order the API returned, which is CAA's own — see the note in `pages/Artwork.jsx`.
  */
 export const TYPE_ORDER = [
   'Front',
@@ -57,40 +60,21 @@ export const RATIO_LONG_EDGE = 1200;
  */
 export const TILE_PX = 190;
 
-const UNKNOWN_TYPE_RANK = TYPE_ORDER.length;
-
-/** Rank of an image's primary type; unknown and untyped both sort last. */
-function typeRank(image) {
-  const primary = image?.types?.[0];
-  const i = TYPE_ORDER.indexOf(primary);
-  return i === -1 ? UNKNOWN_TYPE_RANK : i;
-}
-
 function isPositive(n) {
   return typeof n === 'number' && Number.isFinite(n) && n > 0;
 }
 
 /**
- * Order the grid: by primary type, then by image id.
+ * The release's cover art page on MusicBrainz — where these scans are edited,
+ * reordered and uploaded.
  *
- * CAA lists an image's types in its own order and the tile badge leads with
- * `types[0]`, so that is the one that decides where the tile lands. The id
- * tie-break is a **string** comparison by code unit — `"10"` before `"9"` — not
- * a numeric one: the id is opaque here, and a stable, locale-independent order
- * is worth more than a numerically pleasing one.
- *
- * Returns a new array; the caller's list is never mutated.
+ * The `/cover-art` tab, not the bare release page: this gallery's subject is the
+ * artwork, and the release page shows the tracklist. `mb_url` on an image points
+ * at the release itself and is left alone; CAA has no per-image page for it to
+ * point at anyway.
  */
-export function sortImages(images) {
-  return (images || []).slice().sort((a, b) => {
-    const rank = typeRank(a) - typeRank(b);
-    if (rank !== 0) return rank;
-    const ida = String(a?.image_id ?? '');
-    const idb = String(b?.image_id ?? '');
-    if (ida < idb) return -1;
-    if (ida > idb) return 1;
-    return 0;
-  });
+export function mbCoverArtUrl(mbid) {
+  return mbid ? `https://musicbrainz.org/release/${mbid}/cover-art` : null;
 }
 
 /**
@@ -147,6 +131,29 @@ export function pickThumbSize(image, target) {
   const want = isPositive(target) ? target : 0;
   const covering = sizes.find((size) => size >= want);
   return covering === undefined ? sizes[sizes.length - 1] : covering;
+}
+
+/**
+ * The `size` for the lightbox stage: the smallest rendition that actually
+ * **covers** `target`, and the original when none does.
+ *
+ * The fallback is the whole difference from `pickThumbSize`, and it is the
+ * point. A 190 px tile is well served by the largest thumbnail CAA happened to
+ * generate; the stage is the screen where someone judges a scan, and CAA
+ * generates no `1200` for older uploads — those releases fall back to `500`,
+ * which is visibly soft blown up to ~900 CSS px (worse again on a 2× display,
+ * which is why the caller measures its target in device pixels). There the
+ * original is the only honest answer, and the grid thumbnail already on screen
+ * covers the wait.
+ *
+ * An unusable `target` resolves to the original for the same reason — on this
+ * screen quality is the cheap direction to be wrong in, the opposite of the
+ * grid's.
+ */
+export function pickStageSize(image, target) {
+  const size = pickThumbSize(image, target);
+  if (size === 'full' || !isPositive(target)) return 'full';
+  return size >= target ? size : 'full';
 }
 
 /**

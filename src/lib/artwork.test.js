@@ -5,10 +5,11 @@ import {
   TYPE_ORDER,
   filterByType,
   formatFetchedAt,
+  mbCoverArtUrl,
+  pickStageSize,
   pickThumbSize,
   provenanceLine,
   slideDimensions,
-  sortImages,
   typeCounts,
 } from './artwork';
 
@@ -41,61 +42,21 @@ describe('TYPE_ORDER', () => {
   });
 });
 
-describe('sortImages', () => {
-  it('orders by primary type, front cover first', () => {
-    const images = [
-      image({ image_id: '3', types: ['Medium'] }),
-      image({ image_id: '2', types: ['Back'] }),
-      image({ image_id: '1', types: ['Front'] }),
-    ];
-    expect(ids(sortImages(images))).toEqual(['1', '2', '3']);
-  });
-
-  it('decides on types[0], not on any type present', () => {
-    // The tile badge leads with types[0], so that is what has to place the tile.
-    const images = [
-      image({ image_id: '1', types: ['Booklet', 'Front'] }),
-      image({ image_id: '2', types: ['Back'] }),
-    ];
-    expect(ids(sortImages(images))).toEqual(['2', '1']);
-  });
-
-  it('sorts ids as strings, not as numbers', () => {
-    // "10" < "9" by code unit; a numeric sort would flip these two.
-    const images = [
-      image({ image_id: '9', types: ['Front'] }),
-      image({ image_id: '10', types: ['Front'] }),
-    ];
-    expect(ids(sortImages(images))).toEqual(['10', '9']);
+describe('mbCoverArtUrl', () => {
+  it('points at the release cover art page, not the release page', () => {
+    // Where these scans are uploaded, reordered and edited — the release page
+    // shows the tracklist, which is not what this gallery is about.
+    expect(mbCoverArtUrl('abc-123')).toBe(
+      'https://musicbrainz.org/release/abc-123/cover-art'
+    );
   });
 
   it.each([
-    ['an unknown type', ['Fanart']],
-    ['no types at all', []],
-    ['a missing types field', undefined],
-  ])('sorts %s after every known type', (_label, types) => {
-    const odd = image({ image_id: '1', types });
-    if (types === undefined) delete odd.types;
-    const images = [odd, image({ image_id: '2', types: ['Other'] })];
-    expect(ids(sortImages(images))).toEqual(['2', '1']);
-  });
-
-  it('does not mutate the caller list', () => {
-    const images = [
-      image({ image_id: '2', types: ['Back'] }),
-      image({ image_id: '1', types: ['Front'] }),
-    ];
-    const sorted = sortImages(images);
-    expect(ids(images)).toEqual(['2', '1']);
-    expect(sorted).not.toBe(images);
-  });
-
-  it.each([
+    ['an empty id', ''],
     ['null', null],
     ['undefined', undefined],
-    ['an empty list', []],
-  ])('returns an empty array for %s', (_label, input) => {
-    expect(sortImages(input)).toEqual([]);
+  ])('returns null for %s rather than a link to nothing', (_label, mbid) => {
+    expect(mbCoverArtUrl(mbid)).toBeNull();
   });
 });
 
@@ -230,6 +191,40 @@ describe('pickThumbSize', () => {
   ])('resolves %s to the smallest rendition', (_label, target) => {
     // Under-sized is the cheap direction to be wrong in — 40 originals is not.
     expect(pickThumbSize(image(), target)).toBe(250);
+  });
+});
+
+describe('pickStageSize', () => {
+  it('takes the smallest rendition that covers the stage', () => {
+    expect(pickStageSize(image({ thumb_sizes: [250, 500, 1200] }), 900)).toBe(
+      1200
+    );
+  });
+
+  it('takes the original when no rendition covers the stage', () => {
+    // Where it parts ways with the grid rule: CAA generates no 1200 for older
+    // uploads, and 500 blown up to a 900 px stage is the blur this fixes.
+    expect(pickStageSize(image({ thumb_sizes: [250, 500] }), 900)).toBe('full');
+  });
+
+  it('still takes a thumbnail on a stage small enough for one', () => {
+    expect(pickStageSize(image({ thumb_sizes: [250, 500] }), 400)).toBe(500);
+    expect(pickStageSize(image({ thumb_sizes: [250, 500] }), 500)).toBe(500);
+  });
+
+  it('takes the original when CAA generated no thumbnails', () => {
+    expect(pickStageSize(image({ thumb_sizes: [] }), 400)).toBe('full');
+  });
+
+  it.each([
+    ['zero', 0],
+    ['a negative stage', -10],
+    ['null', null],
+    ['undefined', undefined],
+    ['NaN', Number.NaN],
+  ])('resolves %s to the original, unlike the grid rule', (_label, target) => {
+    // On this screen quality is the cheap direction to be wrong in.
+    expect(pickStageSize(image(), target)).toBe('full');
   });
 });
 
