@@ -2657,18 +2657,101 @@ describe('Album — genre preview modes', () => {
     });
   }
 
-  it('asks for replace mode by default and shows all three values', async () => {
+  it('asks for replace mode and the lastfm source by default, and shows all three values', async () => {
     await openPreview({ replace: REPLACE, merge: MERGE });
 
-    expect(
-      vi.mocked(fetch).mock.calls.some(([url]) => url.includes('mode=replace'))
-    ).toBe(true);
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls.some(([url]) => url.includes('mode=replace'))).toBe(true);
+    expect(calls.some(([url]) => url.includes('source=lastfm'))).toBe(true);
     const dl = document.querySelector('.genre-preview-dl');
     expect(dl).toHaveTextContent('Rock');
     expect(dl).toHaveTextContent('Electronic');
     expect(screen.getByRole('button', { name: 'Replace' })).toHaveClass(
       'seg-active'
     );
+    expect(screen.getByRole('button', { name: 'Last.fm' })).toHaveClass(
+      'seg-active'
+    );
+    expect(screen.getByText(/From Last\.fm/)).toBeInTheDocument();
+  });
+
+  it('switches source, re-requests, and labels the fetched value with it', async () => {
+    const REPLACE_MB = {
+      status: 'ok',
+      mode: 'replace',
+      old_genre: 'Rock',
+      fetched_genre: 'Alternative Rock',
+      new_genre: 'Alternative Rock',
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, genre: 'Rock' }),
+          });
+        }
+        if (url.includes('/genre?')) {
+          const body = url.includes('source=musicbrainz')
+            ? REPLACE_MB
+            : REPLACE;
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(body),
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Genre', /^fetch$/i));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'MusicBrainz' }));
+    });
+
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url]) =>
+            url.includes('source=musicbrainz') && url.includes('mode=replace')
+        )
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'MusicBrainz' })).toHaveClass(
+      'seg-active'
+    );
+    expect(screen.getByText(/From MusicBrainz/)).toBeInTheDocument();
+    expect(document.querySelector('.genre-preview-dl')).toHaveTextContent(
+      'Alternative Rock'
+    );
+  });
+
+  it('keeps the current mode when switching source', async () => {
+    await openPreview({ replace: REPLACE, merge: MERGE });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'MusicBrainz' }));
+    });
+
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url]) =>
+            url.includes('mode=merge') && url.includes('source=musicbrainz')
+        )
+    ).toBe(true);
   });
 
   it('re-fetches in merge mode and proposes current-plus-fetched', async () => {

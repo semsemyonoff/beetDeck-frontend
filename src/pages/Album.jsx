@@ -56,6 +56,14 @@ const GENRE_MODES = [
   { value: 'merge', label: 'Merge' },
 ];
 
+const GENRE_SOURCES = [
+  { value: 'lastfm', label: 'Last.fm' },
+  { value: 'musicbrainz', label: 'MusicBrainz' },
+];
+const GENRE_SOURCE_LABEL = Object.fromEntries(
+  GENRE_SOURCES.map((s) => [s.value, s.label])
+);
+
 const COVER_VERDICT_LABEL = {
   larger: 'bigger than the current cover',
   smaller: 'smaller than the current cover',
@@ -471,12 +479,16 @@ export default function Album({ id, dataVersion = 0 }) {
   // `reopen: false` for the mode switch: it runs with the modal already open,
   // so a response that arrives after the user dismissed or committed it must
   // not put the modal back on screen.
-  const handleGenreFetch = async (mode = 'replace', { reopen = true } = {}) => {
+  const handleGenreFetch = async (
+    mode = 'replace',
+    source = 'lastfm',
+    { reopen = true } = {}
+  ) => {
     const slot = mode === 'merge' ? 'genre-merge' : 'genre-fetch';
     const req = ++genreReqRef.current;
     setBusy(slot);
     const { ok, data: d } = await postJson(
-      `/api/album/${data.id}/genre?mode=${mode}`
+      `/api/album/${data.id}/genre?mode=${mode}&source=${source}`
     );
     // Only release the slot this call took. `busy` is one global string, so an
     // unconditional clear would unlock Confirm while a second, still in-flight
@@ -492,6 +504,7 @@ export default function Album({ id, dataVersion = 0 }) {
         if (!reopen && prev === null) return null;
         return {
           mode,
+          source,
           old: d?.old_genre || '',
           fetched: d?.fetched_genre || '',
           next: d?.new_genre || '',
@@ -1637,7 +1650,9 @@ export default function Album({ id, dataVersion = 0 }) {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <div className="modal-eyebrow">Genre · Last.fm preview</div>
+                <div className="modal-eyebrow">
+                  Genre · {GENRE_SOURCE_LABEL[genrePreview.source]} preview
+                </div>
                 <h3 className="modal-title">{album.title}</h3>
               </div>
               <button
@@ -1648,7 +1663,20 @@ export default function Album({ id, dataVersion = 0 }) {
               </button>
             </div>
             <div className="modal-body">
-              <div className="genre-mode-seg">
+              <div className="genre-switch-row">
+                <Segmented
+                  size="sm"
+                  value={genrePreview.source}
+                  options={GENRE_SOURCES}
+                  disabled={genreBusy}
+                  onChange={(source) =>
+                    !genreBusy &&
+                    source !== genrePreview.source &&
+                    handleGenreFetch(genrePreview.mode, source, {
+                      reopen: false,
+                    })
+                  }
+                />
                 <Segmented
                   size="sm"
                   value={genrePreview.mode}
@@ -1657,7 +1685,9 @@ export default function Album({ id, dataVersion = 0 }) {
                   onChange={(mode) =>
                     !genreBusy &&
                     mode !== genrePreview.mode &&
-                    handleGenreFetch(mode, { reopen: false })
+                    handleGenreFetch(mode, genrePreview.source, {
+                      reopen: false,
+                    })
                   }
                 />
               </div>
@@ -1674,7 +1704,9 @@ export default function Album({ id, dataVersion = 0 }) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="muted small">From Last.fm</dt>
+                  <dt className="muted small">
+                    From {GENRE_SOURCE_LABEL[genrePreview.source]}
+                  </dt>
                   <dd>
                     {genrePreview.fetched || (
                       <span className="muted">nothing returned</span>

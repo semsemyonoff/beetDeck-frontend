@@ -1146,7 +1146,10 @@ h4 {
   flex-direction: column;
   gap: var(--s-2);
 }
-.genre-mode-seg {
+.genre-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
   margin-bottom: var(--s-5);
 }
 /* Reported inside the modal: a .flash renders in the page body, under the
