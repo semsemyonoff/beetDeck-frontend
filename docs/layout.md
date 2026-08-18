@@ -29,6 +29,8 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     │   ├── artwork.js      # typeCounts / filterByType / pickThumbSize / pickStageSize /
     │   │                   #   slideDimensions / mbCoverArtUrl / formatFetchedAt /
     │   │                   #   provenanceLine
+    │   ├── mbsync.js       # buildMbsyncViewModel / toggleField / excludedFieldsFor
+    │   │                   #   (MusicBrainz sync diff mapping + exclusion state)
     │   ├── scan.js         # buildScanSummary / buildScanViewModel / scanProgressPct /
     │   │                   #   isIndeterminate / applyLogChunk / parseLogLines / classifyLogLevel
     │   ├── tagEditor.js    # dirname / groupUntagged / excludeUntagged / summarize /
@@ -55,6 +57,9 @@ this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
     │   ├── ItemTagsEditor.jsx  # Per-track free tag editor over all editable beets fields
     │   ├── AlbumLyricsModal.jsx # Album lyrics fetch→preview→confirm (props-driven state machine)
     │   ├── AlbumBpmModal.jsx    # Album BPM progress (no apply step — writes immediately)
+    │   ├── AlbumMbsyncModal.jsx # MusicBrainz sync diff review: album-level fields,
+    │   │                        #   per-track fields grouped by field, unmapped tracks,
+    │   │                        #   per-field exclusion checkboxes (props-driven, no network)
     │   └── ArtLightbox.jsx      # Artwork overlay: metadata + Set-as-cover, and the
     │                            #   PhotoSwipe fullscreen layer over the filtered list
     └── pages/              # Route views
