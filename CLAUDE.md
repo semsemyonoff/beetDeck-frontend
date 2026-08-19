@@ -18,6 +18,17 @@ Mostly defined by what it deliberately does **not** use:
 - `useState` / `useReducer` — **no state-management library**.
 - Vite 8 + `@vitejs/plugin-react`; ESLint (flat config) + Prettier; Vitest + RTL.
 
+The one runtime dependency beyond React is **`photoswipe`** (5.x, MIT, zero
+dependencies), the fullscreen image viewer behind the artwork gallery's lightbox.
+It is here because pinch-zoom, pan, momentum and the gesture handling a scan
+viewer needs are weeks of work to get right and none of it is beetDeck-specific.
+It stays cheap because `pswpModule: () => import('photoswipe')` puts the core in
+its own lazy chunk — nothing but a fullscreen open loads it, and only
+`photoswipe/lightbox` plus `photoswipe/style.css` are imported eagerly, from
+`ui/ArtLightbox.jsx`. Add a dependency with `dwe cmd frontend.npm -- install <pkg>`
+and commit `package-lock.json`; hand-editing `package.json` and running
+`frontend.install` reports success without installing anything.
+
 ## Layout
 
 `src/lib/` holds pure helpers with a co-located `*.test.js`, `src/ui/` shared
@@ -31,6 +42,13 @@ Two things the tree cannot show:
 - `src/lib/scan.js` `classifyLogLevel` **mirrors the backend's**
   `parse_beets_line` log levels and is pinned to the beets version the backend
   pins (2.12.0). The two must change together, across repositories.
+- `src/lib/mbsync.js` `buildMbsyncViewModel` follows the same one-mapper rule as
+  `buildScanViewModel`: it is the single place the snake_case
+  `…/mbsync` response becomes the camelCase shape `AlbumMbsyncModal` consumes,
+  so a new response field gets threaded through the mapper, not read ad hoc in
+  the modal. `fieldNames` is derived there rather than in the modal because it
+  is the union across both levels — it is what the exclusion checkboxes list
+  and what "everything is excluded" is counted against.
 
 ## Routing
 
@@ -40,11 +58,14 @@ Two things the tree cannot show:
 - `#/` — Library
 - `#/artist/<name>` — Artist (`encodeURIComponent`'d)
 - `#/album/<id>` — Album
+- `#/album/<id>/artwork` — Cover Art Archive gallery for that album
 - `#/untagged` — Untagged folder index
 - `#/untagged/<dir>` — per-folder tag editor (`encodeURIComponent`'d, decoded once in `parse()`)
 - `#/scan` — scan log for the current/last run
 
-Anything unrecognized falls back to Library.
+Anything unrecognized falls back to Library — except an unknown suffix under
+`#/album/<id>/…`, which keeps rendering the album page rather than losing the id
+the URL still carries.
 
 **Every navigable element must be a real `<a href>`** so middle-click, Ctrl/Cmd+click
 and "Open in new tab" work. Use `hrefFor` / `useRouteLink` / `<RouteLink>` rather
@@ -67,9 +88,26 @@ The endpoint contracts are the backend's OpenAPI spec (`/apidoc/scalar/`,
 
 Client-owned invariants:
 
-- **The modals hold no network code.** `AlbumLyricsModal` and `AlbumBpmModal` are
-  props-driven state machines; the requests live in `src/pages/Album.jsx` and in
-  the two queue modules. Add a call there, not in the modal.
+- **The modals hold no network code.** `AlbumLyricsModal`, `AlbumBpmModal` and
+  `AlbumMbsyncModal` are props-driven state machines; the requests live in
+  `src/pages/Album.jsx` (mirroring its pre-existing genre flow: a monotonic
+  request ref plus a busy lock) and in the two queue modules. Add a call there,
+  not in the modal.
+- **The MusicBrainz sync button is disabled, not explained.** `Album.jsx`
+  disables the **Sync** action (in the `MusicBrainz` `ActionGroup`) when
+  `data.mb_albumid` is absent rather than letting the request round-trip into a
+  `400`. The modal's own Confirm is rendered only when the preview reports
+  `changed` — a diff made up entirely of unmapped tracks has nothing to write,
+  and confirming it would consume the stash for a no-op. Preview→confirm both
+  send `expected_generation`; the confirm renders the backend's `error` (and
+  `reasons` when present) instead of a hardcoded sentence — three different
+  `400`s exist upstream (no id, wrong `data_source`, release not found) and
+  collapsing them into one client message would state a fact about MusicBrainz
+  that actually came from the local row. The two `409`s are distinguished in the
+  UI too: a rescan in flight ("a library scan is running") reads differently
+  from a stale preview ("the album changed, re-run the preview"). A successful
+  confirm calls `setVersion` to refresh the page, same as every other write
+  flow here.
 - `runLyricsFetchQueue` (`CONCURRENCY = 6`) and `runBpmComputeQueue`
   (`CONCURRENCY = 2` — CPU-bound, ~9s/track on the server) pool the per-track
   fetch/compute requests.
@@ -84,7 +122,11 @@ Client-owned invariants:
   a value other than the one on screen; it also cannot express the `merge` mode,
   whose result exists only in the preview. The Replace/Merge switch re-requests
   `…/genre?mode=…` and the modal shows all three values (current, fetched,
-  proposed) so the switch is a visible diff, not a hidden one.
+  proposed) so the switch is a visible diff, not a hidden one. A second
+  `Segmented` switch picks the **source** (`lastfm`/`musicbrainz`, threaded into
+  the same request as `?source=…`), and the fetched value is labelled with
+  whichever source produced it — switching sources re-requests rather than
+  relabeling a cached answer, so the label always matches the value shown.
 - A cover fetch answers with both sizes (`width`/`height` and
   `current_width`/`current_height`); `compareCoverSize` turns them into the
   is-this-an-upgrade verdict. `relaxed: true` means the backend only found the

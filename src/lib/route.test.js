@@ -88,6 +88,22 @@ describe('parse', () => {
       artist: 'test%2',
     });
   });
+
+  // The artwork gallery is the album route's only sub-route: an unknown third
+  // segment must keep the album page (and its id), not drop to the library.
+  const ALBUM_SUFFIXES = [
+    ['#/album/42/artwork', { name: 'artwork', id: '42' }],
+    ['#/album/42', { name: 'album', id: '42' }],
+    ['#/album/42/', { name: 'album', id: '42' }],
+    ['#/album/42/cover', { name: 'album', id: '42' }],
+    ['#/album/42/artworks', { name: 'album', id: '42' }],
+    ['#/album/42/artwork/full', { name: 'artwork', id: '42' }],
+    ['album/42/artwork', { name: 'artwork', id: '42' }],
+  ];
+
+  it.each(ALBUM_SUFFIXES)('parses %s', (hash, expected) => {
+    expect(parse(hash)).toEqual(expected);
+  });
 });
 
 describe('hrefFor', () => {
@@ -155,6 +171,29 @@ describe('hrefFor', () => {
   it('parse(hrefFor(t)) round-trips scan', () => {
     const t = { name: 'scan' };
     expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  const ARTWORK_HREFS = [
+    [{ name: 'artwork', id: '42' }, '#/album/42/artwork'],
+    [{ name: 'artwork', id: 7 }, '#/album/7/artwork'],
+  ];
+
+  it.each(ARTWORK_HREFS)('builds the artwork href for %o', (target, href) => {
+    expect(hrefFor(target)).toBe(href);
+  });
+
+  it('parse(hrefFor(t)) round-trips artwork', () => {
+    const t = { name: 'artwork', id: '99' };
+    expect(parse(hrefFor(t))).toEqual(t);
+  });
+
+  it.each([
+    '#/album/42/artwork',
+    '#/album/42',
+    '#/artist/Portishead',
+    '#/scan',
+  ])('hrefFor(parse(%s)) round-trips the hash', (hash) => {
+    expect(hrefFor(parse(hash))).toBe(hash);
   });
 
   it('parse(#/) equals library', () => {

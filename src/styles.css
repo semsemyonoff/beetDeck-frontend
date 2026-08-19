@@ -1146,7 +1146,10 @@ h4 {
   flex-direction: column;
   gap: var(--s-2);
 }
-.genre-mode-seg {
+.genre-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
   margin-bottom: var(--s-5);
 }
 /* Reported inside the modal: a .flash renders in the page body, under the
@@ -1253,6 +1256,9 @@ h4 {
   box-shadow: none;
   border-radius: 0;
   border-right: 1px solid var(--border-soft);
+  /* Same reason as `.art-empty-actions .btn`: the Gallery entry is a real anchor
+     (routing rule), and `.btn` deliberately does not suppress the UA underline. */
+  text-decoration: none;
 }
 .action-group-btns .btn-action:last-child {
   border-right: none;
@@ -1673,6 +1679,18 @@ h4 {
    justify-content: space-between). */
 .modal-foot > .row-end {
   margin-left: auto;
+}
+/* Scoped to modal footers rather than a global `.btn:disabled`, which this
+   file deliberately does not carry (it would restyle every disabled button in
+   the SPA) — the same reasoning as `.art-lb-actions .btn:disabled` below.
+   Without it a disabled Confirm is pixel-identical to a live one: the sync
+   modal with every field excluded, and the genre preview when the source
+   returned nothing, both offer a full-strength primary button that does
+   nothing when clicked. */
+.modal-foot .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  filter: saturate(0.75);
 }
 .lyrics-full {
   font-family: var(--f-mono);
@@ -3834,6 +3852,109 @@ h4 {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+ *  Album MusicBrainz sync modal (amm-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-mbsync {
+  max-width: 720px;
+}
+.amm-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.amm-empty {
+  padding: var(--s-4) 0;
+}
+.amm-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.amm-toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.amm-field-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+  font-size: 12px;
+  cursor: pointer;
+}
+.amm-field-toggle input {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+}
+.amm-section {
+  display: flex;
+  flex-direction: column;
+}
+.amm-section-head {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  padding-bottom: var(--s-2);
+}
+.amm-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.amm-row:last-child {
+  border-bottom: none;
+}
+.amm-field {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  color: var(--text-mute);
+  letter-spacing: 0.02em;
+}
+.amm-track-group {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.amm-track-group:last-child {
+  border-bottom: none;
+}
+.amm-track-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--s-2);
+}
+.amm-track-row {
+  grid-template-columns: 30px 1fr;
+  border-bottom: none;
+  padding: 4px 0;
+}
+.amm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.amm-unmapped-row {
+  grid-template-columns: 30px 1fr auto;
+}
+.amm-unmapped-title {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
  *  Tag editor modal
  * ───────────────────────────────────────────────────────────────────────────── */
 
@@ -4078,4 +4199,615 @@ h4 {
 }
 .ite-add-empty {
   padding: 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Artwork gallery (Cover Art Archive) — .art-*
+ *  Uniform square tiles + letterboxed art: ratios run 1:8 → 2:1, so the square
+ *  keeps badges/comments on one baseline while the letterbox still reads the
+ *  true shape of each scan.
+ *  Ported from docs/design/project/styles.css (the design prototype), minus two
+ *  rules that block carried: .badge-warn (already defined above) and a global
+ *  .btn:disabled, which would restyle every disabled button in the SPA.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.page-artwork {
+  padding-bottom: var(--s-9);
+}
+.crumb-static-now {
+  color: var(--text);
+}
+
+.art-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-6);
+}
+.art-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.art-head-side {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+/* The MusicBrainz action is a real anchor (this repository's routing rule) and
+ * `.btn` never had to suppress the UA underline — same rule as the lightbox
+ * actions and the empty states. */
+.art-head-side a.btn {
+  text-decoration: none;
+}
+.art-mbid {
+  color: var(--text-faint);
+}
+
+.art-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: var(--s-5);
+}
+.art-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.art-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+.art-chip:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.art-chip-n {
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.art-chip-on {
+  background: var(--accent-soft);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--accent) 45%, transparent);
+}
+.art-chip-on .art-chip-n {
+  color: color-mix(in oklab, var(--accent) 70%, white);
+}
+.art-count-line {
+  font-size: 11.5px;
+  color: var(--text-mute);
+  letter-spacing: 0.01em;
+}
+.art-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--s-4);
+}
+.art-tile {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border-radius: var(--r-md);
+  background: var(--surface-0);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+  overflow: hidden;
+  transition:
+    box-shadow 120ms,
+    transform 120ms;
+}
+.art-tile:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    var(--sh-2);
+  transform: translateY(-2px);
+}
+.art-tile-cover {
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.art-stage {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  /* Same trap as `.art-lb-frame`: as a flex item this box's automatic minimum
+   * size is its content's min-content height, which outranks `aspect-ratio`.
+   * A 134×250 obi strip then grew the stage to 208×270 and — since grid rows
+   * stretch — took every square tile in its row with it, which is precisely the
+   * uniform tiling the letterboxed layout exists to keep. */
+  min-height: 0;
+  background: #060a14
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.022) 0 6px,
+      transparent 6px 12px
+    );
+}
+/* The prototype letterboxes an inline <svg>; the real page renders an <img> in
+   the same box under the same class name (the responsive rule below matches on
+   it), so object-fit — which an <svg> does not need — is added here. */
+.art-svg {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.art-flag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+.art-flag-cover {
+  background: color-mix(in oklab, var(--accent) 82%, transparent);
+  color: var(--accent-fg);
+}
+.art-flag-unapproved {
+  top: auto;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(8, 12, 24, 0.78);
+  color: var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--warn) 35%, transparent);
+}
+/* The stage below is a fixed dark backdrop in both themes, so anything drawn on
+   top of it needs a fixed light foreground too. Taking --text-mute here reads as
+   #6a76a0 on dark (4.4:1) but flips to #5d6a8a in the light theme, which is dark
+   ink on a dark pill. Same reason for .art-lb-nav and .art-lb-counter. */
+.art-ratio {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  color: #6a76a0;
+  background: rgba(6, 10, 20, 0.72);
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+}
+.art-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 11px 12px;
+  border-top: 1px solid var(--border-soft);
+}
+.art-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.art-type {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+.art-type-front {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  color: color-mix(in oklab, var(--accent) 72%, white);
+}
+.art-type-back {
+  background: color-mix(in oklab, var(--lime) 16%, transparent);
+  color: color-mix(in oklab, var(--lime) 68%, white);
+}
+.art-type-medium {
+  background: color-mix(in oklab, var(--ok) 16%, transparent);
+  color: var(--ok);
+}
+.art-comment {
+  font-size: 11px;
+  color: var(--text-mute);
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.art-empty {
+  max-width: 560px;
+  margin: var(--s-10) auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+.art-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-lg);
+  display: grid;
+  place-items: center;
+  background: var(--surface-1);
+  color: var(--text-mute);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+.art-empty-title {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.art-empty-body {
+  font-size: 13px;
+  color: var(--text-mute);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.art-empty-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+/* The prototype's next actions were <button>s; the repository's routing rule
+   makes them real anchors, and `.btn` has never had to suppress the UA
+   underline before. Scoped, not added to `.btn` itself. */
+.art-empty-actions .btn {
+  text-decoration: none;
+}
+
+.art-error {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface-0));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--danger) 35%, transparent);
+}
+.art-error-icon {
+  color: var(--danger);
+  display: inline-flex;
+}
+.art-error-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.art-error-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.art-error-reason {
+  font-size: 11px;
+  color: var(--text-mute);
+  overflow-wrap: anywhere;
+}
+.art-error-hint {
+  margin-top: var(--s-4);
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.art-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(3, 7, 18, 0.82);
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
+  animation: fade-in 120ms ease-out;
+}
+.art-lb-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  /* The row must be definite, or the stage is content-sized: the frame's
+   * `height: 100%` then resolves against `auto`, the image falls back to its
+   * natural height and a ~1:8 spine pushes the whole lightbox past the
+   * viewport. Verified with a real 150×1200 strip, not reasoned about. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  width: min(1240px, 100%);
+  height: min(760px, 88vh);
+  background: var(--surface-0);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-modal);
+  overflow: hidden;
+  animation: pop-in 140ms ease-out;
+}
+.art-lb-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--s-7);
+  min-width: 0;
+  min-height: 0;
+  background: #05080f
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.02) 0 8px,
+      transparent 8px 16px
+    );
+}
+.art-lb-frame {
+  /* The two layers are stacked, not laid out: the cached thumbnail holds the
+   * frame while the sharp rendition arrives. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* Without these the grid item's automatic minimum size is the image's own
+   * min-content height, which beats `height: 100%` and lets a tall scan grow
+   * the frame instead of being letterboxed inside it. */
+  min-width: 0;
+  min-height: 0;
+}
+.art-lb-frame .art-svg {
+  position: absolute;
+  inset: 0;
+  max-width: 100%;
+  max-height: 100%;
+  /* The prototype letterboxed an <svg>, which has no intrinsic size and fills
+   * the frame on its own. An <img> stops at its natural size, so a 500 px
+   * rendition would float in the middle of a ~900 px stage; these three
+   * restore the prototype's framing without cropping or stretching. */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.6));
+}
+/* The low-res layer: same box, same `object-fit`, so an identical ratio puts it
+ * exactly under the sharp one. Blurred on purpose — an upscaled 250 px scan
+ * reads as a placeholder rather than as a bad copy of the artwork. Scoped on
+ * the frame because the rule above it is, and a bare `.art-lb-blur` loses the
+ * `filter` cascade to it — which shows up as a placeholder that is merely soft
+ * and passes for the real thing. The scale hides the blur's feathered edge. */
+.art-lb-frame .art-lb-blur {
+  filter: blur(12px);
+  transform: scale(1.03);
+}
+.art-lb-shot {
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+.art-lb-shot.is-loaded {
+  opacity: 1;
+}
+/* The one in-flow child of the frame — both image layers are absolute — so the
+ * frame's own flex centring places it, and nothing here touches `transform`.
+ * Centring it with `translate(-50%, -50%)` is the trap: `.spinner`'s keyframes
+ * animate `transform` too, the rotate replaces the translate for the whole
+ * cycle, and the spinner lurches out of the middle and back once per turn
+ * instead of turning in place. `relative` only so `z-index` applies. */
+.art-lb-spinner {
+  position: relative;
+  z-index: 1;
+  /* The image underneath is the click target for fullscreen. */
+  pointer-events: none;
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: var(--accent);
+}
+.art-lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  /* The staged <img> carries a drop-shadow filter, which makes it a stacking
+   * context painted with the positioned boxes — so DOM order alone decided who
+   * won, and `prev` (before the frame) lost. Its element box spans the whole
+   * frame even when the art is letterboxed inside it, so a wide scan swallowed
+   * the click and opened fullscreen instead of paging back. */
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #a8b1cc;
+  background: rgba(12, 18, 34, 0.8);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.art-lb-nav:hover {
+  color: #ffffff;
+  background: rgba(30, 41, 68, 0.92);
+}
+.art-lb-prev {
+  left: 14px;
+}
+.art-lb-next {
+  right: 14px;
+}
+.art-lb-counter {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 11px;
+  color: #6a76a0;
+  background: rgba(6, 10, 20, 0.7);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.art-lb-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-left: 1px solid var(--border-soft);
+  overflow-y: auto;
+}
+.art-lb-side-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.art-lb-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+.art-lb-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.art-lb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.art-lb-meta > div {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: var(--s-3);
+  align-items: baseline;
+}
+.art-lb-meta dt {
+  color: var(--text-mute);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.art-lb-meta dd {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.art-lb-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border-soft);
+}
+.art-lb-actions .btn {
+  justify-content: center;
+  height: 34px;
+  /* Two of the three actions are real anchors (this repository's routing rule),
+   * and `.btn` never had to suppress the UA underline before — same reason the
+   * empty states carry their own rule. */
+  text-decoration: none;
+}
+/* Scoped on purpose: the prototype leaned on a global `.btn:disabled`, which
+ * this file deliberately does not carry (it would restyle every disabled button
+ * in the SPA). Without a rule of some kind the disabled "Set as album cover"
+ * is pixel-identical to an enabled one — and RTL, which asserts the attribute,
+ * cannot see that. */
+.art-lb-actions .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  filter: saturate(0.75);
+}
+
+/* PhotoSwipe overrides — fullscreen artwork viewer.
+ *
+ * Its loading indicator lives in the top bar, flush left (`margin-right: auto`
+ * pushes the buttons away from it), which on a CAA original that takes seconds
+ * is a spinner in a corner while the middle of the screen sits on an upscaled
+ * placeholder — it reads as a frozen viewer. Centered on the slide instead,
+ * where the eye already is. `position: fixed` because the box it sits in is the
+ * top bar: nothing in that flow can put it in the middle of the viewport.
+ * `pointer-events` because `.pswp__top-bar > *` turns them back on, and a 44 px
+ * box over the image would eat the click that zooms it. */
+.pswp .pswp__preloader {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  width: 44px;
+  height: 44px;
+  overflow: visible;
+  pointer-events: none;
+  background: none;
+  transition: background-color 0.2s linear;
+}
+/* The backdrop belongs to the **active** state, not to the box: the element is
+ * in the DOM for the whole session and only its icon fades, so a background on
+ * the box itself is a grey disc parked in the middle of every slide — which is
+ * exactly what it was. Same 0.2s PhotoSwipe gives the icon, so the two appear
+ * together, and after the base rule so equal specificity resolves its way. */
+.pswp .pswp__preloader--active {
+  border-radius: 999px;
+  background: rgba(6, 10, 20, 0.55);
+}
+/* The icon is absolutely placed for the 50×60 top-bar box it no longer sits in;
+ * 6 px centres its 32 px square in the 44 px one. */
+.pswp .pswp__preloader .pswp__icn {
+  top: 6px;
+  left: 6px;
+}
+
+.art-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 320;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow:
+    var(--sh-2),
+    inset 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.btn-badge {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-dim);
+}
+.btn-action:hover .btn-badge {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .art-lb-inner {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 92vh;
+  }
+  .art-lb-side {
+    border-left: none;
+    border-top: 1px solid var(--border-soft);
+  }
+  .art-lb-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 }
