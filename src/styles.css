@@ -1680,6 +1680,18 @@ h4 {
 .modal-foot > .row-end {
   margin-left: auto;
 }
+/* Scoped to modal footers rather than a global `.btn:disabled`, which this
+   file deliberately does not carry (it would restyle every disabled button in
+   the SPA) — the same reasoning as `.art-lb-actions .btn:disabled` below.
+   Without it a disabled Confirm is pixel-identical to a live one: the sync
+   modal with every field excluded, and the genre preview when the source
+   returned nothing, both offer a full-strength primary button that does
+   nothing when clicked. */
+.modal-foot .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  filter: saturate(0.75);
+}
 .lyrics-full {
   font-family: var(--f-mono);
   font-size: 13px;
