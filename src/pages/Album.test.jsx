@@ -2657,18 +2657,101 @@ describe('Album — genre preview modes', () => {
     });
   }
 
-  it('asks for replace mode by default and shows all three values', async () => {
+  it('asks for replace mode and the lastfm source by default, and shows all three values', async () => {
     await openPreview({ replace: REPLACE, merge: MERGE });
 
-    expect(
-      vi.mocked(fetch).mock.calls.some(([url]) => url.includes('mode=replace'))
-    ).toBe(true);
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls.some(([url]) => url.includes('mode=replace'))).toBe(true);
+    expect(calls.some(([url]) => url.includes('source=lastfm'))).toBe(true);
     const dl = document.querySelector('.genre-preview-dl');
     expect(dl).toHaveTextContent('Rock');
     expect(dl).toHaveTextContent('Electronic');
     expect(screen.getByRole('button', { name: 'Replace' })).toHaveClass(
       'seg-active'
     );
+    expect(screen.getByRole('button', { name: 'Last.fm' })).toHaveClass(
+      'seg-active'
+    );
+    expect(screen.getByText(/From Last\.fm/)).toBeInTheDocument();
+  });
+
+  it('switches source, re-requests, and labels the fetched value with it', async () => {
+    const REPLACE_MB = {
+      status: 'ok',
+      mode: 'replace',
+      old_genre: 'Rock',
+      fetched_genre: 'Alternative Rock',
+      new_genre: 'Alternative Rock',
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) => {
+        if (url === '/api/album/42') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ ...ALBUM_DATA, genre: 'Rock' }),
+          });
+        }
+        if (url.includes('/genre?')) {
+          const body = url.includes('source=musicbrainz')
+            ? REPLACE_MB
+            : REPLACE;
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(body),
+          });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      })
+    );
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('Genre', /^fetch$/i));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'MusicBrainz' }));
+    });
+
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url]) =>
+            url.includes('source=musicbrainz') && url.includes('mode=replace')
+        )
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'MusicBrainz' })).toHaveClass(
+      'seg-active'
+    );
+    expect(screen.getByText(/From MusicBrainz/)).toBeInTheDocument();
+    expect(document.querySelector('.genre-preview-dl')).toHaveTextContent(
+      'Alternative Rock'
+    );
+  });
+
+  it('keeps the current mode when switching source', async () => {
+    await openPreview({ replace: REPLACE, merge: MERGE });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Merge' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'MusicBrainz' }));
+    });
+
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url]) =>
+            url.includes('mode=merge') && url.includes('source=musicbrainz')
+        )
+    ).toBe(true);
   });
 
   it('re-fetches in merge mode and proposes current-plus-fetched', async () => {
@@ -3013,5 +3096,184 @@ describe('Album — artwork gallery link', () => {
     await renderAlbum();
 
     expect(galleryLink().querySelector('.btn-badge')).toBeNull();
+  });
+});
+
+describe('Album — MusicBrainz sync', () => {
+  const ALBUM_WITH_MBID = {
+    ...ALBUM_DATA,
+    mb_albumid: '11111111-2222-3333-4444-555555555555',
+  };
+
+  const PREVIEW_PAYLOAD = {
+    album_id: 42,
+    mb_albumid: ALBUM_WITH_MBID.mb_albumid,
+    data_source: 'MusicBrainz',
+    stash_generation: 7,
+    album_fields: [{ field: 'label', old: '', new: '4AD' }],
+    track_fields: [
+      {
+        field: 'title',
+        changes: [{ item_id: 1, track: 1, old: 'Intro', new: 'Introduction' }],
+      },
+    ],
+    unmapped: [],
+    changed: true,
+  };
+
+  beforeEach(() => {
+    stubLocation();
+    vi.mocked(runLyricsFetchQueue).mockReset();
+    vi.mocked(runBpmComputeQueue).mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    restoreLocation();
+  });
+
+  function mbsyncFetch({
+    preview,
+    previewStatus = 200,
+    confirm,
+    confirmStatus = 200,
+  } = {}) {
+    return vi.fn().mockImplementation((url) => {
+      if (url === '/api/album/42') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(ALBUM_WITH_MBID),
+        });
+      }
+      if (url.endsWith('/mbsync/confirm')) {
+        return Promise.resolve({
+          ok: confirmStatus >= 200 && confirmStatus < 300,
+          status: confirmStatus,
+          json: () => Promise.resolve(confirm),
+        });
+      }
+      if (url.endsWith('/mbsync')) {
+        return Promise.resolve({
+          ok: previewStatus >= 200 && previewStatus < 300,
+          status: previewStatus,
+          json: () => Promise.resolve(preview),
+        });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+    });
+  }
+
+  async function renderAndOpen(handlers) {
+    vi.stubGlobal('fetch', mbsyncFetch(handlers));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+    await act(async () => {
+      fireEvent.click(groupButton('MusicBrainz', /^sync$/i));
+    });
+  }
+
+  it('disables the Sync button when the album has no MusicBrainz id', async () => {
+    vi.stubGlobal('fetch', makeFetch(ALBUM_DATA));
+    await act(async () => {
+      render(<Album id={42} />);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    );
+
+    expect(groupButton('MusicBrainz', /^sync$/i)).toBeDisabled();
+  });
+
+  it('previews then confirms, sending expected_generation and refreshing the album', async () => {
+    await renderAndOpen({
+      preview: PREVIEW_PAYLOAD,
+      confirm: { status: 'ok' },
+    });
+
+    expect(document.querySelector('.modal-album-mbsync')).toBeInTheDocument();
+    expect(screen.getByText('4AD')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    });
+
+    const calls = vi.mocked(fetch).mock.calls;
+    const confirmCall = calls.find(([url]) => url.endsWith('/mbsync/confirm'));
+    expect(confirmCall).toBeTruthy();
+    expect(JSON.parse(confirmCall[1].body)).toEqual({
+      expected_generation: 7,
+      excluded_fields: [],
+    });
+    // The album refetches after a successful confirm.
+    expect(
+      calls.filter(([url]) => url === '/api/album/42').length
+    ).toBeGreaterThan(1);
+    expect(
+      document.querySelector('.modal-album-mbsync')
+    ).not.toBeInTheDocument();
+  });
+
+  it('flags a partial write rather than reporting a clean success', async () => {
+    // The database was written but at least one audio file was not — a user
+    // whose tags did not reach disk must not be told the sync just worked.
+    await renderAndOpen({
+      preview: PREVIEW_PAYLOAD,
+      confirm: { status: 'partial', write_failures: [101] },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    });
+
+    expect(screen.getByText(/partial write/i)).toBeInTheDocument();
+    expect(
+      document.querySelector('.modal-album-mbsync')
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a rescan-in-flight 409 as a distinct message from a stale preview', async () => {
+    await renderAndOpen({
+      preview: { error: 'A library scan is in progress' },
+      previewStatus: 409,
+    });
+
+    expect(document.querySelector('.modal-album-mbsync')).toBeNull();
+    expect(screen.getByText(/library scan is running/i)).toBeInTheDocument();
+  });
+
+  it('reports a stale/drifted confirm distinctly from a rescan', async () => {
+    await renderAndOpen({
+      preview: PREVIEW_PAYLOAD,
+      confirm: {
+        error:
+          'The fetched result changed since the preview (re-fetched or already written)',
+      },
+      confirmStatus: 409,
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    });
+
+    expect(
+      document.querySelector('.modal-album-mbsync .error')
+    ).toHaveTextContent(/album changed since the preview/i);
+  });
+
+  it('shows the reasons on a 502 from an unreachable MusicBrainz', async () => {
+    await renderAndOpen({
+      preview: {
+        error: 'MusicBrainz could not be reached',
+        reasons: ['Connection refused'],
+      },
+      previewStatus: 502,
+    });
+
+    expect(screen.getByText(/connection refused/i)).toBeInTheDocument();
   });
 });

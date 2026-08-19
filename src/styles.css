@@ -1146,7 +1146,10 @@ h4 {
   flex-direction: column;
   gap: var(--s-2);
 }
-.genre-mode-seg {
+.genre-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
   margin-bottom: var(--s-5);
 }
 /* Reported inside the modal: a .flash renders in the page body, under the
@@ -1676,6 +1679,18 @@ h4 {
    justify-content: space-between). */
 .modal-foot > .row-end {
   margin-left: auto;
+}
+/* Scoped to modal footers rather than a global `.btn:disabled`, which this
+   file deliberately does not carry (it would restyle every disabled button in
+   the SPA) — the same reasoning as `.art-lb-actions .btn:disabled` below.
+   Without it a disabled Confirm is pixel-identical to a live one: the sync
+   modal with every field excluded, and the genre preview when the source
+   returned nothing, both offer a full-strength primary button that does
+   nothing when clicked. */
+.modal-foot .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  filter: saturate(0.75);
 }
 .lyrics-full {
   font-family: var(--f-mono);
@@ -3834,6 +3849,109 @@ h4 {
     max-width: none;
     height: 7px;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ *  Album MusicBrainz sync modal (amm-*)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.modal-album-mbsync {
+  max-width: 720px;
+}
+.amm-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.amm-empty {
+  padding: var(--s-4) 0;
+}
+.amm-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.amm-toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.amm-field-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+  font-size: 12px;
+  cursor: pointer;
+}
+.amm-field-toggle input {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+}
+.amm-section {
+  display: flex;
+  flex-direction: column;
+}
+.amm-section-head {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  padding-bottom: var(--s-2);
+}
+.amm-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.amm-row:last-child {
+  border-bottom: none;
+}
+.amm-field {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  color: var(--text-mute);
+  letter-spacing: 0.02em;
+}
+.amm-track-group {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.amm-track-group:last-child {
+  border-bottom: none;
+}
+.amm-track-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--s-2);
+}
+.amm-track-row {
+  grid-template-columns: 30px 1fr;
+  border-bottom: none;
+  padding: 4px 0;
+}
+.amm-track-num {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 30px;
+  flex-shrink: 0;
+}
+.amm-unmapped-row {
+  grid-template-columns: 30px 1fr auto;
+}
+.amm-unmapped-title {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
