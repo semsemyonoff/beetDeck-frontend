@@ -13,7 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The only step that fetches a toolchain from github.com, over a link that
+      # drops often enough to matter. A download that dies part-way is not just a
+      # failed run: the half-written Node stays in the shared tool cache *marked
+      # complete*, so every later job reuses a broken interpreter. Hence
+      # retry-after-clearing rather than a plain retry — the second attempt must
+      # not find the wreckage of the first.
       - uses: actions/setup-node@v6
+        id: node
+        continue-on-error: true
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Clear the half-installed Node
+        if: steps.node.outcome == 'failure'
+        run: rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/node/24."*
+      - uses: actions/setup-node@v6
+        if: steps.node.outcome == 'failure'
         with:
           node-version: '24'
           cache: npm
@@ -25,18 +41,29 @@ jobs:
 
   test:
     # Sequential, not for the dependency — the suites are independent — but for
-    # the tool cache. Both jobs ask for the same `node-version` and the same npm
-    # cache, and on a self-hosted runner they share one `hostedtoolcache` volume.
-    # When a new patch release appears upstream neither finds it cached, both
-    # install it at once, and one job's "delete the version folder, copy the new
-    # tree" races the other's copy — which is how the backend's CI ended up with
-    # a half-written Python stdlib. Serialized, the first job fills the cache and
-    # the second just reads it.
+    # the tool cache. Both jobs ask for the same `node-version` and share one
+    # `hostedtoolcache` volume on the self-hosted runner, so on a version neither
+    # has cached they would install it twice at once, each deleting the version
+    # folder the other is copying into. This way one job installs and the other
+    # reads, and only one of them can be caught by a dropped download.
     needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Normally a cache hit — `lint` ran first and installed it. The retry is
+      # here anyway for the run where the cache was swept in between; see the
+      # comment on the same step above.
       - uses: actions/setup-node@v6
+        id: node
+        continue-on-error: true
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Clear the half-installed Node
+        if: steps.node.outcome == 'failure'
+        run: rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/node/24."*
+      - uses: actions/setup-node@v6
+        if: steps.node.outcome == 'failure'
         with:
           node-version: '24'
           cache: npm
