@@ -24,6 +24,15 @@ jobs:
         run: npm run format:check
 
   test:
+    # Sequential, not for the dependency — the suites are independent — but for
+    # the tool cache. Both jobs ask for the same `node-version` and the same npm
+    # cache, and on a self-hosted runner they share one `hostedtoolcache` volume.
+    # When a new patch release appears upstream neither finds it cached, both
+    # install it at once, and one job's "delete the version folder, copy the new
+    # tree" races the other's copy — which is how the backend's CI ended up with
+    # a half-written Python stdlib. Serialized, the first job fills the cache and
+    # the second just reads it.
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
