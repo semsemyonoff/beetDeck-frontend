@@ -1,6 +1,6 @@
 # Routing helpers and the RouteLink pattern
 
-Reference for `CLAUDE.md` → _Routing_. The rule lives there; this is the API and
+Reference for `AGENTS.md` → _Routing_. The rule lives there; this is the API and
 the layout recipe.
 
 ## Why anchors

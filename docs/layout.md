@@ -1,6 +1,6 @@
 # Repository layout
 
-Reference for `CLAUDE.md` → _Layout_. Orientation only — the tree is authoritative,
+Reference for `AGENTS.md` → _Layout_. Orientation only — the tree is authoritative,
 this file is not. Every `src/lib/` module has a co-located `*.test.js`, and most
 `ui/` and `pages/` modules have a `*.test.jsx`; those are omitted below.
 
