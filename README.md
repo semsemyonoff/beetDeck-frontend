@@ -59,7 +59,7 @@ npm run format:check # Prettier (check only)
 
 ## Further documentation
 
-- `CLAUDE.md` — notes for AI agents: conventions, routing rules, and the
+- `AGENTS.md` — notes for AI agents: conventions, routing rules, and the
   client-side invariants around the fetch queues and the scan view model.
 - `docs/layout.md` — annotated source tree.
 - `docs/routing.md` — the `RouteLink` API and the stretched-link card pattern.
