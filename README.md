@@ -8,6 +8,9 @@ filesystem with the backend.
 
 - Node.js 24+ (see `engines` in `package.json`)
 
+Vite 8.1.6 and Vitest 4.1.11 are the minimum versions for the current security
+patch baseline. Keep `package-lock.json` in sync with dependency changes.
+
 ## Dev workflow
 
 ```bash
