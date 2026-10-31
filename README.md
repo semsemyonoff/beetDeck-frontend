@@ -8,6 +8,9 @@ filesystem with the backend.
 
 - Node.js 24+ (see `engines` in `package.json`)
 
+Vite 8.1.6 and Vitest 4.1.11 are the minimum versions for the current security
+patch baseline. Keep `package-lock.json` in sync with dependency changes.
+
 ## Dev workflow
 
 ```bash
@@ -59,7 +62,7 @@ npm run format:check # Prettier (check only)
 
 ## Further documentation
 
-- `CLAUDE.md` — notes for AI agents: conventions, routing rules, and the
+- `AGENTS.md` — notes for AI agents: conventions, routing rules, and the
   client-side invariants around the fetch queues and the scan view model.
 - `docs/layout.md` — annotated source tree.
 - `docs/routing.md` — the `RouteLink` API and the stretched-link card pattern.
