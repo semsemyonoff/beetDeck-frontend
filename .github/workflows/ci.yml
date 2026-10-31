@@ -19,7 +19,7 @@ jobs:
       # complete*, so every later job reuses a broken interpreter. Hence
       # retry-after-clearing rather than a plain retry — the second attempt must
       # not find the wreckage of the first.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         id: node
         continue-on-error: true
         with:
@@ -28,7 +28,7 @@ jobs:
       - name: Clear the half-installed Node
         if: steps.node.outcome == 'failure'
         run: rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/node/24."*
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         if: steps.node.outcome == 'failure'
         with:
           node-version: '24'
@@ -53,7 +53,7 @@ jobs:
       # Normally a cache hit — `lint` ran first and installed it. The retry is
       # here anyway for the run where the cache was swept in between; see the
       # comment on the same step above.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         id: node
         continue-on-error: true
         with:
@@ -62,7 +62,7 @@ jobs:
       - name: Clear the half-installed Node
         if: steps.node.outcome == 'failure'
         run: rm -rf "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}/node/24."*
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         if: steps.node.outcome == 'failure'
         with:
           node-version: '24'
